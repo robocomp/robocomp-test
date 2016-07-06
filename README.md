@@ -1,2 +1,2 @@
-# robocomp-test
+# robocomp-tests
 Repository containing testing programs for RoboComp components

@@ -1,0 +1,31 @@
+TrajectoryRobot2DProxy = trajectoryrobot2d:tcp -h localhost -p 12204
+
+
+
+# This property is used by the clients to connect to IceStorm.
+TopicManager.Proxy=IceStorm/TopicManager:default -p 9999
+
+Points=10
+
+Point0=4000.,+1200.,+0.0
+Point1=2000.,+1200.,-0.5
+Point2=3000.,+2000.,+0.0
+Point3=3800.,+0000.,+1.57
+Point4=5020.,-1638.,+3.14159
+Point5=4490.,-3040.,-2.3562
+Point6=2801.,-3080.,-1.57
+Point7=2206.,-2518.,-0.76
+Point8=2831.,-0623.,+3.07
+Point9=3378.,-0577.,+0.93
+
+
+
+
+
+Ice.Warn.Connections=0
+Ice.Trace.Network=0
+Ice.Trace.Protocol=0
+Ice.ACM.Client=10
+Ice.ACM.Server=10
+
+
