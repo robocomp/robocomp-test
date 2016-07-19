@@ -1,4 +1,4 @@
-TrajectoryRobot2DProxy = trajectoryrobot2d:tcp -h localhost -p 19204
+TrajectoryRobot2DProxy = trajectoryrobot2d:tcp -h robonuc1.local -p 12204
 
 
 
@@ -7,16 +7,20 @@ TopicManager.Proxy=IceStorm/TopicManager:default -p 9999
 
 Points=10
 
-Point0=4000.,+1200.,+0.0
-Point1=2000.,+1200.,-0.5
-Point2=3000.,+2000.,+0.0
+
+
+# Offset 0
+Point0=3000.,+2000.,+0.0
+Point1=4000.,+1200.,+0.0
+Point2=2000.,+1200.,-0.5
 Point3=3800.,+0000.,+1.57
 Point4=5020.,-1638.,+3.14159
-Point5=4490.,-3040.,-2.3562
-Point6=2801.,-3080.,-1.57
+Point5=4490.,-3000.,-2.3562
+Point6=2801.,-2880.,-1.57
 Point7=2206.,-2518.,-0.76
 Point8=2831.,-0623.,+3.07
 Point9=3378.,-0577.,+0.93
+
 
 
 
