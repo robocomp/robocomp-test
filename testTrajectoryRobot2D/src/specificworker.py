@@ -80,6 +80,9 @@ class PointWidget(QtGui.QWidget):
 		QtCore.QObject.connect(self.button, QtCore.SIGNAL ('clicked()'), self.pressedSlot)
 		self.layout.addWidget(self.button)
 
+		self.stopButton = QtGui.QPushButton("stop")
+		self.layout.addWidget(self.stopButton)
+
 		self.setLayout(self.layout)
 		self.show()
 
@@ -88,7 +91,7 @@ class PointWidget(QtGui.QWidget):
 		#print 'PointWidget::pressedSlot', self.ident
 		self.pressed.emit(self.ident)
 		
-		
+	
 class SpecificWorker(GenericWorker):
 	currentTarget = -1
 	points = []
@@ -123,8 +126,17 @@ class SpecificWorker(GenericWorker):
 		for npoint in xrange( len(self.points) ):
 			pw = PointWidget(prnt=None, x=self.points[npoint][0], z=self.points[npoint][1], a=self.points[npoint][2], ident=npoint)
 			QtCore.QObject.connect(pw, QtCore.SIGNAL('pressed(int)'), self.pressedSlot)
+			pw.stopButton.clicked.connect( self.stopRobotSlot )
 			self.layout.addWidget(pw)
 			self.pointWidgets.append(pw)
+
+	@QtCore.Slot()
+	def stopRobotSlot(self):
+		try:
+			self.trajectoryrobot2d_proxy.stop()
+		except Ice.Exception as e:
+			print e
+		
 
 	@QtCore.Slot(int)
 	def pressedSlot(self, ident):
@@ -138,6 +150,7 @@ class SpecificWorker(GenericWorker):
 		target.y = 0
 		target.z = self.points[self.currentTarget][1]
 		target.rx = 0
+		
 		if self.points[self.currentTarget][2] == None:
 			target.ry = 0
 			target.doRotation = False
@@ -145,7 +158,10 @@ class SpecificWorker(GenericWorker):
 			target.ry = float(self.points[self.currentTarget][2])
 			target.doRotation = True
 		target.rz = 0
-		self.trajectoryrobot2d_proxy.go(target)
+		try:
+			self.trajectoryrobot2d_proxy.go(target)
+		except Ice.Exception as e:
+			print e
 
 	@QtCore.Slot()
 	def compute(self):
