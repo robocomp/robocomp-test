@@ -1,10 +1,12 @@
 import "/robocomp/interfaces/IDSLs/TrajectoryRobot2D.idsl";
+import "/robocomp/interfaces/IDSLs/RCISMousePicker.idsl";
 
 Component testTrajectoryRobot2D
 {
 	Communications
 	{
 		requires TrajectoryRobot2D;
+		subscribesTo RCISMousePicker;
 	};
 	language python;
 	gui Qt(QWidget);
