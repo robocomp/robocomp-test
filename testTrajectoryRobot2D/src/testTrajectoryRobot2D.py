@@ -55,7 +55,7 @@
 #
 #
 
-import sys, traceback, Ice, IceStorm, subprocess, threading, time, Queue, os, copy
+import sys, traceback, IceStorm, subprocess, threading, time, Queue, os, copy
 
 # Ctrl+c handling
 import signal
@@ -64,24 +64,6 @@ signal.signal(signal.SIGINT, signal.SIG_DFL)
 from PySide import *
 
 from specificworker import *
-
-
-ROBOCOMP = ''
-try:
-	ROBOCOMP = os.environ['ROBOCOMP']
-except:
-	print '$ROBOCOMP environment variable not set, using the default value /opt/robocomp'
-	ROBOCOMP = '/opt/robocomp'
-if len(ROBOCOMP)<1:
-	print 'ROBOCOMP environment variable not set! Exiting.'
-	sys.exit()
-
-
-preStr = "-I"+ROBOCOMP+"/interfaces/ -I/opt/robocomp/interfaces/ --all "+ROBOCOMP+"/interfaces/"
-Ice.loadSlice(preStr+"CommonBehavior.ice")
-Ice.loadSlice(preStr+"TrajectoryRobot2D.ice")
-import RoboCompCommonBehavior
-import RoboCompTrajectoryRobot2D
 
 
 class CommonBehaviorI(RoboCompCommonBehavior.CommonBehavior):
@@ -124,13 +106,18 @@ if __name__ == '__main__':
 	parameters = {}
 	for i in ic.getProperties():
 		parameters[str(i)] = str(ic.getProperties().getProperty(i))
-	if status == 0:
+
+		# Topic Manager
+		proxy = ic.getProperties().getProperty("TopicManager.Proxy")
+		obj = ic.stringToProxy(proxy)
+		topicManager = IceStorm.TopicManagerPrx.checkedCast(obj)
+
 		# Remote object connection for TrajectoryRobot2D
 		try:
 			proxyString = ic.getProperties().getProperty('TrajectoryRobot2DProxy')
 			try:
 				basePrx = ic.stringToProxy(proxyString)
-				trajectoryrobot2d_proxy = RoboCompTrajectoryRobot2D.TrajectoryRobot2DPrx.checkedCast(basePrx)
+				trajectoryrobot2d_proxy = TrajectoryRobot2DPrx.checkedCast(basePrx)
 				mprx["TrajectoryRobot2DProxy"] = trajectoryrobot2d_proxy
 			except Ice.Exception:
 				print 'Cannot connect to the remote object (TrajectoryRobot2D)', proxyString
@@ -140,12 +127,27 @@ if __name__ == '__main__':
 			print e
 			print 'Cannot get TrajectoryRobot2DProxy property.'
 			status = 1
-		except:
-			traceback.print_exc()
-			status = 1
 
+	if status == 0:
 		worker = SpecificWorker(mprx)
 		worker.setParams(parameters)
+
+		RCISMousePicker_adapter = ic.createObjectAdapter("RCISMousePickerTopic")
+		rcismousepickerI_ = RCISMousePickerI(worker)
+		rcismousepicker_proxy = RCISMousePicker_adapter.addWithUUID(rcismousepickerI_).ice_oneway()
+
+		subscribeDone = False
+		while not subscribeDone:
+			try:
+				rcismousepicker_topic = topicManager.retrieve("RCISMousePicker")
+				subscribeDone = True
+			except Ice.Exception, e:
+				print "Error. Topic does not exist (yet)"
+				status = 0
+				time.sleep(1)
+		qos = {}
+		rcismousepicker_topic.subscribeAndGetPublisher(qos, rcismousepicker_proxy)
+		RCISMousePicker_adapter.activate()
 
 
 		app.exec_()

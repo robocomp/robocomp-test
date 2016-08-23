@@ -1,5 +1,8 @@
-TrajectoryRobot2DProxy = trajectoryrobot2d:tcp -h robonuc1.local -p 19204
+# Endpoints for subscriptions
+RCISMousePickerTopic.Endpoints=tcp -p 13204
 
+TrajectoryRobot2DProxy = trajectoryrobot2d:tcp -h robonuc1.local -p 12204
+#TrajectoryRobot2DProxy = trajectoryrobot2d:tcp -p 19204
 
 
 # This property is used by the clients to connect to IceStorm.
