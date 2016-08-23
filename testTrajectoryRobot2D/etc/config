@@ -1,4 +1,4 @@
-TrajectoryRobot2DProxy = trajectoryrobot2d:tcp -h robonuc1.local -p 12204
+TrajectoryRobot2DProxy = trajectoryrobot2d:tcp -h robonuc1.local -p 19204
 
 
 

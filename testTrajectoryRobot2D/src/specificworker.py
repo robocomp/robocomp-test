@@ -52,14 +52,14 @@ class PointWidget(QtGui.QWidget):
 		self.layout = QtGui.QVBoxLayout()
 
 		lo = QtGui.QHBoxLayout()
-		x = QtGui.QLabel("x")
+		x = QtGui.QLabel("x"+str(ident))
 		lo.addWidget(x)
 		self.xLabel = QtGui.QLabel(str(self.x))
 		lo.addWidget(self.xLabel)
 		self.layout.addLayout(lo)
 
 		lo = QtGui.QHBoxLayout()
-		z = QtGui.QLabel("z")
+		z = QtGui.QLabel("z"+str(ident))
 		lo.addWidget(z)
 		self.zLabel = QtGui.QLabel(str(self.z))
 		lo.addWidget(self.zLabel)
