@@ -101,8 +101,10 @@ class SpecificWorker(GenericWorker):
 		self.timer.timeout.connect(self.compute)
 		self.Period = 2000
 		self.timer.start(self.Period)
+		self.vlayout = QtGui.QVBoxLayout()
 		self.layout = QtGui.QHBoxLayout()
-		self.setLayout(self.layout)
+		self.vlayout.addLayout(self.layout)
+		self.setLayout(self.vlayout)
 
 	def setParams(self, params):
 		try:
@@ -129,6 +131,11 @@ class SpecificWorker(GenericWorker):
 			pw.stopButton.clicked.connect( self.stopRobotSlot )
 			self.layout.addWidget(pw)
 			self.pointWidgets.append(pw)
+
+		self.edit = QtGui.QTextEdit()
+		self.vlayout.addWidget(self.edit)
+
+		self.Period = 200
 
 	@QtCore.Slot()
 	def stopRobotSlot(self):
@@ -165,9 +172,30 @@ class SpecificWorker(GenericWorker):
 
 	@QtCore.Slot()
 	def compute(self):
-		return True
-
+		try:
+			s = self.trajectoryrobot2d_proxy.getState()
+			print "--------- NavState -----------"
+			print "	STATE", s.state
+			print "	pose:" , "%.2f" % s.x, "%.2f" % s.z, "%.2f" % s.ang
+			print "	vel pose:", s.advV, s.rotV
+			print "	dist to target", s.distanceToTarget
+			print "	elapsedTime", s.elapsedTime
+			print "	ETA", s.estimatedTime
+			print " planning time", s.planningTime
+			self.edit.append("STATE: " + s.state 
+										+ "	X: " + "%d mm" % s.x + "  Z: %d mm" % s.z + "  A: %.2f r" % s.ang 
+										+ "	vA: " + "%d mm/s" % s.advV + "vR %.2f r/s" % s.rotV
+										+ "	D2target: " + "%d mm" % s.distanceToTarget 
+										+ "	ET: " + "%d ms" % s.elapsedTime 
+										+ "	ETA: " + "%d ms" % s.estimatedTime
+										+ " PT: " + "%d ms" % s.planningTime )
+			
+		except Ice.Exception as e:
+			print e
+		
+################
 ## SUBSCRIPTIONS
+################
 
 	#
 	# setPick
