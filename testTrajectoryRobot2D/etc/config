@@ -10,6 +10,8 @@ TopicManager.Proxy=IceStorm/TopicManager:default -p 9999
 
 Points=10
 
+
+
 # Offset 0
 Point0=3000.,+2000.,+0.0
 Point1=4000.,+1200.,+0.0
@@ -21,6 +23,10 @@ Point6=2801.,-2880.,-1.57
 Point7=2206.,-2518.,-0.76
 Point8=2831.,-0623.,+3.07
 Point9=3378.,-0577.,+0.93
+
+
+
+
 
 
 Ice.Warn.Connections=0
