@@ -52,13 +52,18 @@ bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList params)
 		qFatal("Error reading config params %s", par.value.c_str());
 	}
 	
-  innerModel->print();
+  //innerModel->print();
 	
-	InnerModelRGBD *rgbdNode;
-	try{ innerModel->get(rgbdNode, "rgbd"); }
-	catch(const std::exception &e){ std::cout << e.what() << std::endl;}
+	InnerModelOmniRobot *robot = innerModel->getNode<InnerModelOmniRobot>("robot");
+	qDebug() << __FUNCTION__ << "Robot:"  << robot->id << robot->port;
+	
+	InnerModelRGBD *rgbd = innerModel->getNode<InnerModelRGBD>("rgbd");
+	qDebug() << __FUNCTION__ << "RGBD:"  << rgbd->id << rgbd->port;
+	
 
-	qDebug() << __FUNCTION__ << rgbdNode->focal;
+	innerModel->getNode<InnerModelCamera>("camera")->project("rgbd", QVec::vec3(30, 450, 500), "camera").print("project");
+	
+	
 	timer.start(Period);
 	return true;
 }
@@ -66,6 +71,7 @@ bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList params)
 void SpecificWorker::compute()
 {
 	//qDebug() << __FUNCTION__ << "hola";
+	qFatal("Job done");
 }
 
 

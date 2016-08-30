@@ -23,16 +23,12 @@
 */
 
 
-
-
-
-
-
 #ifndef SPECIFICWORKER_H
 #define SPECIFICWORKER_H
 
 #include <genericworker.h>
 #include <innermodel/innermodel.h>
+#include <typeinfo>
 
 class SpecificWorker : public GenericWorker
 {
