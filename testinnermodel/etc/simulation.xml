@@ -1,0 +1,5 @@
+<innermodel>
+	<include path="etc/shelly.xml"/>
+	<include path="etc/autonomyLabModel-kitchen.xml"/>
+</innermodel>
+
