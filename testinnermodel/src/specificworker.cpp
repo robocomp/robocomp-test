@@ -54,13 +54,16 @@ bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList params)
 	
   //innerModel->print();
 	
-	InnerModelOmniRobot *robot = innerModel->getNode<InnerModelOmniRobot>("robot");
-	qDebug() << __FUNCTION__ << "Robot:"  << robot->id << robot->port;
+// 	InnerModelOmniRobot *robot = innerModel->getNode<InnerModelOmniRobot>("robot");
+// 	qDebug() << __FUNCTION__ << "Robot:"  << robot->id << robot->port << robot->tx << robot->ty << robot->tz;
+// 	
+// 	InnerModelRGBD *rgbd = innerModel->getNode<InnerModelRGBD>("rgbd");
+// 	qDebug() << __FUNCTION__ << "RGBD:"  << rgbd->id << rgbd->port << rgbd->getFocal();
+// 	
+	InnerModelLaser *laser = innerModel->getNode<InnerModelLaser>("laser");
+	qDebug() << __FUNCTION__ << "LASER:"  << laser->id << laser->port << laser->measures << laser->min;
+	qDebug() << __FUNCTION__ << "LASER2:" <<  dynamic_cast<InnerModelLaser*>(innerModel->getNode("laser"))->port;
 	
-	InnerModelRGBD *rgbd = innerModel->getNode<InnerModelRGBD>("rgbd");
-	qDebug() << __FUNCTION__ << "RGBD:"  << rgbd->id << rgbd->port;
-	
-
 	innerModel->getNode<InnerModelCamera>("camera")->project("rgbd", QVec::vec3(30, 450, 500), "camera").print("project");
 	
 	
