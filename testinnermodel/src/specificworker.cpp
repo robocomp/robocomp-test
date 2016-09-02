@@ -58,8 +58,12 @@ bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList params)
 	
 	
 	innerModel->getNode<InnerModelLaser>("laser")->print(true);
-	qDebug() << innerModel->getNode<InnerModelLaser>("laser")->angle;
-	qDebug() << dynamic_cast<InnerModelLaser*>(innerModel->getNode("laser"))->angle;
+	qDebug() << innerModel->getNode<InnerModelLaser>("laser")->port;
+	qDebug() << dynamic_cast<InnerModelLaser*>(innerModel->getNode("laser"))->port;
+	
+	qDebug() << dynamic_cast<InnerModelTransform*>(innerModel->getNode("monitor_pose"))->id;
+	
+	qDebug() << dynamic_cast<InnerModelCamera*>(innerModel->getNode("camera"))->focal;
 	
 	
 // 	InnerModelOmniRobot *robot = innerModel->getNode<InnerModelOmniRobot>("robot");
@@ -72,7 +76,7 @@ bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList params)
 	qDebug() << __FUNCTION__ << "LASER:"  << laser->id << laser->port << laser->measures << laser->min;
 	qDebug() << __FUNCTION__ << "LASER2:" <<  dynamic_cast<InnerModelLaser*>(innerModel->getNode("laser"))->port;
 	
-	innerModel->getNode<InnerModelCamera>("camera")->project("rgbd", QVec::vec3(30, 450, 500), "camera").print("project");
+	innerModel->getNode<InnerModelCamera>("camera")->project("rgbd", QVec::vec3(30, 450, 100), "camera").print("project");
 	
 	
 	timer.start(Period);
