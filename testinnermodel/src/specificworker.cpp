@@ -52,7 +52,15 @@ bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList params)
 		qFatal("Error reading config params %s", par.value.c_str());
 	}
 	
-  //innerModel->print();
+	
+  
+	qDebug() << "------------------------------";
+	
+	
+	innerModel->getNode<InnerModelLaser>("laser")->print(true);
+	qDebug() << innerModel->getNode<InnerModelLaser>("laser")->angle;
+	qDebug() << dynamic_cast<InnerModelLaser*>(innerModel->getNode("laser"))->angle;
+	
 	
 // 	InnerModelOmniRobot *robot = innerModel->getNode<InnerModelOmniRobot>("robot");
 // 	qDebug() << __FUNCTION__ << "Robot:"  << robot->id << robot->port << robot->tx << robot->ty << robot->tz;
