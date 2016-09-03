@@ -17,7 +17,7 @@
 #    along with RoboComp.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import sys, os, Ice, traceback, time
+import sys, os, Ice, traceback, time, random
 
 from PySide import *
 from genericworker import *
@@ -96,15 +96,42 @@ class SpecificWorker(GenericWorker):
 	currentTarget = -1
 	points = []
 	pointWidgets = []
+	choice = 0
+	pwl = list()
+	totalTargets = 0
 	def __init__(self, proxy_map):
 		super(SpecificWorker, self).__init__(proxy_map)
 		self.timer.timeout.connect(self.compute)
 		self.Period = 2000
 		self.timer.start(self.Period)
+		
+		# divides in left and right areas
+		self.mainlayout = QtGui.QHBoxLayout()
+		
+		# divides buttons and textedit
 		self.vlayout = QtGui.QVBoxLayout()
-		self.layout = QtGui.QHBoxLayout()
-		self.vlayout.addLayout(self.layout)
-		self.setLayout(self.vlayout)
+		
+		# divides buttons horizontally
+		self.hlayout = QtGui.QHBoxLayout()
+		
+		self.vlayout.addLayout(self.hlayout)
+		
+		# Low Text panel
+		self.edit = QtGui.QTextEdit()
+		self.vlayout.addWidget(self.edit)
+
+		self.mainlayout.addLayout(self.vlayout)
+		self.rightlayout = QtGui.QVBoxLayout()
+		self.autoButton = QtGui.QPushButton("Auto")
+		self.autoButton.setCheckable(True)
+		self.rightlayout.addWidget(self.autoButton)
+		
+		# right TextEdit area
+		self.rightedit = QtGui.QTextEdit()
+		self.rightlayout.addWidget(self.rightedit)
+
+		self.mainlayout.addLayout(self.rightlayout)
+		self.setLayout(self.mainlayout)
 
 	def setParams(self, params):
 		try:
@@ -129,11 +156,9 @@ class SpecificWorker(GenericWorker):
 			pw = PointWidget(prnt=None, x=self.points[npoint][0], z=self.points[npoint][1], a=self.points[npoint][2], ident=npoint)
 			QtCore.QObject.connect(pw, QtCore.SIGNAL('pressed(int)'), self.pressedSlot)
 			pw.stopButton.clicked.connect( self.stopRobotSlot )
-			self.layout.addWidget(pw)
+			self.hlayout.addWidget(pw)
 			self.pointWidgets.append(pw)
-
-		self.edit = QtGui.QTextEdit()
-		self.vlayout.addWidget(self.edit)
+			self.pwl.append(pw)
 
 		self.Period = 200
 
@@ -181,17 +206,26 @@ class SpecificWorker(GenericWorker):
 			print "	dist to target", s.distanceToTarget
 			print "	elapsedTime", s.elapsedTime
 			print "	ETA", s.estimatedTime
-			print " planning time", s.planningTime
+			print "	PT", s.planningTime
 			self.edit.append("STATE: " + s.state 
 										+ "	X: " + "%d mm" % s.x + "  Z: %d mm" % s.z + "  A: %.2f r" % s.ang 
 										+ "	vA: " + "%d mm/s" % s.advV + "vR %.2f r/s" % s.rotV
 										+ "	D2target: " + "%d mm" % s.distanceToTarget 
 										+ "	ET: " + "%d ms" % s.elapsedTime 
 										+ "	ETA: " + "%d ms" % s.estimatedTime
-										+ " PT: " + "%d ms" % s.planningTime )
+										+ "	PT: " + "%d ms" % s.planningTime )
 			
 		except Ice.Exception as e:
 			print e
+			
+		if self.autoButton.isChecked():
+			if s.state == "IDLE":
+				self.choice = (random.randint(0, 9))
+				self.pwl[self.choice].button.click()
+				self.rightedit.append("New target witn button " + "%d" % self.choice)
+				self.rigthedit.append("Total targets " + "%d" % self.totalTargets)
+				self.totalTargets += 1
+
 		
 ################
 ## SUBSCRIPTIONS
