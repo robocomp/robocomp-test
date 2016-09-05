@@ -201,6 +201,7 @@ class SpecificWorker(GenericWorker):
 			s = self.trajectoryrobot2d_proxy.getState()
 			print "--------- NavState -----------"
 			print "	STATE", s.state
+			print " Description:", s.description
 			print "	pose:" , "%.2f" % s.x, "%.2f" % s.z, "%.2f" % s.ang
 			print "	vel pose:", s.advV, s.rotV
 			print "	dist to target", s.distanceToTarget
@@ -208,6 +209,7 @@ class SpecificWorker(GenericWorker):
 			print "	ETA", s.estimatedTime
 			print "	PT", s.planningTime
 			self.edit.append("STATE: " + s.state 
+										+ " Description: " + s.description
 										+ "	X: " + "%d mm" % s.x + "  Z: %d mm" % s.z + "  A: %.2f r" % s.ang 
 										+ "	vA: " + "%d mm/s" % s.advV + "vR %.2f r/s" % s.rotV
 										+ "	D2target: " + "%d mm" % s.distanceToTarget 
@@ -223,7 +225,7 @@ class SpecificWorker(GenericWorker):
 				self.choice = (random.randint(0, 9))
 				self.pwl[self.choice].button.click()
 				self.rightedit.append("New target witn button " + "%d" % self.choice)
-				self.rigthedit.append("Total targets " + "%d" % self.totalTargets)
+				self.rightedit.append("Total targets " + "%d" % self.totalTargets)
 				self.totalTargets += 1
 
 		
