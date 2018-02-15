@@ -2,6 +2,7 @@
 #include <thread>
 #include <unordered_map>
 #include <string>
+#include <vector>
 
 class NODE;
 class TRANSFORM;
@@ -12,14 +13,17 @@ using TRANSFORMPtr = std::shared_ptr<TRANSFORM>;
 class NODE
 {
 	public:
-		NODE(std::string&& id_, const NODEPtr &parent_) : id(std::move(id_)) , parent(parent_)
+		NODE(std::string&& id_, const NODEPtr &parent_ = nullptr) : id(std::move(id_)) , parent(parent_) 
 		{
+			parent->addChild(this);
 		}
 		virtual ~NODE(){};
 		std::string getId() const { return id; }
+		
 	protected:
 		std::string id;
 		NODEPtr parent;
+		std::vector<NODEPtr> children;
 };
 
 class TRANSFORM : public NODE
@@ -27,22 +31,23 @@ class TRANSFORM : public NODE
 	public:
 		TRANSFORM(std::string&& id_, const NODEPtr &parent_ = nullptr) : NODE(std::move(id_), parent_)
 		{
-			std::cout << "Soy el TRANSFORM: " << id << std::endl;
-			std::cout << "gola" << std::endl;
+			if( parent != nullptr)
+				std::cout << "Soy el TRANSFORM " << id << " con padre " << parent->getId() << std::endl;
+			else
+				std::cout << "Soy el TRANSFORM " << id << " sin padre " << std::endl;
 		}	
 };
 
-// class CAMERA : public NODE
-// {
-// 	public:
-// 		CAMERA(std::string&& id_): NODE(std::move(id_))
-// 		{
-// 			//id = std::move(id_);
-// 			std::cout << "Soy CAMERA" << std::endl;
-// 		}
-// 	private:
-// 		
-// };
+class CAMERA : public TRANSFORM
+{
+	public:
+		CAMERA(std::string&& id_, const NODEPtr &parent_ = nullptr): TRANSFORM(std::move(id_), parent_)
+		{
+			std::cout << "Soy CAMERA " << id << std::endl;
+		}
+	private:
+		
+};
 
 class Inner
 {
@@ -58,21 +63,15 @@ class Inner
 			auto t = std::make_tuple(params...);
 			std::string id = (std::get<0>(t));
 			std::shared_ptr<T> node(new T(std::forward<Ts>(params)...)); 
-			std::cout << "gola1" << std::endl;
-			NODEPtr kk = std::static_pointer_cast<NODE>(node);
-			std::cout << "gola2 " << kk->getId() << " " << (kk==nullptr) << std::endl;
-			NODEPtr kkk;
-			hash.insert({id, kkk});
-			//bool ok = hash.insert({id, kk}).second;
-			std::cout << "gola3" << std::endl;
-			return node;
+			bool ok = hash.insert({id, std::static_pointer_cast<NODE>(node)}).second;
+			if(ok)
+				return node;
+			else 
+				throw;
 		}
-		//void setRoot(TRANSFORMPtr&& r)						{ std::cout << "gola" << std::endl ; root = std::move(r);};
-		void setRoot(const TRANSFORMPtr &r)						{ std::cout << "gola" << std::endl ; root = r;};
+		void setRoot(const TRANSFORMPtr &r)						{ root = r;};
 		
 		std::unordered_map<std::string, std::shared_ptr<NODE>> hash;
-		std::unordered_map<std::string, int> ihash = {{"gola",5}};
-		
 		
 	private:
 		TRANSFORMPtr root;
@@ -81,15 +80,13 @@ class Inner
 int main()
 {
 	std::cout << std::boolalpha;   	
-	Inner *inner = new Inner();
-	std::cout << inner->ihash.size() << std::endl;
-	inner->ihash.insert({"gola", 5});
-	std::cout << "gola3.5" << std::endl;
-	inner->hash.insert({"gola", std::shared_ptr<NODE>()});
+	auto inner = std::make_shared<Inner>();
 	
 	auto a = inner->newNode<TRANSFORM>("root");
-	std::cout << "gola4" << std::endl;
 	inner->setRoot( a );
-	std::cout << "gola5" << std::endl;
 	inner->newNode<TRANSFORM>("t1", inner->hash.at("root"));
+	inner->newNode<TRANSFORM>("t2", inner->hash.at("root"));
+	inner->newNode<CAMERA>("c1", inner->hash.at("t2"));
+	
+	//inner->print("Inner");
 }
