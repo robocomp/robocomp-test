@@ -242,7 +242,7 @@ class SpecificWorker(GenericWorker):
 		target = RoboCompTrajectoryRobot2D.TargetPose()
 		target.x = myPick.x
 		target.y = 0
-		target.z = -myPick.z
+		target.z = myPick.z
 		target.doRotation = False
 		try:
 			self.trajectoryrobot2d_proxy.go(target)
