@@ -6,24 +6,34 @@
 
 class NODE;
 class TRANSFORM;
+class JOINT;
 using NODEPtr = std::shared_ptr<NODE>; 
 using TRANSFORMPtr = std::shared_ptr<TRANSFORM>;
-//using CAMERAPtr = std::shared_ptr<CAMERA>; 
+using JOINTPtr = std::shared_ptr<JOINT>; 
 
 class NODE
 {
 	public:
 		NODE(std::string&& id_, const NODEPtr &parent_ = nullptr) : id(std::move(id_)) , parent(parent_) 
-		{
-			parent->addChild(this);
-		}
+		{}
 		virtual ~NODE(){};
-		std::string getId() const { return id; }
+		std::string getId() const 	{ return id; }
+		void addChild(NODE *node)	{ children.push_back(node);};
+		void print()
+		{
+			std::cout << "enter to print " << id << " " << children.size() << std::endl;
+			std::vector<NODE*>::iterator i;
+			for (i=children.begin(); i!=children.end(); i++)
+			{
+				(*i)->print(); 
+			}
+			std::cout << "ID:" << id << std::endl;
+		}
 		
 	protected:
 		std::string id;
 		NODEPtr parent;
-		std::vector<NODEPtr> children;
+		std::vector<NODE*> children;
 };
 
 class TRANSFORM : public NODE
@@ -32,18 +42,27 @@ class TRANSFORM : public NODE
 		TRANSFORM(std::string&& id_, const NODEPtr &parent_ = nullptr) : NODE(std::move(id_), parent_)
 		{
 			if( parent != nullptr)
+			{
+				parent->addChild(this);
 				std::cout << "Soy el TRANSFORM " << id << " con padre " << parent->getId() << std::endl;
+			}
 			else
 				std::cout << "Soy el TRANSFORM " << id << " sin padre " << std::endl;
-		}	
+		}
 };
 
-class CAMERA : public TRANSFORM
+class JOINT: public TRANSFORM
 {
 	public:
-		CAMERA(std::string&& id_, const NODEPtr &parent_ = nullptr): TRANSFORM(std::move(id_), parent_)
+		JOINT(std::string&& id_, const NODEPtr &parent_ = nullptr): TRANSFORM(std::move(id_), parent_)
 		{
-			std::cout << "Soy CAMERA " << id << std::endl;
+			if( parent != nullptr)
+			{
+				parent->addChild(this);
+				std::cout << "Soy JOINT " << id << " con padre " << parent->getId() << std::endl;
+			}
+			else
+				std::cout << "Soy JOINT " << id << " sin padre " << std::endl;
 		}
 	private:
 		
@@ -69,7 +88,9 @@ class Inner
 			else 
 				throw;
 		}
+		
 		void setRoot(const TRANSFORMPtr &r)						{ root = r;};
+		void print() const 										{ root->print();}
 		
 		std::unordered_map<std::string, std::shared_ptr<NODE>> hash;
 		
@@ -86,7 +107,7 @@ int main()
 	inner->setRoot( a );
 	inner->newNode<TRANSFORM>("t1", inner->hash.at("root"));
 	inner->newNode<TRANSFORM>("t2", inner->hash.at("root"));
-	inner->newNode<CAMERA>("c1", inner->hash.at("t2"));
+	inner->newNode<JOINT>("c1", inner->hash.at("t2"));
 	
-	//inner->print("Inner");
+	inner->print();
 }
