@@ -1,5 +1,5 @@
 TARGET = inner
-LIBS = -lm
+LIBS = -lm -pthread
 CPP = g++-7
 CPPFLAGS = -g -std=c++17 -Wall 
 

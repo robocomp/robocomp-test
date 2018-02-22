@@ -3,6 +3,12 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
+#include <mutex>
+#include <random>
+#include <future>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 class NODE;
 class TRANSFORM;
@@ -11,14 +17,52 @@ using NODEPtr = std::shared_ptr<NODE>;
 using TRANSFORMPtr = std::shared_ptr<TRANSFORM>;
 using JOINTPtr = std::shared_ptr<JOINT>; 
 
+namespace mapExt
+{
+    template<typename myMap>
+    std::vector<typename myMap::key_type> Keys(const myMap& m)
+    {
+        std::vector<typename myMap::key_type> r;
+        r.reserve(m.size());
+        for (const auto&kvp : m)
+        {
+            r.push_back(kvp.first);
+        }
+        return r;
+    }
+
+    template<typename myMap>
+    std::vector<typename myMap::mapped_type> Values(const myMap& m)
+    {
+        std::vector<typename myMap::mapped_type> r;
+        r.reserve(m.size());
+        for (const auto&kvp : m)
+        {
+            r.push_back(kvp.second);
+        }
+        return r;
+    }
+}
+
 class NODE
 {
 	public:
-		NODE(std::string&& id_, const NODEPtr &parent_ = nullptr) : id(std::move(id_)) , parent(parent_) 
-		{}
+		NODE(const std::string& id_, const NODEPtr &parent_ = nullptr) : id(std::move(id_)) , parent(parent_) 
+		{
+			if( parent != nullptr)
+			{
+				parent->addChild(this);
+				//std::cout << "Soy el TRANSFORM " << id << " con padre " << parent->getId() << std::endl;
+			}
+			//else
+				//std::cout << "Soy el TRANSFORM " << id << " sin padre " << std::endl;
+		}
 		virtual ~NODE(){};
-		std::string getId() const 	{ return id; }
-		void addChild(NODE *node)	{ children.push_back(node);};
+		std::string getId() const 						{ return id; }
+		std::string getId2() const 						{ return id2; }
+		void setId(const std::string &id_) 				{ id = id_;}
+		void setId2(const std::string &id_) 			{ id2 = id_;}
+		void addChild(NODE *node)						{ children.push_back(node);};
 		void print()
 		{
 			std::cout << "enter to print " << id << " " << children.size() << std::endl;
@@ -31,7 +75,8 @@ class NODE
 		}
 		
 	protected:
-		std::string id;
+		mutable std::mutex mymutex;
+		std::string id, id2;
 		NODEPtr parent;
 		std::vector<NODE*> children;
 };
@@ -39,33 +84,38 @@ class NODE
 class TRANSFORM : public NODE
 {
 	public:
-		TRANSFORM(std::string&& id_, const NODEPtr &parent_ = nullptr) : NODE(std::move(id_), parent_)
-		{
-			if( parent != nullptr)
-			{
-				parent->addChild(this);
-				std::cout << "Soy el TRANSFORM " << id << " con padre " << parent->getId() << std::endl;
-			}
-			else
-				std::cout << "Soy el TRANSFORM " << id << " sin padre " << std::endl;
-		}
+		TRANSFORM(const std::string& id_, const NODEPtr &parent_ = nullptr) : NODE(std::move(id_), parent_)
+		{}
 };
 
 class JOINT: public TRANSFORM
 {
 	public:
-		JOINT(std::string&& id_, const NODEPtr &parent_ = nullptr): TRANSFORM(std::move(id_), parent_)
-		{
-			if( parent != nullptr)
-			{
-				parent->addChild(this);
-				std::cout << "Soy JOINT " << id << " con padre " << parent->getId() << std::endl;
-			}
-			else
-				std::cout << "Soy JOINT " << id << " sin padre " << std::endl;
-		}
+		JOINT(const std::string& id_, const NODEPtr &parent_ = nullptr): TRANSFORM(std::move(id_), parent_)
+		{}
 	private:
 		
+};
+
+template <typename T>
+class Proxy : public T
+{
+	public:
+		//Proxy(const std::shared_ptr<T> &node_) : T(node_->getId())
+		Proxy(T *node_) : T(node_->getId())
+		{
+			node = node_;
+			T::mymutex.lock();
+			//std::cout << node->getId() << " dentro " << node->getId2() << std::endl;
+		}
+		~Proxy()							{ T::mymutex.unlock();	}
+		std::shared_ptr<T> operator ->() 	{ std::cout << node->getId() << " dentro " << node->getId2() << std::endl;
+		return node;}
+		//std::string getId() const 			{ return node->getId(); }
+		std::string getId2T() const 		{ return node->getId2(); }
+		
+		//std::shared_ptr<T> node;
+		T* node;
 };
 
 class Inner
@@ -88,7 +138,25 @@ class Inner
 			else 
 				throw;
 		}
-		
+		//////////////////////////////////////
+		/// Node getter
+		///////////////
+		/////////////////////////////////////
+		template <typename N> 
+		std::shared_ptr<Proxy<N>> getNode(const std::string &id) 
+		{
+			try 
+			{ 
+				auto n = hash.at(id);
+				auto nn = std::static_pointer_cast<N>(n);
+				return std::shared_ptr<Proxy<N>>(new Proxy<N>(nn.get()));
+			}
+			catch(const std::exception &e)
+			{ 
+				std::cout << e.what() << std::endl;
+				return std::shared_ptr<Proxy<N>>();
+			}
+		}
 		void setRoot(const TRANSFORMPtr &r)						{ root = r;};
 		void print() const 										{ root->print();}
 		
@@ -98,6 +166,44 @@ class Inner
 		TRANSFORMPtr root;
 };
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void readThread(const std::shared_ptr<Inner> &inner)
+{
+	std::random_device r;
+	std::default_random_engine e1(r());
+	std::vector<std::string> keys = mapExt::Keys(inner->hash);
+	std::uniform_int_distribution<int> uniform_dist(0, keys.size()-1);
+	while(true)
+	{
+		//inner->print();
+		auto target = keys[uniform_dist(e1)];
+		auto node = inner->getNode<TRANSFORM>(target);
+		//std::shared_ptr<Proxy<TRANSFORM>> n = std::static_pointer_cast<Proxy<TRANSFORM>>(node);
+		//std::shared_ptr<Proxy<TRANSFORM>> n = node;
+		std::cout <<  node->getId2T() << " " << node->getId() << std::endl;
+		std::this_thread::sleep_for(1ms);
+	}
+}
+void writeThread(const std::shared_ptr<Inner> &inner)
+{
+	std::random_device r;
+	std::default_random_engine e1(r());
+	std::vector<std::string> keys = mapExt::Keys(inner->hash);
+	std::uniform_int_distribution<int> uniform_dist(0, keys.size()-1);
+	
+	while(true)
+	{
+		auto target = keys[uniform_dist(e1)];
+		auto node = inner->getNode<TRANSFORM>(target);
+		auto id = node->getId();
+		std::this_thread::sleep_for(1ms);		
+		node->setId(id);
+		std::this_thread::sleep_for(1ms);		
+	}
+}
+
+
 int main()
 {
 	std::cout << std::boolalpha;   	
@@ -105,9 +211,30 @@ int main()
 	
 	auto a = inner->newNode<TRANSFORM>("root");
 	inner->setRoot( a );
-	inner->newNode<TRANSFORM>("t1", inner->hash.at("root"));
-	inner->newNode<TRANSFORM>("t2", inner->hash.at("root"));
-	inner->newNode<JOINT>("c1", inner->hash.at("t2"));
+	auto t1 = inner->newNode<TRANSFORM>("t1", inner->hash.at("root")); t1->setId2("caca1");
+	auto t2 = inner->newNode<TRANSFORM>("t2", inner->hash.at("root")); t2->setId2("caca2");
+	auto t3 = inner->newNode<TRANSFORM>("t3", inner->hash.at("root")); t3->setId2("caca3");
+	auto t4 = inner->newNode<TRANSFORM>("t4", inner->hash.at("root")); t4->setId2("caca4");
+
+	inner->newNode<JOINT>("j1", inner->hash.at("t1"));
+	inner->newNode<JOINT>("j2", inner->hash.at("t2"));
+	inner->newNode<JOINT>("j3", inner->hash.at("t3"));
+	
+	inner->newNode<TRANSFORM>("t5", inner->hash.at("t4"));
+	inner->newNode<TRANSFORM>("t6", inner->hash.at("t4"));
 	
 	inner->print();
+	
+	std::cout << "----------------getNode---------------------" << std::endl;
+	auto j = inner->getNode<JOINT>("j1");
+	j->print();
+	auto t = inner->getNode<TRANSFORM>("t1");
+	t->print();
+	
+	std::cout << "-----------threads-------------------------" << std::endl;
+ 	auto task1 = std::async(std::launch::async, readThread, inner);
+ 	auto task2 = std::async(std::launch::async, writeThread, inner);
+ 	task1.wait();
+	task2.wait();
+	
 }
