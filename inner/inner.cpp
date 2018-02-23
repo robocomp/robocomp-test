@@ -65,13 +65,13 @@ class NODE
 		void addChild(NODE *node)						{ children.push_back(node);};
 		void print()
 		{
-			std::cout << "enter to print " << id << " " << children.size() << std::endl;
+			std::cout << "PRINT: enter to print " << id << " " << children.size() << std::endl;
 			std::vector<NODE*>::iterator i;
 			for (i=children.begin(); i!=children.end(); i++)
 			{
 				(*i)->print(); 
 			}
-			std::cout << "ID:" << id << std::endl;
+			std::cout << "PRINT: ID:" << id << std::endl;
 		}
 		
 	protected:
@@ -101,21 +101,20 @@ template <typename T>
 class Proxy : public T
 {
 	public:
-		//Proxy(const std::shared_ptr<T> &node_) : T(node_->getId())
-		Proxy(T *node_) : T(node_->getId())
+		Proxy(const std::shared_ptr<T> &node_) : T(node_->getId())
+		//Proxy(T *node_) : T(node_->getId())
 		{
 			node = node_;
 			T::mymutex.lock();
 			//std::cout << node->getId() << " dentro " << node->getId2() << std::endl;
 		}
 		~Proxy()							{ T::mymutex.unlock();	}
-		std::shared_ptr<T> operator ->() 	{ std::cout << node->getId() << " dentro " << node->getId2() << std::endl;
-		return node;}
+		//std::shared_ptr<T> operator ->() 	{ std::cout << node->getId() << " dentro " << node->getId2() << std::endl; return node;}
 		//std::string getId() const 			{ return node->getId(); }
 		std::string getId2T() const 		{ return node->getId2(); }
 		
-		//std::shared_ptr<T> node;
-		T* node;
+		std::shared_ptr<T> node;
+		//T* node;
 };
 
 class Inner
@@ -140,7 +139,6 @@ class Inner
 		}
 		//////////////////////////////////////
 		/// Node getter
-		///////////////
 		/////////////////////////////////////
 		template <typename N> 
 		std::shared_ptr<Proxy<N>> getNode(const std::string &id) 
@@ -148,8 +146,9 @@ class Inner
 			try 
 			{ 
 				auto n = hash.at(id);
+				std::cout << "shit" << std::endl;
 				auto nn = std::static_pointer_cast<N>(n);
-				return std::shared_ptr<Proxy<N>>(new Proxy<N>(nn.get()));
+				return std::shared_ptr<Proxy<N>>(new Proxy<N>(nn));
 			}
 			catch(const std::exception &e)
 			{ 
@@ -179,8 +178,6 @@ void readThread(const std::shared_ptr<Inner> &inner)
 		//inner->print();
 		auto target = keys[uniform_dist(e1)];
 		auto node = inner->getNode<TRANSFORM>(target);
-		//std::shared_ptr<Proxy<TRANSFORM>> n = std::static_pointer_cast<Proxy<TRANSFORM>>(node);
-		//std::shared_ptr<Proxy<TRANSFORM>> n = node;
 		std::cout <<  node->getId2T() << " " << node->getId() << std::endl;
 		std::this_thread::sleep_for(1ms);
 	}
@@ -202,7 +199,6 @@ void writeThread(const std::shared_ptr<Inner> &inner)
 		std::this_thread::sleep_for(1ms);		
 	}
 }
-
 
 int main()
 {
@@ -228,13 +224,13 @@ int main()
 	std::cout << "----------------getNode---------------------" << std::endl;
 	auto j = inner->getNode<JOINT>("j1");
 	j->print();
-	auto t = inner->getNode<TRANSFORM>("t1");
+	auto t = inner->getNode<TRANSFORM>("c1");
 	t->print();
 	
 	std::cout << "-----------threads-------------------------" << std::endl;
- 	auto task1 = std::async(std::launch::async, readThread, inner);
- 	auto task2 = std::async(std::launch::async, writeThread, inner);
- 	task1.wait();
-	task2.wait();
+//  	auto task1 = std::async(std::launch::async, readThread, inner);
+//  	auto task2 = std::async(std::launch::async, writeThread, inner);
+//  	task1.wait();
+// 	task2.wait();
 	
 }
