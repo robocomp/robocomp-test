@@ -13,9 +13,11 @@ using namespace std::chrono_literals;
 class NODE;
 class TRANSFORM;
 class JOINT;
+class Inner;
 using NODEPtr = std::shared_ptr<NODE>; 
 using TRANSFORMPtr = std::shared_ptr<TRANSFORM>;
 using JOINTPtr = std::shared_ptr<JOINT>; 
+using INNERPtr = std::shared_ptr<Inner>;
 
 namespace mapExt
 {
@@ -44,14 +46,16 @@ namespace mapExt
     }
 }
 
+
 class NODE
 {
 	public:
-		NODE(const std::string& id_, const NODEPtr &parent_ = nullptr) : id(std::move(id_)) , parent(parent_) 
+		NODE(const std::string& id_, const INNERPtr &inner_, const NODEPtr &parent_ = nullptr) : id(id_), parent(parent_) 
 		{
+			inner = inner_;
 			if( parent != nullptr)
 			{
-				parent->addChild(this);
+				parent->addChild(id);
 				//std::cout << "Soy el TRANSFORM " << id << " con padre " << parent->getId() << std::endl;
 			}
 			//else
@@ -62,15 +66,21 @@ class NODE
 		std::string getId2() const 						{ return id2; }
 		void setId(const std::string &id_) 				{ id = id_;}
 		void setId2(const std::string &id_) 			{ id2 = id_;}
-		void addChild(NODE *node)						{ children.push_back(node);};
+		void addChild(const std::string &id)			{ children.push_back(id);};
 		void print()
 		{
 			std::cout << "PRINT: enter to print " << id << " " << children.size() << std::endl;
-			std::vector<NODE*>::iterator i;
-			for (i=children.begin(); i!=children.end(); i++)
+			for(auto&& id : children)
 			{
-				(*i)->print(); 
+				auto child = inner->getNode<NODE>(id);
+				child->print();
 			}
+			
+			std::vector<std::string>::iterator i;
+			//for (i=children.begin(); i!=children.end(); i++)
+			//{
+			//	(*i)->print(); 
+			//}
 			std::cout << "PRINT: ID:" << id << std::endl;
 		}
 		
@@ -78,24 +88,27 @@ class NODE
 		mutable std::mutex mymutex;
 		std::string id, id2;
 		NODEPtr parent;
-		std::vector<NODE*> children;
+		std::vector<std::string> children;
+		std::shared_ptr<Inner> inner;
 };
 
 class TRANSFORM : public NODE
 {
 	public:
-		TRANSFORM(const std::string& id_, const NODEPtr &parent_ = nullptr) : NODE(std::move(id_), parent_)
+		TRANSFORM(const std::string& id_, const INNERPtr &inner_,const NODEPtr &parent_ = nullptr) : NODE(id_, inner, parent_)
 		{}
 };
 
 class JOINT: public TRANSFORM
 {
 	public:
-		JOINT(const std::string& id_, const NODEPtr &parent_ = nullptr): TRANSFORM(std::move(id_), parent_)
+		JOINT(const std::string& id_, const INNERPtr &inner_, const NODEPtr &parent_ = nullptr): TRANSFORM(id_, inner, parent_)
 		{}
 	private:
 		
 };
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////7
 
 template <typename T>
 class Proxy : public T
@@ -165,6 +178,7 @@ class Inner
 		TRANSFORMPtr root;
 };
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void readThread(const std::shared_ptr<Inner> &inner)
@@ -207,17 +221,17 @@ int main()
 	
 	auto a = inner->newNode<TRANSFORM>("root");
 	inner->setRoot( a );
-	auto t1 = inner->newNode<TRANSFORM>("t1", inner->hash.at("root")); t1->setId2("caca1");
-	auto t2 = inner->newNode<TRANSFORM>("t2", inner->hash.at("root")); t2->setId2("caca2");
-	auto t3 = inner->newNode<TRANSFORM>("t3", inner->hash.at("root")); t3->setId2("caca3");
-	auto t4 = inner->newNode<TRANSFORM>("t4", inner->hash.at("root")); t4->setId2("caca4");
+	auto t1 = inner->newNode<TRANSFORM>("t1", inner, inner->hash.at("root")); t1->setId2("caca1");
+	auto t2 = inner->newNode<TRANSFORM>("t2", inner, inner->hash.at("root")); t2->setId2("caca2");
+	auto t3 = inner->newNode<TRANSFORM>("t3", inner, inner->hash.at("root")); t3->setId2("caca3");
+	auto t4 = inner->newNode<TRANSFORM>("t4", inner, inner->hash.at("root")); t4->setId2("caca4");
 
-	inner->newNode<JOINT>("j1", inner->hash.at("t1"));
-	inner->newNode<JOINT>("j2", inner->hash.at("t2"));
-	inner->newNode<JOINT>("j3", inner->hash.at("t3"));
+	inner->newNode<JOINT>("j1", inner, inner->hash.at("t1"));
+	inner->newNode<JOINT>("j2", inner, inner->hash.at("t2"));
+	inner->newNode<JOINT>("j3", inner, inner->hash.at("t3"));
 	
-	inner->newNode<TRANSFORM>("t5", inner->hash.at("t4"));
-	inner->newNode<TRANSFORM>("t6", inner->hash.at("t4"));
+	inner->newNode<TRANSFORM>("t5", inner, inner->hash.at("t4"));
+	inner->newNode<TRANSFORM>("t6", inner, inner->hash.at("t4"));
 	
 	inner->print();
 	
