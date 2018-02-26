@@ -1,7 +1,8 @@
-TARGET = inner
+TARGET = main
 LIBS = -lm -pthread
 CPP = g++-7
 CPPFLAGS = -g -std=c++17 -Wall 
+
 
 .PHONY: default all clean
 
@@ -9,9 +10,9 @@ default: $(TARGET)
 all: default
 
 OBJECTS = $(patsubst %.cpp, %.o, $(wildcard *.cpp))
-HEADERS = $(wildcard *.h)
+HEADERS = $(wildcard *.h )
 
-%.o: %.c $(HEADERS)
+%.o: %.c $(HEADERS) 
 	$(CPP) $(CPPFLAGS) -c $< -o $@
 
 .PRECIOUS: $(TARGET) $(OBJECTS)
