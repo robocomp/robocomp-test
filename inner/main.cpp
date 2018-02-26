@@ -55,10 +55,11 @@ void readThread(const std::shared_ptr<Inner> &inner)
 	std::uniform_int_distribution<int> uniform_dist(0, keys.size()-1);
 	while(true)
 	{
-		//inner->print();
-		auto target = keys[uniform_dist(e1)];
-		auto node = inner->getNode<NODE>(target);
-		std::cout <<  "thread " << node->getId2() << " and " << node->getId() << std::endl;
+		inner->print();
+// 		auto target = keys[uniform_dist(e1)];
+// 		auto node = inner->getNode<NODE>(target);
+// 		if(node.operator bool() )
+// 			std::cout <<  "thread " << node->getId2() << " and " << node->getId() << std::endl;
 		std::this_thread::sleep_for(1ms);
 	}
 }
@@ -73,9 +74,26 @@ void writeThread(const std::shared_ptr<Inner> &inner)
 	{
 		auto target = keys[uniform_dist(e1)];
 		auto node = inner->getNode<TRANSFORM>(target);
-		auto id = node->getId();
-		std::this_thread::sleep_for(1ms);		
-		node->setId(id);
+		if(node.operator bool())
+		{
+			auto id = node->getId();
+			std::this_thread::sleep_for(1ms);		
+			node->setId(id);
+			std::this_thread::sleep_for(1ms);		
+		}
+	}
+}
+
+void createThread(const std::shared_ptr<Inner> &inner)
+{
+	std::random_device r;
+	std::default_random_engine e1(r());
+	std::vector<std::string> keys = mapExt::Keys(inner->hash);
+	std::uniform_int_distribution<int> uniform_dist(0, keys.size()-1);
+	
+	while(true)
+	{
+		
 		std::this_thread::sleep_for(1ms);		
 	}
 }
@@ -85,20 +103,21 @@ int main()
 	std::cout << std::boolalpha;   	
 	auto inner = std::make_shared<Inner>();
 	
-	auto a = inner->newNode<TRANSFORM>("root");
+	auto a = inner->newNode<TRANSFORM>("root", inner);
 	inner->setRoot( a );
-	auto t1 = inner->newNode<TRANSFORM>("t1", inner->hash.at("root")); t1->setId2("caca1");
-	auto t2 = inner->newNode<TRANSFORM>("t2", inner->hash.at("root")); t2->setId2("caca2");
-	auto t3 = inner->newNode<TRANSFORM>("t3", inner->hash.at("root")); t3->setId2("caca3");
-	auto t4 = inner->newNode<TRANSFORM>("t4", inner->hash.at("root")); t4->setId2("caca4");
+	auto t1 = inner->newNode<TRANSFORM>("t1", inner, inner->hash.at("root")); t1->setId2("caca1");
+	auto t2 = inner->newNode<TRANSFORM>("t2", inner, inner->hash.at("root")); t2->setId2("caca2");
+	auto t3 = inner->newNode<TRANSFORM>("t3", inner, inner->hash.at("root")); t3->setId2("caca3");
+	auto t4 = inner->newNode<TRANSFORM>("t4", inner, inner->hash.at("root")); t4->setId2("caca4");
 
-	inner->newNode<JOINT>("j1", inner->hash.at("t1"));
-	inner->newNode<JOINT>("j2", inner->hash.at("t2"));
-	inner->newNode<JOINT>("j3", inner->hash.at("t3"));
+	inner->newNode<JOINT>("j1", inner, inner->hash.at("t1"));
+	inner->newNode<JOINT>("j2", inner, inner->hash.at("t2"));
+	inner->newNode<JOINT>("j3", inner, inner->hash.at("t3"));
 	
-	inner->newNode<TRANSFORM>("t5", inner->hash.at("t4"));
-	inner->newNode<TRANSFORM>("t6", inner->hash.at("t4"));
+	inner->newNode<TRANSFORM>("t5", inner, inner->hash.at("t4"));
+	inner->newNode<TRANSFORM>("t6", inner, inner->hash.at("t4"));
 	
+	std::cout << "Created, now printing" << std::endl;
 	inner->print();
 	
 	std::cout << "----------------getNode---------------------" << std::endl;
@@ -109,9 +128,21 @@ int main()
 	t->print();
 	
 	std::cout << "-----------threads-------------------------" << std::endl;
-  	auto task1 = std::async(std::launch::async, readThread, inner);
-//  	auto task2 = std::async(std::launch::async, writeThread, inner);
-  	task1.wait();
-// 	task2.wait();
+	std::vector<int> RN = {0,1}, WN = {0,1,2,3,4,5}, CN = {0};
+	std::future<void> threadsR[RN.size()], threadsW[WN.size()], threadsC[CN.size()];
 	
+	for (auto&& i : RN)
+		threadsR[i] = std::async(std::launch::async, readThread, inner);
+	for (auto&& i : WN)
+		threadsW[i] = std::async(std::launch::async, writeThread, inner);
+	for (auto&& i : CN)
+		threadsC[i] = std::async(std::launch::async, createThread, inner);
+	 
+	for (auto&& i: RN)
+		threadsR[i].wait();
+	for (auto&& i: WN)
+		threadsW[i].wait();
+  	for (auto&& i: CN)
+		threadsC[i].wait();
+  	
 }

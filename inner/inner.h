@@ -23,6 +23,7 @@
 #include <string>
 #include <vector>
 #include <mutex>
+
 #include <unordered_map>
 
 #include "nodes.h"
@@ -31,22 +32,38 @@ using NODEPtr = std::shared_ptr<NODE>;
 using TRANSFORMPtr = std::shared_ptr<TRANSFORM>;
 using JOINTPtr = std::shared_ptr<JOINT>; 
 
+using namespace std::chrono_literals;
+
+////////////////////////////////////
+/// Proxy class. Have to reproduce Node's interface 'cause -> overload does not work
+////////////////////////////////////
+
 template <typename T>
-class Proxy 
+class Proxy : public T
 {
 	public:
-		Proxy(const std::shared_ptr<T> &node_)
+		Proxy(const std::shared_ptr<T> &node_, const std::shared_ptr<Inner> &inner) : T(node_->getId(), inner)
 		{
 			node = node_;
-			//node->lock();
-			std::cout << node->getId() << " dentro " << node->getId2() << std::endl;
+			if (node->lock())
+				std::cout << node->getId() << " dentro " << node->getId2() << std::endl;
+			else
+				throw std::runtime_error("Could not lock the mutex");
 		}
-		~Proxy()								{ std::cout << "me matan" << std::endl;  /*node->unlock(); */}
+		~Proxy()										{ std::cout << "me matan" << std::endl;  node->unlock(); }
 		
-		std::shared_ptr<T> * operator ->() const	{ return node;}
-		//std::string getId() const 			{ std::cout << "En getId del proxy" << std::endl; return node->getId(); }
-		//std::string getId2T() const 			{ return node->getId2(); }
+		//std::shared_ptr<T> operator ->() const	{ return node;}
 		
+		std::string getId() const 						{ return node->getId(); }
+		std::string getId2() const 						{ return node->getId2(); }
+		void setId(const std::string &id_) 				{ node->setId(id_);}
+		void setId2(const std::string &id_) 			{ node->setId(id_);}
+		void addChild(NODE *node_)						{ node->children.push_back(node_);};
+		void print() const								{ node->print(); }								
+		void lock() 									{ node->lock();}
+		void unlock()   								{ node->unlock();}
+		
+	private:		
 		std::shared_ptr<T> node;
 };
 
@@ -68,7 +85,7 @@ class Inner
 			if(ok)
 				return node;
 			else 
-				throw;
+				throw std::out_of_range("Cannot insert id in hash");
 		}
 		//////////////////////////////////////
 		/// Node getter
@@ -80,7 +97,7 @@ class Inner
 			{ 
 				auto n = hash.at(id);
 				auto nn = std::static_pointer_cast<N>(n);
-				return std::shared_ptr<Proxy<N>>(new Proxy<N>(nn));
+				return std::shared_ptr<Proxy<N>>(new Proxy<N>(nn, std::shared_ptr<Inner>()));
 			}
 			catch(const std::exception &e)
 			{ 
