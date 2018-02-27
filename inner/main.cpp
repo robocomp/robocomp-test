@@ -18,32 +18,6 @@ using NODEPtr = std::shared_ptr<NODE>;
 using TRANSFORMPtr = std::shared_ptr<TRANSFORM>;
 using JOINTPtr = std::shared_ptr<JOINT>; 
 
-namespace mapExt
-{
-    template<typename myMap>
-    std::vector<typename myMap::key_type> Keys(const myMap& m)
-    {
-        std::vector<typename myMap::key_type> r;
-        r.reserve(m.size());
-        for (const auto&kvp : m)
-        {
-            r.push_back(kvp.first);
-        }
-        return r;
-    }
-
-    template<typename myMap>
-    std::vector<typename myMap::mapped_type> Values(const myMap& m)
-    {
-        std::vector<typename myMap::mapped_type> r;
-        r.reserve(m.size());
-        for (const auto&kvp : m)
-        {
-            r.push_back(kvp.second);
-        }
-        return r;
-    }
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -51,27 +25,28 @@ void readThread(const std::shared_ptr<Inner> &inner)
 {
 	std::random_device r;
 	std::default_random_engine e1(r());
-	std::vector<std::string> keys = mapExt::Keys(inner->hash);
+	std::vector<std::string> keys = inner->hash.keys();
 	std::uniform_int_distribution<int> uniform_dist(0, keys.size()-1);
 	while(true)
 	{
+		
 		inner->print();
 // 		auto target = keys[uniform_dist(e1)];
 // 		auto node = inner->getNode<NODE>(target);
 // 		if(node.operator bool() )
 // 			std::cout <<  "thread " << node->getId2() << " and " << node->getId() << std::endl;
-		std::this_thread::sleep_for(1ms);
+		std::this_thread::sleep_for(100ms);
 	}
 }
 void writeThread(const std::shared_ptr<Inner> &inner)
 {
 	std::random_device r;
 	std::default_random_engine e1(r());
-	std::vector<std::string> keys = mapExt::Keys(inner->hash);
-	std::uniform_int_distribution<int> uniform_dist(0, keys.size()-1);
 	
 	while(true)
 	{
+		std::vector<std::string> keys = inner->hash.keys();
+		std::uniform_int_distribution<int> uniform_dist(0, keys.size()-1);
 		auto target = keys[uniform_dist(e1)];
 		auto node = inner->getNode<TRANSFORM>(target);
 		if(node.operator bool())
@@ -79,7 +54,7 @@ void writeThread(const std::shared_ptr<Inner> &inner)
 			auto id = node->getId();
 			std::this_thread::sleep_for(1ms);		
 			node->setId(id);
-			std::this_thread::sleep_for(1ms);		
+			std::this_thread::sleep_for(100ms);		
 		}
 	}
 }
@@ -88,13 +63,20 @@ void createThread(const std::shared_ptr<Inner> &inner)
 {
 	std::random_device r;
 	std::default_random_engine e1(r());
-	std::vector<std::string> keys = mapExt::Keys(inner->hash);
-	std::uniform_int_distribution<int> uniform_dist(0, keys.size()-1);
+	std::uniform_int_distribution<int> name_dist(0, 10000);
 	
 	while(true)
 	{
-		
-		std::this_thread::sleep_for(1ms);		
+		std::vector<std::string> keys = inner->hash.keys();
+		std::uniform_int_distribution<int> uniform_dist(0, keys.size()-1);
+		auto parent = keys[uniform_dist(e1)];
+		std::string id = std::to_string(name_dist(e1));
+		std::cout << "new id " << id << std::endl;
+		try
+		{	auto n = inner->newNode<TRANSFORM>(id, inner, inner->hash.at(parent)); }
+		catch(const std::exception &e) 
+		{	std::cout << e.what() << std::endl;}
+		std::this_thread::sleep_for(100ms);		
 	}
 }
 
@@ -133,16 +115,17 @@ int main()
 	
 	for (auto&& i : RN)
 		threadsR[i] = std::async(std::launch::async, readThread, inner);
-	for (auto&& i : WN)
-		threadsW[i] = std::async(std::launch::async, writeThread, inner);
+
+	
+// 	for (auto&& i : WN)
+// 		threadsW[i] = std::async(std::launch::async, writeThread, inner);
+// 	for (auto&& i: WN)
+// 		threadsW[i].wait();
+	
 	for (auto&& i : CN)
 		threadsC[i] = std::async(std::launch::async, createThread, inner);
-	 
-	for (auto&& i: RN)
-		threadsR[i].wait();
-	for (auto&& i: WN)
-		threadsW[i].wait();
   	for (auto&& i: CN)
 		threadsC[i].wait();
-  	
+	for (auto&& i: RN)
+		threadsR[i].wait();  	
 }

@@ -16,6 +16,7 @@ class Inner;
 class NODE
 {
 	public:
+		NODE(){};
 		NODE(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::shared_ptr<NODE> &parent_ = nullptr) : id(id_) , parent(parent_) 
 		{
 			inner = inner_;
@@ -29,8 +30,8 @@ class NODE
 		void setId2(const std::string &id_) 			{ id2 = id_;}
 		void addChild(const std::string &nodeId);					
 		void print() const;
-		bool lock() 	{ return mymutex.try_lock_shared_for(10ms);};
-		void unlock()   { mymutex.unlock();};
+		bool lock() 									{ return mymutex.try_lock_shared_for(10ms);};
+		void unlock()   								{ mymutex.unlock();};
 		
 	protected:
 		mutable std::shared_timed_mutex mymutex;
@@ -43,6 +44,7 @@ class NODE
 class TRANSFORM : public NODE
 {
 	public:
+		TRANSFORM(){};
 		TRANSFORM(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::shared_ptr<NODE> &parent_ = nullptr) : NODE(id_, inner_, parent_)
 		{}
 };
@@ -50,6 +52,7 @@ class TRANSFORM : public NODE
 class JOINT: public TRANSFORM
 {
 	public:
+		JOINT(){};
 		JOINT(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::shared_ptr<NODE> &parent_ = nullptr): TRANSFORM(id_, inner_, parent_)
 		{}
 	private:

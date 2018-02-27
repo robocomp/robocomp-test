@@ -42,15 +42,15 @@ template <typename T>
 class Proxy : public T
 {
 	public:
-		Proxy(const std::shared_ptr<T> &node_, const std::shared_ptr<Inner> &inner) : T(node_->getId(), inner)
+		Proxy(const std::shared_ptr<T> &node_, const std::shared_ptr<Inner> &inner) : T()//T(node_->getId(), inner)
 		{
 			node = node_;
-			if (node->lock())
-				std::cout << node->getId() << " dentro " << node->getId2() << std::endl;
+			if (node->lock()){}
+				//std::cout << node->getId() << " dentro " << node->getId2() << std::endl;
 			else
 				throw std::runtime_error("Could not lock the mutex");
 		}
-		~Proxy()										{ std::cout << "me matan" << std::endl;  node->unlock(); }
+		~Proxy()										{ node->unlock(); }
 		
 		//std::shared_ptr<T> operator ->() const	{ return node;}
 		
@@ -65,6 +65,54 @@ class Proxy : public T
 		
 	private:		
 		std::shared_ptr<T> node;
+};
+
+template <typename K, typename V>
+class ThreadSafeHash
+{
+	using myMap = std::unordered_map<K, V>;
+		
+	public:
+		ThreadSafeHash(){};
+		ThreadSafeHash(const ThreadSafeHash &other) = delete;
+		ThreadSafeHash& operator=(const ThreadSafeHash &other) = delete;
+		
+		V at(const K &key)	const					{ std::shared_lock<std::shared_timed_mutex> lock(mymutex); return hash.at(key);};
+		auto insert(std::pair<K, V> data)			
+		{ 
+			std::unique_lock<std::shared_timed_mutex> lock(mymutex); 
+			auto t = hash.insert(data); 
+			return t;
+		}
+		auto size() const 							{ std::shared_lock<std::shared_timed_mutex> lock(mymutex); return hash.size();}
+		
+		std::vector<typename myMap::key_type> keys()
+		{
+			std::shared_lock<std::shared_timed_mutex> lock(mymutex);
+			std::vector<typename myMap::key_type> r;
+			r.reserve(hash.size());
+			for (const auto&kvp : hash)
+			{
+				r.push_back(kvp.first);
+			}
+			return r;
+		}
+
+		std::vector<typename myMap::mapped_type> values()
+		{
+			std::shared_lock<std::shared_timed_mutex> lock(mymutex);
+			std::vector<typename myMap::mapped_type> r;
+			r.reserve(hash.size());
+			for (const auto&kvp : hash)
+			{
+				r.push_back(kvp.second);
+			}
+			return r;
+		}
+		
+	private:
+		myMap hash;
+		mutable std::shared_timed_mutex mymutex;
 };
 
 class Inner
@@ -106,9 +154,13 @@ class Inner
 			}
 		}
 		void setRoot(const TRANSFORMPtr &r)						{ root = r;};
-		void print() const 										{ root->print();}
+		void print() const 										
+		{ 	std::cout << "---------------------------------------" << std::endl; 
+			std::cout << "Elements in tree: " << hash.size() << std::endl;
+			root->print();
+		}
 		
-		std::unordered_map<std::string, std::shared_ptr<NODE>> hash;
+		ThreadSafeHash<std::string, NODEPtr> hash;
 		
 	private:
 		TRANSFORMPtr root;
