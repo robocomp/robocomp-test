@@ -160,6 +160,9 @@ class Inner
 			root->print();
 		}
 		
+		void markForDelete(const std::string &id) {}
+		void deleteNode(const std::string &id){}
+
 		ThreadSafeHash<std::string, NODEPtr> hash;
 		
 	private:

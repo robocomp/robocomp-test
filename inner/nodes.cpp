@@ -1,11 +1,18 @@
 #include "nodes.h"
 #include "inner.h"
 
-void NODE::addChild(const std::string &nodeId)
+void NODE::addChildToParent(const std::string &parentId)
 {
 	//std::unique_lock<std::shared_timed_mutex> lock(mymutex);
-	children.push_back(nodeId); 
+	auto parentNode = inner->getNode<NODE>(parentId);
+	if( parentNode != nullptr)
+		parentNode->children.push_back(id); 
 };
+
+void NODE::addChild(const std::string &childId)
+{
+	children.push_back(childId);
+}
 
 void NODE::print() const
 {
@@ -15,4 +22,12 @@ void NODE::print() const
 		node->print(); 
 	}
 	//std::cout << "PRINT: id " << id << " children: " << children.size() << std::endl;	
+}
+
+std::string NODE::getChildId(unsigned i) const			
+{ 
+	if(i < children.size())
+		return children[i];
+	else 
+		return "";
 }

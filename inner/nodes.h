@@ -17,18 +17,21 @@ class NODE
 {
 	public:
 		NODE(){};
-		NODE(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::shared_ptr<NODE> &parent_ = nullptr) : id(id_) , parent(parent_) 
+		//NODE(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::shared_ptr<NODE> &parent_ = nullptr) : id(id_) , parent(parent_) 
+		NODE(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::string &parent_ = "") : id(id_) , parent(parent_) 
 		{
 			inner = inner_;
-			if( parent != nullptr)
-				parent->addChild(id);
+			addChildToParent( parent );
 		}
 		virtual ~NODE(){};
 		std::string getId() const 						{ return id; }
 		std::string getId2() const 						{ return id2; }
 		void setId(const std::string &id_) 				{ id = id_;}
 		void setId2(const std::string &id_) 			{ id2 = id_;}
-		void addChild(const std::string &nodeId);					
+		void addChild(const std::string &nodeId);		
+		void addChildToParent(const std::string &parentId);
+		std::string getParentId() const					{ return parent;}
+		std::string getChildId(unsigned int i) const;
 		void print() const;
 		bool lock() 									{ return mymutex.try_lock_shared_for(10ms);};
 		void unlock()   								{ mymutex.unlock();};
@@ -36,7 +39,8 @@ class NODE
 	protected:
 		mutable std::shared_timed_mutex mymutex;
 		std::string id, id2;
-		std::shared_ptr<NODE> parent;
+		//std::shared_ptr<NODE> parent;
+		std::string parent;
 		std::vector<std::string> children;
 		std::shared_ptr<Inner> inner;
 };
@@ -45,7 +49,8 @@ class TRANSFORM : public NODE
 {
 	public:
 		TRANSFORM(){};
-		TRANSFORM(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::shared_ptr<NODE> &parent_ = nullptr) : NODE(id_, inner_, parent_)
+		//TRANSFORM(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::shared_ptr<NODE> &parent_ = nullptr) : NODE(id_, inner_, parent_)
+		TRANSFORM(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::string &parent_ = "") : NODE(id_, inner_, parent_)
 		{}
 };
 
@@ -53,7 +58,8 @@ class JOINT: public TRANSFORM
 {
 	public:
 		JOINT(){};
-		JOINT(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::shared_ptr<NODE> &parent_ = nullptr): TRANSFORM(id_, inner_, parent_)
+		//JOINT(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::shared_ptr<NODE> &parent_ = nullptr): TRANSFORM(id_, inner_, parent_)
+		JOINT(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::string &parent_ = ""): TRANSFORM(id_, inner_, parent_)
 		{}
 	private:
 		
