@@ -65,6 +65,7 @@ void createThread(const std::shared_ptr<Inner> &inner)
 	
 	while(true)
 	{
+		std::cout << "size " << inner->hash.size() << std::endl;
 		std::vector<std::string> keys = inner->hash.keys();
 		std::uniform_int_distribution<int> uniform_dist(0, keys.size()-1);
 		auto parent = keys[uniform_dist(e1)];
@@ -109,34 +110,27 @@ void chainThread(const std::shared_ptr<Inner> &inner)
 			cont++;
 		}
 		while(child_id != "" or cont>levelsDown);
-		std::cout << "THREAD transform: up " << levelsUp << " down "  << levelsDown;
+		std::cout << "THREAD transform: up " << levelsUp << " down "  << levelsDown << std::endl;
 		std::this_thread::sleep_for(100ms);		
 	}
 }
 
-
-/*void deleteThread(const std::shared_ptr<Inner> &inner)
+void deleteThread(const std::shared_ptr<Inner> &inner)
 {
 	std::random_device r;
 	std::default_random_engine e1(r());
-	std::uniform_int_distribution<int> name_dist(0, 10000);
 	
 	while(true)
 	{
 		std::vector<std::string> keys = inner->hash.keys();
 		std::uniform_int_distribution<int> uniform_dist(0, keys.size()-1);
-		auto if = keys[uniform_dist(e1)];
+		auto id = keys[uniform_dist(e1)];
 		std::cout << "THREAD: deleting id " << id << std::endl;
-		inner->markForDelete(id);
 		inner->deleteNode(id);
-		try
-		{	auto n = inner->newNode<TRANSFORM>(id, inner, parent); }
-		catch(const std::exception &e) 
-		{	std::cout << e.what() << std::endl;}
+		std::cout << "THREAD: id  deleted ok" << id << std::endl;
 		std::this_thread::sleep_for(100ms);		
 	}
 }
-*/
 
 int main()
 {
@@ -144,12 +138,11 @@ int main()
 	auto inner = std::make_shared<Inner>();
 	
 	std::cout << "----------------Create Nodes---------------------" << std::endl;
-	auto a = inner->newNode<TRANSFORM>("root", inner);
-	inner->setRoot( a );
-	auto t1 = inner->newNode<TRANSFORM>("t1", inner, "root"); t1->setId2("caca1");
-	auto t2 = inner->newNode<TRANSFORM>("t2", inner, "root"); t2->setId2("caca2");
-	auto t3 = inner->newNode<TRANSFORM>("t3", inner, "root"); t3->setId2("caca3");
-	auto t4 = inner->newNode<TRANSFORM>("t4", inner, "root"); t4->setId2("caca4");
+	inner->setRoot( inner->newNode<TRANSFORM>("root", inner));
+	inner->newNode<TRANSFORM>("t1", inner, "root"); 
+	inner->newNode<TRANSFORM>("t2", inner, "root"); 
+	inner->newNode<TRANSFORM>("t3", inner, "root"); 
+	inner->newNode<TRANSFORM>("t4", inner, "root"); 
 
 	inner->newNode<JOINT>("j1", inner, "t1");
 	inner->newNode<JOINT>("j2", inner, "t2");
@@ -161,16 +154,30 @@ int main()
 	std::cout << "---------------Created, now printing--------------" << std::endl;
 	inner->print();
 	
-	std::cout << "----------------getNode---------------------" << std::endl;
+	std::cout << "----------------Get Node---------------------" << std::endl;
 	auto j = inner->getNode<JOINT>("j1");
 	j->print();
-	std::shared_ptr<Proxy<TRANSFORM>>  t = inner->getNode<TRANSFORM>("t1");
+	j.reset();
+	auto t = inner->getNode<TRANSFORM>("t1");
 	t->print();
-	t->print();
+	t.reset();
+	
+	std::cout << "----------------Delete Node---------------------" << std::endl;
+	//std::cout << "COUNTER " << inner->getNode<NODE>("t5").use_count() << std::endl;
+	//auto node = inner->getNode<NODE>("t5");
+	//std::cout << "COUNTER " << node.use_count() << std::endl;
+	//node->markForDelete();
+	
+	//inner->deleteNode("t5");
+	//node.reset();
+	//std::cout << "asdfa " << node.use_count() << std::endl;
+	//inner->hash.erase("t5");
+	
+	/////////////////////
 	
 	std::cout << "-----------threads-------------------------" << std::endl;
-	std::vector<int> RN = {0,1}, WN = {0}, CN = {0}, CT = {0,1};
-	std::future<void> threadsR[RN.size()], threadsW[WN.size()], threadsC[CN.size()], threadsT[CT.size()];
+	std::vector<int> RN = {}, WN = {}, CN = {0,1}, TN = {}, DN = {0,1};
+	std::future<void> threadsR[RN.size()], threadsW[WN.size()], threadsC[CN.size()], threadsT[TN.size()], threadsD[DN.size()];
 	
 	for (auto&& i : RN)
 		threadsR[i] = std::async(std::launch::async, readThread, inner);
@@ -181,17 +188,21 @@ int main()
 	for (auto&& i : CN)
 		threadsC[i] = std::async(std::launch::async, createThread, inner);
 	
-	for (auto&& i : CT)
-		threadsC[i] = std::async(std::launch::async, chainThread, inner);
+	for (auto&& i : TN)
+		threadsT[i] = std::async(std::launch::async, chainThread, inner);
 	
+	for (auto&& i : DN)
+		threadsD[i] = std::async(std::launch::async, deleteThread, inner);
 	
-  	for (auto&& i: CN)
+	for (auto&& i: DN)
+		threadsD[i].wait();
+	for (auto&& i: CN)
 		threadsC[i].wait();
 	for (auto&& i: RN)
 		threadsR[i].wait();  	
 	for (auto&& i: WN)
 		threadsW[i].wait();
-	for (auto&& i: CN)
-		threadsC[i].wait();
-
+	for (auto&& i: TN)
+		threadsT[i].wait();
+	
 }

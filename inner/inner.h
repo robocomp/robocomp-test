@@ -48,7 +48,7 @@ class Proxy : public T
 			if (node->lock() == false)
 				throw std::runtime_error("Could not lock the mutex");
 			node->incWaiting();
-			std::cout << "Waiting at " << node->getId() << " = " << node->getWaiting() << std::endl;
+			//std::cout << "Waiting at " << node->getId() << " = " << node->getWaiting() << std::endl;
 		}
 		~Proxy()										
 		{ 
@@ -66,6 +66,11 @@ class Proxy : public T
 		void print() const								{ node->print(); }								
 		void lock() 									{ node->lock();}
 		void unlock()   								{ node->unlock();}
+		bool isMarkedForDelete() const					{ return node->markedForDelete(); };
+		void markForDelete() 							{ node->markForDelete();  };
+		void incWaiting() 								{ node->incWaiting();}
+		void decWaiting() 								{ node->decWaiting();}
+		ulong getWaiting() const 						{ return node->getWaiting();}
 		
 	private:		
 		std::shared_ptr<T> node;
@@ -87,6 +92,10 @@ class ThreadSafeHash
 			std::unique_lock<std::shared_timed_mutex> lock(mymutex); 
 			auto t = hash.insert(data); 
 			return t;
+		}
+		void erase(const K &key)
+		{
+			hash.erase(key);
 		}
 		auto size() const 							{ std::shared_lock<std::shared_timed_mutex> lock(mymutex); return hash.size();}
 		
@@ -165,11 +174,27 @@ class Inner
 			std::cout << "Elements in tree: " << hash.size() << std::endl;
 			root->print();
 		}
-		
-		void markForDelete(const std::string &id) {}
-		void deleteNode(const std::string &id){}
+		void deleteNode(const std::string &id)
+		{
+			if(id == root->getId()) //CHECK WHAT HAPPENS WITHOUT HIS
+				return;
+			auto node = getNode<NODE>(id);
+			//std::cout << "entering DELETE: " << node.use_count() << std::endl;
+			node->markForDelete();
+			while( hash.at(id)->getWaiting() > 1);
+			if(node.unique())
+			{
+				node.reset();
+				hash.erase(id);
+				//std::cout << "DELETE: node " << id << " deleted OK " << node.use_count() << " references" << std::endl;
+			}
+			else
+			{
+				std::cout << "DELETE: could not delete node " << node.use_count() << std::endl;
+			}
+		}
 
-		ThreadSafeHash<std::string, NODEPtr> hash;
+		ThreadSafeHash<std::string, NODEPtr> hash;   //PROBAR CON ATOMIC
 		
 	private:
 		TRANSFORMPtr root;

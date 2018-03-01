@@ -35,7 +35,8 @@ class NODE
 		void print() const;
 		bool lock() 									{ return mymutex.try_lock_shared_for(10ms);};
 		void unlock()   								{ mymutex.unlock();};
-		bool isMarkedForDelete() const					{ return markedForDelete; };
+		bool isMarkedForDelete() const					{ return markedForDelete.load(); };
+		void markForDelete() 							{ markedForDelete.store(true);  };
 		void incWaiting() 								{ lockWaiting++;}
 		void decWaiting() 								{ lockWaiting--;}
 		ulong getWaiting() const 						{ return lockWaiting;}
