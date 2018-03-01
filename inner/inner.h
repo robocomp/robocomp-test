@@ -45,12 +45,16 @@ class Proxy : public T
 		Proxy(const std::shared_ptr<T> &node_, const std::shared_ptr<Inner> &inner) : T()//T(node_->getId(), inner)
 		{
 			node = node_;
-			if (node->lock()){}
-				//std::cout << node->getId() << " dentro " << node->getId2() << std::endl;
-			else
+			if (node->lock() == false)
 				throw std::runtime_error("Could not lock the mutex");
+			node->incWaiting();
+			std::cout << "Waiting at " << node->getId() << " = " << node->getWaiting() << std::endl;
 		}
-		~Proxy()										{ node->unlock(); }
+		~Proxy()										
+		{ 
+			node->decWaiting();
+			node->unlock(); 
+		}
 		
 		//std::shared_ptr<T> operator ->() const	{ return node;}
 		
@@ -144,13 +148,15 @@ class Inner
 			try 
 			{ 
 				auto n = hash.at(id);
+				if(n->isMarkedForDelete())
+					return std::shared_ptr<Proxy<N>>(nullptr);
 				auto nn = std::static_pointer_cast<N>(n);
 				return std::shared_ptr<Proxy<N>>(new Proxy<N>(nn, std::shared_ptr<Inner>()));
 			}
 			catch(const std::exception &e)
 			{ 
 				std::cout << e.what() << std::endl;
-				return std::shared_ptr<Proxy<N>>();
+				return std::shared_ptr<Proxy<N>>(nullptr);
 			}
 		}
 		void setRoot(const TRANSFORMPtr &r)						{ root = r;};

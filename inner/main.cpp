@@ -169,17 +169,21 @@ int main()
 	t->print();
 	
 	std::cout << "-----------threads-------------------------" << std::endl;
-	std::vector<int> RN = {0,1}, WN = {0}, CN = {0};
-	std::future<void> threadsR[RN.size()], threadsW[WN.size()], threadsC[CN.size()];
+	std::vector<int> RN = {0,1}, WN = {0}, CN = {0}, CT = {0,1};
+	std::future<void> threadsR[RN.size()], threadsW[WN.size()], threadsC[CN.size()], threadsT[CT.size()];
 	
 	for (auto&& i : RN)
 		threadsR[i] = std::async(std::launch::async, readThread, inner);
 	
  	for (auto&& i : WN)
- 		threadsW[i] = std::async(std::launch::async, chainThread, inner);
+ 		threadsW[i] = std::async(std::launch::async, writeThread, inner);
 	
 	for (auto&& i : CN)
 		threadsC[i] = std::async(std::launch::async, createThread, inner);
+	
+	for (auto&& i : CT)
+		threadsC[i] = std::async(std::launch::async, chainThread, inner);
+	
 	
   	for (auto&& i: CN)
 		threadsC[i].wait();
@@ -187,5 +191,7 @@ int main()
 		threadsR[i].wait();  	
 	for (auto&& i: WN)
 		threadsW[i].wait();
+	for (auto&& i: CN)
+		threadsC[i].wait();
 
 }

@@ -8,6 +8,7 @@
 #include <mutex>
 #include <shared_mutex>
 #include <vector>
+#include <atomic>
 
 using namespace std::chrono_literals;
 
@@ -17,7 +18,6 @@ class NODE
 {
 	public:
 		NODE(){};
-		//NODE(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::shared_ptr<NODE> &parent_ = nullptr) : id(id_) , parent(parent_) 
 		NODE(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::string &parent_ = "") : id(id_) , parent(parent_) 
 		{
 			inner = inner_;
@@ -35,21 +35,25 @@ class NODE
 		void print() const;
 		bool lock() 									{ return mymutex.try_lock_shared_for(10ms);};
 		void unlock()   								{ mymutex.unlock();};
+		bool isMarkedForDelete() const					{ return markedForDelete; };
+		void incWaiting() 								{ lockWaiting++;}
+		void decWaiting() 								{ lockWaiting--;}
+		ulong getWaiting() const 						{ return lockWaiting;}
 		
 	protected:
 		mutable std::shared_timed_mutex mymutex;
 		std::string id, id2;
-		//std::shared_ptr<NODE> parent;
 		std::string parent;
 		std::vector<std::string> children;
 		std::shared_ptr<Inner> inner;
+		std::atomic<bool> markedForDelete{false};
+		std::atomic<ulong> lockWaiting{0};
 };
 
 class TRANSFORM : public NODE
 {
 	public:
 		TRANSFORM(){};
-		//TRANSFORM(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::shared_ptr<NODE> &parent_ = nullptr) : NODE(id_, inner_, parent_)
 		TRANSFORM(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::string &parent_ = "") : NODE(id_, inner_, parent_)
 		{}
 };
@@ -58,7 +62,6 @@ class JOINT: public TRANSFORM
 {
 	public:
 		JOINT(){};
-		//JOINT(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::shared_ptr<NODE> &parent_ = nullptr): TRANSFORM(id_, inner_, parent_)
 		JOINT(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::string &parent_ = ""): TRANSFORM(id_, inner_, parent_)
 		{}
 	private:
