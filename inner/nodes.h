@@ -24,14 +24,13 @@ class NODE
 			addChildToParent( parent );
 		}
 		virtual ~NODE(){};
-		std::string getId() const 						{ return id; }
-		std::string getId2() const 						{ return id2; }
-		void setId(const std::string &id_) 				{ id = id_;}
-		void setId2(const std::string &id_) 			{ id2 = id_;}
-		void addChild(const std::string &nodeId);		
+		std::string getId() const ;					
+		void setId(const std::string &id_);
+		void addChild(const std::string &nodeId);;		
 		void addChildToParent(const std::string &parentId);
-		std::string getParentId() const					{ return parent;}
+		std::string getParentId() const;				
 		std::string getChildId(unsigned int i) const;
+		std::vector<std::string> getChildren() const;
 		void print() const;
 		bool lock() 									{ return mymutex.try_lock_shared_for(10ms);};
 		void unlock()   								{ mymutex.unlock();};

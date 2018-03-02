@@ -28,7 +28,7 @@ void readThread(const std::shared_ptr<Inner> &inner)
 	std::uniform_int_distribution<int> uniform_dist(0, keys.size()-1);
 	while(true)
 	{		
-		inner->print();
+		inner->printIter();
 // 		auto target = keys[uniform_dist(e1)];
 // 		auto node = inner->getNode<NODE>(target);
 // 		if(node.operator bool() )
@@ -138,7 +138,7 @@ int main()
 	auto inner = std::make_shared<Inner>();
 	
 	std::cout << "----------------Create Nodes---------------------" << std::endl;
-	inner->setRoot( inner->newNode<TRANSFORM>("root", inner));
+	inner->setRoot("root");
 	inner->newNode<TRANSFORM>("t1", inner, "root"); 
 	inner->newNode<TRANSFORM>("t2", inner, "root"); 
 	inner->newNode<TRANSFORM>("t3", inner, "root"); 
@@ -176,7 +176,7 @@ int main()
 	/////////////////////
 	
 	std::cout << "-----------threads-------------------------" << std::endl;
-	std::vector<int> RN = {}, WN = {}, CN = {0,1}, TN = {}, DN = {0,1};
+	std::vector<int> RN = {0}, WN = {}, CN = {0,1}, TN = {}, DN = {};
 	std::future<void> threadsR[RN.size()], threadsW[WN.size()], threadsC[CN.size()], threadsT[TN.size()], threadsD[DN.size()];
 	
 	for (auto&& i : RN)

@@ -23,7 +23,7 @@
 #include <string>
 #include <vector>
 #include <mutex>
-
+#include <stack>
 #include <unordered_map>
 
 #include "nodes.h"
@@ -168,36 +168,15 @@ class Inner
 				return std::shared_ptr<Proxy<N>>(nullptr);
 			}
 		}
-		void setRoot(const TRANSFORMPtr &r)						{ root = r;};
-		void print() const 										
-		{ 	std::cout << "---------------------------------------" << std::endl; 
-			std::cout << "Elements in tree: " << hash.size() << std::endl;
-			root->print();
-		}
-		void deleteNode(const std::string &id)
-		{
-			if(id == root->getId()) //CHECK WHAT HAPPENS WITHOUT HIS
-				return;
-			auto node = getNode<NODE>(id);
-			//std::cout << "entering DELETE: " << node.use_count() << std::endl;
-			node->markForDelete();
-			while( hash.at(id)->getWaiting() > 1);
-			if(node.unique())
-			{
-				node.reset();
-				hash.erase(id);
-				//std::cout << "DELETE: node " << id << " deleted OK " << node.use_count() << " references" << std::endl;
-			}
-			else
-			{
-				std::cout << "DELETE: could not delete node " << node.use_count() << std::endl;
-			}
-		}
-
-		ThreadSafeHash<std::string, NODEPtr> hash;   //PROBAR CON ATOMIC
-		
+		void setRoot(const std::string &r);
+		void print() const;
+		void printIter();
+		void deleteNode(const std::string &id);
+	
+			ThreadSafeHash<std::string, NODEPtr> hash;   //PROBAR CON ATOMIC
 	private:
-		TRANSFORMPtr root;
+		std::string rootid;
+		TRANSFORMPtr rootptr;
 };
 
 #endif // INNER_H
