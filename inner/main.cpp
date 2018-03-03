@@ -137,7 +137,6 @@ int main()
 	std::cout << std::boolalpha;   	
 	auto inner = std::make_shared<Inner>();
 	
-	std::cout << "----------------Create Nodes---------------------" << std::endl;
 	inner->setRoot("root");
 	inner->newNode<TRANSFORM>("t1", inner, "root"); 
 	inner->newNode<TRANSFORM>("t2", inner, "root"); 
@@ -152,7 +151,7 @@ int main()
 	inner->newNode<TRANSFORM>("t6", inner, "t4");
 	
 	std::cout << "---------------Created, now printing--------------" << std::endl;
-	inner->print();
+	inner->printIter();
 	
 	std::cout << "----------------Get Node---------------------" << std::endl;
 	auto j = inner->getNode<JOINT>("j1");
@@ -176,7 +175,7 @@ int main()
 	/////////////////////
 	
 	std::cout << "-----------threads-------------------------" << std::endl;
-	std::vector<int> RN = {0}, WN = {}, CN = {0,1}, TN = {}, DN = {};
+	std::vector<int> RN = {0}, WN = {}, CN = {0}, TN = {}, DN = {};
 	std::future<void> threadsR[RN.size()], threadsW[WN.size()], threadsC[CN.size()], threadsT[TN.size()], threadsD[DN.size()];
 	
 	for (auto&& i : RN)

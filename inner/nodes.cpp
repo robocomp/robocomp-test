@@ -15,17 +15,12 @@ void NODE::setId(const std::string &id_)
 
 void NODE::addChildToParent(const std::string &parentId)
 {
-	//std::unique_lock<std::shared_timed_mutex> lock(mymutex);
-	if(parentId == "root")
-		parentNode = inner->rootptr;
-	else
-		parentNode = inner->getNode<NODE>(parentId);
-	
+	auto parentNode = inner->getNode<NODE>(parentId);
 	if( parentNode )
-	{
-		parentNode->children.push_back(id); 
-		std::cout << "Inner::addChildToParent added chldren " << id << " to " << parentNode->getId() << std::endl;
-	}
+		parentNode->addChild(id); 
+	else
+		std::cout << "Inner::addChildToParent ROOT not found" << std::endl;
+		
 };
 
 void NODE::addChild(const std::string &childId)
@@ -40,12 +35,7 @@ std::string NODE::getParentId() const
 
 void NODE::print() const
 {
-// 	for( auto&& i : children)	
-// 	{
-// 		auto node = inner->hash.at(i);
-// 		node->print(); 
-// 	}
-	std::cout << "PRINT: id " << id << " children: " << children.size() << std::endl;	
+	std::cout << "NODE PRINT: id " << id << " children: " << children.size() << std::endl;	
 }
 
 std::string NODE::getChildId(uint ix) const
@@ -60,3 +50,9 @@ std::vector<std::string> NODE::getChildren() const
 {
 	return children;
 }
+
+std::ostream& operator<< (std::ostream &out, const std::shared_ptr<NODE> &node)
+{
+	out << node->getId();
+	return out;	
+};

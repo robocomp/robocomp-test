@@ -25,6 +25,7 @@
 #include <mutex>
 #include <stack>
 #include <unordered_map>
+#include <iomanip>      // std::setfill, std::setw
 
 #include "nodes.h"
 
@@ -56,23 +57,26 @@ class Proxy : public T
 			node->unlock(); 
 		}
 		
-		//std::shared_ptr<T> operator ->() const	{ return node;}
+		std::shared_ptr<T> operator ->() const	{ return node;}
 		
-		std::string getId() const 						{ return node->getId(); }
-		std::string getId2() const 						{ return node->getId2(); }
-		void setId(const std::string &id_) 				{ node->setId(id_);}
-		void setId2(const std::string &id_) 			{ node->setId(id_);}
-		void addChild(NODE *node_)						{ node->children.push_back(node_);};
-		void print() const								{ node->print(); }								
-		void lock() 									{ node->lock();}
-		void unlock()   								{ node->unlock();}
-		bool isMarkedForDelete() const					{ return node->markedForDelete(); };
-		void markForDelete() 							{ node->markForDelete();  };
-		void incWaiting() 								{ node->incWaiting();}
-		void decWaiting() 								{ node->decWaiting();}
-		ulong getWaiting() const 						{ return node->getWaiting();}
+		std::string getId() const 							{ return node->getId();}
+		void setId(const std::string &id_) 					{ node->setId(id_);}
+		void addChild(const std::string id_)				{ node->addChild(id_);};
+		void addChildToParent(const std::string &parentId)	{ node->addChildToParent(parentId);};
+		std::string getParentId() const						{ return node->getParentId();};
+		std::string getChildId(unsigned int i) const		{ return node->getChildId(i);};
+		std::vector<std::string> getChildren() const		{ return node->getChildren();};
+		void print() const									{ node->print(); }								
+		void lock() 										{ node->lock();}
+		void unlock()   									{ node->unlock();}
+		bool isMarkedForDelete() const						{ return node->markedForDelete(); };
+		void markForDelete() 								{ node->markForDelete();  };
+		void incWaiting() 									{ node->incWaiting();}
+		void decWaiting() 									{ node->decWaiting();}
+		ulong getWaiting() const 							{ return node->getWaiting();}
+		friend std::ostream& operator<< (std::ostream &out, const std::shared_ptr<Proxy<NODE>> &node);
 		
-	private:		
+	protected:		
 		std::shared_ptr<T> node;
 };
 
@@ -176,7 +180,7 @@ class Inner
 			ThreadSafeHash<std::string, NODEPtr> hash;   //PROBAR CON ATOMIC
 	private:
 		std::string rootid;
-		TRANSFORMPtr rootptr;
+		TRANSFORM *rootptr;
 };
 
 #endif // INNER_H

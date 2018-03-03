@@ -2,14 +2,15 @@
 
 void Inner::setRoot(const std::string &r)
 { 
-	rootptr = newNode<TRANSFORM>(r, std::shared_ptr<Inner>(this), "");
-	if(rootptr != nullptr)
-	{
-		rootid = r;
+	//rootptr = newNode<TRANSFORM>(r, std::shared_ptr<Inner>(this), "");
+	rootptr = new TRANSFORM("root", std::shared_ptr<Inner>(this), "");
+	rootid = r;
+	bool ok = hash.insert({r, std::shared_ptr<NODE>(rootptr)}).second;
+	if(ok)
 		std::cout << "Inner::setRoot Create root node as " << r << std::endl;
-	}
 	else
-		std::cout << "ERROR: Inner::setRoot could not create root node as " << r << std::endl;
+		std::cout << "Inner::setRoot ERROR Could nor create existing root node" << r << std::endl;	
+	
 };
 
 void Inner::print() const 										
@@ -26,16 +27,28 @@ void Inner::printIter()
 		std::cout << "Inner::printIter Cannot print cause root is empty" << std::endl;
 		return;
 	}
-	std::stack<NODEPtr> s;
-	s.push(rootptr);
+	std::stack<std::shared_ptr<Proxy<NODE>>> s;
+	auto r = getNode<NODE>("root");
+	s.push(r);
+	std::stack<int> level;
+	int l=0;
+	level.push(l);
 	while(not s.empty())
 	{
-		NODEPtr node = s.top();
-		std::cout << "OOOPS" << node->getId() << " " << node->getChildren().size() << std::endl;
-		node->print();
+		std::shared_ptr<Proxy<NODE>> node = s.top();
+		std::cout << std::setfill('_') << std::setw (level.top()*5) << node << std::endl;
 		s.pop();
-		for(auto&& nn : node->getChildren())
-			s.push(getNode<NODE>(nn));
+		int aux = level.top();
+		level.pop();
+		if(node->getChildren().size()>0)
+		{
+			l=aux + 1;
+			for(auto&& nn : node->getChildren())
+			{
+				s.push(getNode<NODE>(nn));
+				level.push(l);
+			}
+		}
 	}
 }
 
@@ -58,3 +71,9 @@ void Inner::deleteNode(const std::string &id)
 		std::cout << "DELETE: could not delete node " << node.use_count() << std::endl;
 	}
 }
+
+std::ostream& operator<< (std::ostream &out, const std::shared_ptr<Proxy<NODE>> &node)
+{
+	out << node->node;
+	return out;	
+};

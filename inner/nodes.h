@@ -39,6 +39,7 @@ class NODE
 		void incWaiting() 								{ lockWaiting++;}
 		void decWaiting() 								{ lockWaiting--;}
 		ulong getWaiting() const 						{ return lockWaiting;}
+		friend std::ostream& operator<< (std::ostream &out, const std::shared_ptr<NODE> &node);
 		
 	protected:
 		mutable std::shared_timed_mutex mymutex;
