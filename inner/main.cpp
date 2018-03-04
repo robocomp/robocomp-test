@@ -125,6 +125,8 @@ void deleteThread(const std::shared_ptr<Inner> &inner)
 		std::vector<std::string> keys = inner->hash.keys();
 		std::uniform_int_distribution<int> uniform_dist(0, keys.size()-1);
 		auto id = keys[uniform_dist(e1)];
+		if(id == inner->getRootId())
+			continue;
 		std::cout << "THREAD: deleting id " << id << std::endl;
 		inner->deleteNode(id);
 		std::cout << "THREAD: id  deleted ok" << id << std::endl;
@@ -137,7 +139,7 @@ int main()
 	std::cout << std::boolalpha;   	
 	auto inner = std::make_shared<Inner>();
 	
-	inner->setRoot("root");
+	inner->setRootId("root");
 	inner->newNode<TRANSFORM>("t1", inner, "root"); 
 	inner->newNode<TRANSFORM>("t2", inner, "root"); 
 	inner->newNode<TRANSFORM>("t3", inner, "root"); 
@@ -175,7 +177,7 @@ int main()
 	/////////////////////
 	
 	std::cout << "-----------threads-------------------------" << std::endl;
-	std::vector<int> RN = {0}, WN = {}, CN = {0}, TN = {}, DN = {};
+	std::vector<int> RN = {0}, WN = {}, CN = {0}, TN = {}, DN = {0};
 	std::future<void> threadsR[RN.size()], threadsW[WN.size()], threadsC[CN.size()], threadsT[TN.size()], threadsD[DN.size()];
 	
 	for (auto&& i : RN)

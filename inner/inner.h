@@ -62,6 +62,7 @@ class Proxy : public T
 		std::string getId() const 							{ return node->getId();}
 		void setId(const std::string &id_) 					{ node->setId(id_);}
 		void addChild(const std::string id_)				{ node->addChild(id_);};
+		void removeChild(const std::string &childId)		{ node->removeChild(childId);};
 		void addChildToParent(const std::string &parentId)	{ node->addChildToParent(parentId);};
 		std::string getParentId() const						{ return node->getParentId();};
 		std::string getChildId(unsigned int i) const		{ return node->getChildId(i);};
@@ -172,7 +173,8 @@ class Inner
 				return std::shared_ptr<Proxy<N>>(nullptr);
 			}
 		}
-		void setRoot(const std::string &r);
+		void setRootId(const std::string &r);
+		std::string getRootId() const 				{return(rootid);};
 		void print() const;
 		void printIter();
 		void deleteNode(const std::string &id);

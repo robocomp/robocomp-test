@@ -28,6 +28,13 @@ void NODE::addChild(const std::string &childId)
 	children.push_back(childId);
 }
 
+void NODE::removeChild(const std::string &childId)
+{
+	try 
+	{ children.erase(std::remove(children.begin(), children.end(), childId), children.end()); }
+	catch(const std::exception &e) { std::cout << e.what() << std::endl;}
+}
+
 std::string NODE::getParentId() const	
 { 
 	return parent;

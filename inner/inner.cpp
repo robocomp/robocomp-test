@@ -1,6 +1,6 @@
 #include "inner.h"
 
-void Inner::setRoot(const std::string &r)
+void Inner::setRootId(const std::string &r)
 { 
 	//rootptr = newNode<TRANSFORM>(r, std::shared_ptr<Inner>(this), "");
 	rootptr = new TRANSFORM("root", std::shared_ptr<Inner>(this), "");
@@ -54,7 +54,7 @@ void Inner::printIter()
 
 void Inner::deleteNode(const std::string &id)
 {
-	if(id == rootid) //CHECK WHAT HAPPENS WITHOUT HIS
+	if(id == rootid) 
 		return;
 	auto node = getNode<NODE>(id);
 	//std::cout << "entering DELETE: " << node.use_count() << std::endl;
@@ -62,6 +62,9 @@ void Inner::deleteNode(const std::string &id)
 	while( hash.at(id)->getWaiting() > 1);
 	if(node.unique())
 	{
+		auto p = getNode<NODE>(node->getParentId());
+		if(p)
+			p->removeChild(id);
 		node.reset();
 		hash.erase(id);
 		//std::cout << "DELETE: node " << id << " deleted OK " << node.use_count() << " references" << std::endl;

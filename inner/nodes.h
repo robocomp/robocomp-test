@@ -9,6 +9,7 @@
 #include <shared_mutex>
 #include <vector>
 #include <atomic>
+#include <algorithm>
 
 using namespace std::chrono_literals;
 
@@ -28,6 +29,7 @@ class NODE
 		void setId(const std::string &id_);
 		void addChild(const std::string &nodeId);;		
 		void addChildToParent(const std::string &parentId);
+		void removeChild(const std::string &childId);
 		std::string getParentId() const;				
 		std::string getChildId(unsigned int i) const;
 		std::vector<std::string> getChildren() const;
