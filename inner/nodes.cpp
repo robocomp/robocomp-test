@@ -4,24 +4,33 @@
 std::string NODE::getId() const
 { 
 	return id; 
-	
 }
 	
 void NODE::setId(const std::string &id_)
 { 
 	id = id_;
-	
 }
 
-void NODE::addChildToParent(const std::string &parentId)
+bool NODE::addChildToParent(const std::string &parentId)
 {
+    //std::cout << "----------"  << getId() << " xxxxxxxxxx" << inner->getRootId();
+    if(getId() == inner->getRootId())
+    //if(getId() == "root")
+    {    
+        parent = "";
+        return true;
+    }
 	auto parentNode = inner->getNode<NODE>(parentId);
 	if( parentNode )
 		parentNode->addChild(id); 
 	else
-		std::cout << "Inner::addChildToParent ROOT not found" << std::endl;
-		
+    {	
+        std::cout << "Inner::addChildToParent - " << getId() << "'s parent not found" << std::endl;
+        return false;
+    }        
+    return true;
 };
+
 
 void NODE::addChild(const std::string &childId)
 {

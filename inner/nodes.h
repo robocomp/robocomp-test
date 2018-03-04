@@ -22,29 +22,30 @@ class NODE
 		NODE(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::string &parent_ = "") : id(id_) , parent(parent_) 
 		{
 			inner = inner_;
-			addChildToParent( parent );
+			if(!addChildToParent( parent ))
+                throw std::runtime_error("NODE() - cannot create a node without parent");
 		}
 		virtual ~NODE(){};
 		std::string getId() const ;					
 		void setId(const std::string &id_);
 		void addChild(const std::string &nodeId);;		
-		void addChildToParent(const std::string &parentId);
+		bool addChildToParent(const std::string &parentId);
 		void removeChild(const std::string &childId);
 		std::string getParentId() const;				
 		std::string getChildId(unsigned int i) const;
 		std::vector<std::string> getChildren() const;
 		void print() const;
-		bool lock() 									{ return mymutex.try_lock_shared_for(10ms);};
-		void unlock()   								{ mymutex.unlock();};
-		bool isMarkedForDelete() const					{ return markedForDelete.load(); };
-		void markForDelete() 							{ markedForDelete.store(true);  };
-		void incWaiting() 								{ lockWaiting++;}
-		void decWaiting() 								{ lockWaiting--;}
-		ulong getWaiting() const 						{ return lockWaiting;}
+		void lock() 					{ return mymutex.lock();};
+		void unlock()   				{ mymutex.unlock();};
+		bool isMarkedForDelete() const	{ return markedForDelete.load(); };
+		void markForDelete() 			{ markedForDelete.store(true);  };
+		void incWaiting() 				{ lockWaiting++;}
+		void decWaiting() 				{ lockWaiting--;}
+		ulong getWaiting() const 			{ return lockWaiting;}
 		friend std::ostream& operator<< (std::ostream &out, const std::shared_ptr<NODE> &node);
 		
 	protected:
-		mutable std::shared_timed_mutex mymutex;
+		mutable std::recursive_mutex mymutex;
 		std::string id, id2;
 		std::string parent;
 		std::vector<std::string> children;

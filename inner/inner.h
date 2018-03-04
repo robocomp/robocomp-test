@@ -46,9 +46,10 @@ class Proxy : public T
 		Proxy(const std::shared_ptr<T> &node_, const std::shared_ptr<Inner> &inner) : T()//T(node_->getId(), inner)
 		{
 			node = node_;
-			if (node->lock() == false)
-				throw std::runtime_error("Could not lock the mutex");
-			node->incWaiting();
+            node->lock();
+	/*		if (node->lock() == false)
+				throw std::runtime_error("Proxy(): Could not lock the mutex");
+	*/		node->incWaiting();
 			//std::cout << "Waiting at " << node->getId() << " = " << node->getWaiting() << std::endl;
 		}
 		~Proxy()										
@@ -63,13 +64,13 @@ class Proxy : public T
 		void setId(const std::string &id_) 					{ node->setId(id_);}
 		void addChild(const std::string id_)				{ node->addChild(id_);};
 		void removeChild(const std::string &childId)		{ node->removeChild(childId);};
-		void addChildToParent(const std::string &parentId)	{ node->addChildToParent(parentId);};
+		bool addChildToParent(const std::string &parentId)	{ return node->addChildToParent(parentId);};
 		std::string getParentId() const						{ return node->getParentId();};
 		std::string getChildId(unsigned int i) const		{ return node->getChildId(i);};
 		std::vector<std::string> getChildren() const		{ return node->getChildren();};
 		void print() const									{ node->print(); }								
-		void lock() 										{ node->lock();}
-		void unlock()   									{ node->unlock();}
+        void lock() 					                   	{ node->lock();}
+		void unlock()   				                  	{ node->unlock();}
 		bool isMarkedForDelete() const						{ return node->markedForDelete(); };
 		void markForDelete() 								{ node->markForDelete();  };
 		void incWaiting() 									{ node->incWaiting();}
@@ -137,7 +138,12 @@ class Inner
 {
 	
 	public:
-		Inner(){};
+        Inner(){};
+		Inner(const Inner *inner)
+        {
+            rootid = inner->rootid;
+            rootptr = inner->rootptr;
+        };
 		////////////////////////////////
 		/// Factory constructor
 		///////////////////////////////
@@ -146,12 +152,17 @@ class Inner
 		{
 			auto t = std::make_tuple(params...);
 			std::string id = (std::get<0>(t));
-			std::shared_ptr<T> node(new T(std::forward<Ts>(params)...)); 
-			bool ok = hash.insert({id, std::static_pointer_cast<NODE>(node)}).second;
-			if(ok)
-				return node;
-			else 
-				throw std::out_of_range("Cannot insert id in hash");
+            try
+			{  
+                std::shared_ptr<T> node(new T(std::forward<Ts>(params)...)); 
+                bool ok = hash.insert({id, std::static_pointer_cast<NODE>(node)}).second;
+                if(ok)
+                    return node;
+                else 
+                    throw std::out_of_range("Cannot insert id in hash");
+            }
+			catch(const std::exception &e)
+            { throw std::runtime_error("Cannot insert node with invalid parent"); }
 		}
 		//////////////////////////////////////
 		/// Node getter
@@ -169,7 +180,7 @@ class Inner
 			}
 			catch(const std::exception &e)
 			{ 
-				std::cout << e.what() << std::endl;
+				std::cout << e.what() << " for ID: " << id << std::endl;
 				return std::shared_ptr<Proxy<N>>(nullptr);
 			}
 		}
@@ -178,8 +189,9 @@ class Inner
 		void print() const;
 		void printIter();
 		void deleteNode(const std::string &id);
+                void removeSubTree(const std::string id, std::vector<std::string> &l);
 	
-			ThreadSafeHash<std::string, NODEPtr> hash;   //PROBAR CON ATOMIC
+                ThreadSafeHash<std::string, NODEPtr> hash;   //PROBAR CON ATOMIC
 	private:
 		std::string rootid;
 		TRANSFORM *rootptr;
