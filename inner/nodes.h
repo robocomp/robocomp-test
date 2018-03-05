@@ -41,12 +41,12 @@ class NODE
 		void markForDelete() 			{ markedForDelete.store(true);  };
 		void incWaiting() 				{ lockWaiting++;}
 		void decWaiting() 				{ lockWaiting--;}
-		ulong getWaiting() const 			{ return lockWaiting;}
+		ulong getWaiting() const 		{ return lockWaiting;}
 		friend std::ostream& operator<< (std::ostream &out, const std::shared_ptr<NODE> &node);
 		
 	protected:
 		mutable std::recursive_mutex mymutex;
-		std::string id, id2;
+		std::string id;
 		std::string parent;
 		std::vector<std::string> children;
 		std::shared_ptr<Inner> inner;

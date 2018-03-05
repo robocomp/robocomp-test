@@ -15,7 +15,6 @@ bool NODE::addChildToParent(const std::string &parentId)
 {
     //std::cout << "----------"  << getId() << " xxxxxxxxxx" << inner->getRootId();
     if(getId() == inner->getRootId())
-    //if(getId() == "root")
     {    
         parent = "";
         return true;

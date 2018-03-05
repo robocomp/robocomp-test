@@ -92,25 +92,30 @@ class ThreadSafeHash
 		ThreadSafeHash(const ThreadSafeHash &other) = delete;
 		ThreadSafeHash& operator=(const ThreadSafeHash &other) = delete;
 		
-		V at(const K &key)	const					{ std::shared_lock<std::shared_timed_mutex> lock(mymutex); return hash.at(key);};
-		auto insert(std::pair<K, V> data)			
+		V at(const K &key)	const					
+		{ std::shared_lock<std::shared_mutex> lock(mymutex); return hash.at(key);};
+		
+        auto insert(std::pair<K, V> data)			
 		{ 
-			std::unique_lock<std::shared_timed_mutex> lock(mymutex); 
+			std::unique_lock<std::shared_mutex> lock(mymutex); 
 			auto t = hash.insert(data); 
 			return t;
 		}
+		
 		void erase(const K &key)
 		{
+            std::unique_lock<std::shared_mutex> lock(mymutex);
 			hash.erase(key);
 		}
-		auto size() const 							{ std::shared_lock<std::shared_timed_mutex> lock(mymutex); return hash.size();}
+		auto size() const 							
+		{ std::shared_lock<std::shared_mutex> lock(mymutex); return hash.size();}
 		
 		std::vector<typename myMap::key_type> keys()
 		{
-			std::shared_lock<std::shared_timed_mutex> lock(mymutex);
+			std::shared_lock<std::shared_mutex> lock(mymutex);
 			std::vector<typename myMap::key_type> r;
 			r.reserve(hash.size());
-			for (const auto&kvp : hash)
+			for(auto&& kvp : hash)
 			{
 				r.push_back(kvp.first);
 			}
@@ -119,10 +124,10 @@ class ThreadSafeHash
 
 		std::vector<typename myMap::mapped_type> values()
 		{
-			std::shared_lock<std::shared_timed_mutex> lock(mymutex);
+			std::shared_lock<std::shared_mutex> lock(mymutex);
 			std::vector<typename myMap::mapped_type> r;
 			r.reserve(hash.size());
-			for (const auto&kvp : hash)
+			for (auto&& kvp : hash)
 			{
 				r.push_back(kvp.second);
 			}
@@ -131,7 +136,7 @@ class ThreadSafeHash
 		
 	private:
 		myMap hash;
-		mutable std::shared_timed_mutex mymutex;
+		mutable std::shared_mutex mymutex;
 };
 
 class Inner
@@ -150,7 +155,8 @@ class Inner
 		template<typename T, typename... Ts>
 		std::shared_ptr<T> newNode(Ts&&... params)
 		{
-			auto t = std::make_tuple(params...);
+            std::unique_lock<std::mutex>(nn_mutex);
+            auto t = std::make_tuple(params...);
 			std::string id = (std::get<0>(t));
             try
 			{  
@@ -168,22 +174,25 @@ class Inner
 		/// Node getter
 		/////////////////////////////////////
 		template <typename N> 
-		std::shared_ptr<Proxy<N>> getNode(const std::string &id) 
-		{
-			try 
-			{ 
-				auto n = hash.at(id);
-				if(n->isMarkedForDelete())
-					return std::shared_ptr<Proxy<N>>(nullptr);
-				auto nn = std::static_pointer_cast<N>(n);
-				return std::shared_ptr<Proxy<N>>(new Proxy<N>(nn, std::shared_ptr<Inner>()));
-			}
-			catch(const std::exception &e)
-			{ 
-				std::cout << e.what() << " for ID: " << id << std::endl;
-				return std::shared_ptr<Proxy<N>>(nullptr);
-			}
-		}
+		std::shared_ptr<Proxy<N>> getNode(const std::string &id)
+        {
+            std::unique_lock<std::mutex>(gn_mutex);
+            try 
+            { 
+                auto n = hash.at(id);
+                if(n->isMarkedForDelete())
+                    return std::shared_ptr<Proxy<N>>(nullptr);
+                auto nn = std::static_pointer_cast<N>(n);
+                return std::shared_ptr<Proxy<N>>(new Proxy<N>(nn, std::shared_ptr<Inner>()));
+            }
+            catch(const std::exception &e)
+            { 
+                std::cout << e.what() << " for ID: " << id << std::endl;
+                return std::shared_ptr<Proxy<N>>(nullptr);
+            }
+        }
+
+		
 		void setRootId(const std::string &r);
 		std::string getRootId() const 				{return(rootid);};
 		void print() const;
@@ -195,6 +204,7 @@ class Inner
 	private:
 		std::string rootid;
 		TRANSFORM *rootptr;
+        mutable std::mutex gn_mutex, nn_mutex;
 };
 
 #endif // INNER_H

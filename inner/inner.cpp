@@ -38,7 +38,7 @@ void Inner::printIter()
 	while(not s.empty())
 	{
 		std::shared_ptr<Proxy<NODE>> node = s.top();
-                if (!node) { std::cout << "Fary" << std::endl; exit(-1);}
+        if (!node) { std::cout << "Fary" << std::endl; exit(-1);}
 		std::cout << std::setfill('_') << std::setw (level.top()*5) << node->getId() << std::endl;
 		s.pop();
 		int localLevel = level.top();
@@ -48,11 +48,11 @@ void Inner::printIter()
 			l = localLevel + 1;
 			for(auto&& nn : node->getChildren())
 			{
-                                if(auto temp = getNode<NODE>(nn))
-                                {
-                                    s.push(temp);
-                                    level.push(l);
-                                }
+                if(auto temp = getNode<NODE>(nn))
+                {
+                    s.push(temp);
+                    level.push(l);
+                }
 			}
 		}
 		count++;
@@ -74,7 +74,7 @@ void Inner::deleteNode(const std::string &id)
         }
 	//std::cout << "entering DELETE: " << node.use_count() << std::endl;
 	node->markForDelete();
-	while( hash.at(id)->getWaiting() > 1);
+	while( node->getWaiting() > 1);
 	if(node.unique())
 	{
 		auto p = getNode<NODE>(node->getParentId());
@@ -93,11 +93,11 @@ void Inner::deleteNode(const std::string &id)
 void Inner::removeSubTree(const std::string id, std::vector<std::string> &l)
 {
     auto node = getNode<NODE>(id);
-    if(!node) return;
+    if(!node) throw std::runtime_error("Attempt to delete a not existing node.");
     for(auto&& n : node->getChildren())
       removeSubTree(n, l);  
     node->markForDelete();
-    while( hash.at(id)->getWaiting() > 1)
+    while( node->getWaiting() > 1)
         std::this_thread::sleep_for(1ms);
     if(auto p = getNode<NODE>(node->getParentId()))
         p->removeChild(id);
@@ -105,6 +105,8 @@ void Inner::removeSubTree(const std::string id, std::vector<std::string> &l)
     l.push_back(id);
     node.reset();
 }   
+
+
 
 
 // SEG FAULTS when accesing an a deleted node

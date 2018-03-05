@@ -77,7 +77,7 @@ void createThread(const std::shared_ptr<Inner> &inner)
             try
             {	auto n = inner->newNode<TRANSFORM>(id, inner, parent); }
             catch(const std::exception &e) 
-            {	std::cout << e.what() << " Main::createThread - Error" << std::endl;}
+            {	std::cout << e.what() << " " << parent << " Main::createThread - Error" << std::endl;}
         std::this_thread::sleep_for(100ms);		
 	}
 }
@@ -143,11 +143,16 @@ void deleteThread(const std::shared_ptr<Inner> &inner)
 			continue;
 		std::cout << "D THREAD: deleting id " << id << std::endl;
         std::vector<std::string> l;
-        inner->removeSubTree(id,l);
-        std::cout << "D THREAD: deleted " << l.size() << " items:" << std::endl;
-        for(auto&& n: l)
-            std::cout << n << std::endl;
-        std::cout << "---------end deleted----------" << std::endl;
+        try
+        { 
+            inner->removeSubTree(id,l);
+            std::cout << "D THREAD: deleted " << l.size() << " items:" << std::endl;
+            for(auto&& n: l)
+                std::cout << n << std::endl;
+            std::cout << "---------end deleted----------" << std::endl;
+        } 
+        catch(const std::exception &e)
+        { std::cout << e.what() << std::endl;};
                 
 		std::this_thread::sleep_for(100ms);		
 	}
@@ -213,7 +218,7 @@ int main()
         
         
 	std::cout << "-----------threads-------------------------" << std::endl;
-	std::vector<int> RN = {0}, WN = {}, CN = {0,1}, TN = {}, DN = {0};
+	std::vector<int> RN = {0,1}, WN = {}, CN = {0,1}, TN = {}, DN = {0};
 	std::future<void> threadsR[RN.size()], threadsW[WN.size()], threadsC[CN.size()], threadsT[TN.size()], threadsD[DN.size()];
 	
 	for (auto&& i : RN)
