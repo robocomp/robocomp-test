@@ -24,7 +24,7 @@ void readThread(const std::shared_ptr<Inner> &inner)
 {
 	std::random_device r;
 	std::default_random_engine e1(r());
-	std::vector<std::string> keys = inner->hash.keys();
+	std::vector<std::string> keys = inner->hash->keys();
 	std::uniform_int_distribution<int> uniform_dist(0, keys.size()-1);
 	while(true)
 	{		
@@ -43,7 +43,7 @@ void writeThread(const std::shared_ptr<Inner> &inner)
 	
 	while(true)
 	{
-		std::vector<std::string> keys = inner->hash.keys();
+		std::vector<std::string> keys = inner->hash->keys();
 		std::uniform_int_distribution<int> uniform_dist(0, keys.size()-1);
 		auto target = keys[uniform_dist(e1)];
 		auto node = inner->getNode<TRANSFORM>(target);
@@ -65,8 +65,8 @@ void createThread(const std::shared_ptr<Inner> &inner)
 	
 	while(true)
 	{
-		std::cout << "THREAD: creating: size " << inner->hash.size() << std::endl;
-		std::vector<std::string> keys = inner->hash.keys();
+		std::cout << "THREAD: creating: size " << inner->hash->size() << std::endl;
+		std::vector<std::string> keys = inner->hash->keys();
 		std::uniform_int_distribution<int> uniform_dist(0, keys.size()-1);
 		auto parent = keys[uniform_dist(e1)];
         std::string id = std::to_string(name_dist(e1));
@@ -90,7 +90,7 @@ void chainThread(const std::shared_ptr<Inner> &inner)
 	
 	while(true)
 	{
-		std::vector<std::string> keys = inner->hash.keys();
+		std::vector<std::string> keys = inner->hash->keys();
 		std::uniform_int_distribution<int> uniform_dist(0, keys.size()-1);
 		auto id = keys[uniform_dist(e1)];
 		auto running_id = id, parent_id=id;
@@ -136,7 +136,7 @@ void deleteThread(const std::shared_ptr<Inner> &inner)
 	
 	while(true)
 	{
-		std::vector<std::string> keys = inner->hash.keys();
+		std::vector<std::string> keys = inner->hash->keys();
 		std::uniform_int_distribution<int> uniform_dist(0, keys.size()-1);
 		auto id = keys[uniform_dist(e1)];
 		if(id == inner->getRootId())
@@ -218,7 +218,7 @@ int main()
         
         
 	std::cout << "-----------threads-------------------------" << std::endl;
-	std::vector<int> RN = {0,1}, WN = {}, CN = {0,1}, TN = {}, DN = {0};
+	std::vector<int> RN = {}, WN = {}, CN = {0,1}, TN = {}, DN = {0};
 	std::future<void> threadsR[RN.size()], threadsW[WN.size()], threadsC[CN.size()], threadsT[TN.size()], threadsD[DN.size()];
 	
 	for (auto&& i : RN)

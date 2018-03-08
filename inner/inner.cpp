@@ -6,7 +6,7 @@ void Inner::setRootId(const std::string &r)
     //std::cout << "----------" << this->rootid  << std::endl; 
 	rootid = r;
 	rootptr = new TRANSFORM("root", std::shared_ptr<Inner>(this), "");
-	bool ok = hash.insert({r, std::shared_ptr<NODE>(rootptr)}).second;
+	bool ok = hash->insert({r, std::shared_ptr<NODE>(rootptr)}).second;
 	if(ok)
 		std::cout << "Inner::setRoot Create root node as " << r << std::endl;
 	else
@@ -81,7 +81,7 @@ void Inner::deleteNode(const std::string &id)
 		if(p)
 			p->removeChild(id);
 		node.reset();
-		hash.erase(id);
+		hash->erase(id);
 		//std::cout << "DELETE: node " << id << " deleted OK " << node.use_count() << " references" << std::endl;
 	}
 	else
@@ -101,7 +101,7 @@ void Inner::removeSubTree(const std::string id, std::vector<std::string> &l)
         std::this_thread::sleep_for(1ms);
     if(auto p = getNode<NODE>(node->getParentId()))
         p->removeChild(id);
-    hash.erase(id);
+    hash->erase(id);
     l.push_back(id);
     node.reset();
 }   

@@ -27,6 +27,7 @@
 #include <unordered_map>
 #include <iomanip>      // std::setfill, std::setw
 
+#include "safe_ptr.h"
 #include "nodes.h"
 
 using NODEPtr = std::shared_ptr<NODE>; 
@@ -93,26 +94,31 @@ class ThreadSafeHash
 		ThreadSafeHash& operator=(const ThreadSafeHash &other) = delete;
 		
 		V at(const K &key)	const					
-		{ std::shared_lock<std::shared_mutex> lock(mymutex); return hash.at(key);};
+		{ //std::shared_lock<std::shared_mutex> lock(mymutex); 
+			return hash.at(key);
+			
+		};
 		
         auto insert(std::pair<K, V> data)			
 		{ 
-			std::unique_lock<std::shared_mutex> lock(mymutex); 
+			//std::unique_lock<std::shared_mutex> lock(mymutex); 
 			auto t = hash.insert(data); 
 			return t;
 		}
 		
 		void erase(const K &key)
 		{
-            std::unique_lock<std::shared_mutex> lock(mymutex);
+            //std::unique_lock<std::shared_mutex> lock(mymutex);
 			hash.erase(key);
 		}
 		auto size() const 							
-		{ std::shared_lock<std::shared_mutex> lock(mymutex); return hash.size();}
+		{ //std::shared_lock<std::shared_mutex> lock(mymutex); 
+			return hash.size();
+		}
 		
 		std::vector<typename myMap::key_type> keys()
 		{
-			std::shared_lock<std::shared_mutex> lock(mymutex);
+			//std::shared_lock<std::shared_mutex> lock(mymutex);
 			std::vector<typename myMap::key_type> r;
 			r.reserve(hash.size());
 			for(auto&& kvp : hash)
@@ -124,7 +130,7 @@ class ThreadSafeHash
 
 		std::vector<typename myMap::mapped_type> values()
 		{
-			std::shared_lock<std::shared_mutex> lock(mymutex);
+			//std::shared_lock<std::shared_mutex> lock(mymutex);
 			std::vector<typename myMap::mapped_type> r;
 			r.reserve(hash.size());
 			for (auto&& kvp : hash)
@@ -136,7 +142,7 @@ class ThreadSafeHash
 		
 	private:
 		myMap hash;
-		mutable std::shared_mutex mymutex;
+		//mutable std::shared_mutex mymutex;
 };
 
 class Inner
@@ -161,7 +167,7 @@ class Inner
             try
 			{  
                 std::shared_ptr<T> node(new T(std::forward<Ts>(params)...)); 
-                bool ok = hash.insert({id, std::static_pointer_cast<NODE>(node)}).second;
+                bool ok = hash->insert({id, std::static_pointer_cast<NODE>(node)}).second;
                 if(ok)
                     return node;
                 else 
@@ -179,7 +185,7 @@ class Inner
             std::unique_lock<std::mutex>(gn_mutex);
             try 
             { 
-                auto n = hash.at(id);
+                auto n = hash->at(id);
                 if(n->isMarkedForDelete())
                     return std::shared_ptr<Proxy<N>>(nullptr);
                 auto nn = std::static_pointer_cast<N>(n);
@@ -200,7 +206,8 @@ class Inner
 		void deleteNode(const std::string &id);
                 void removeSubTree(const std::string id, std::vector<std::string> &l);
 	
-                ThreadSafeHash<std::string, NODEPtr> hash;   //PROBAR CON ATOMIC
+		//ThreadSafeHash<std::string, NODEPtr> hash;  
+		sf::safe_ptr<ThreadSafeHash<std::string, NODEPtr>> hash; 
 	private:
 		std::string rootid;
 		TRANSFORM *rootptr;
