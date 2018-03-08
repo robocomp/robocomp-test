@@ -19,21 +19,22 @@ class NODE
 {
 	public:
 		NODE(){};
-		NODE(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::string &parent_ = "") : id(id_) , parent(parent_) 
+		NODE(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::string &parent_ = "") : id(id_) , parent(parent_)
 		{
 			inner = inner_;
 			if(!addChildToParent( parent ))
                 throw std::runtime_error("NODE() - cannot create a node without parent");
 		}
 		virtual ~NODE(){};
-		std::string getId() const ;					
+		std::string getId() const ;
 		void setId(const std::string &id_);
-		void addChild(const std::string &nodeId);;		
+		void addChild(const std::string &nodeId);;
 		bool addChildToParent(const std::string &parentId);
 		void removeChild(const std::string &childId);
-		std::string getParentId() const;				
+		std::string getParentId() const;
 		std::string getChildId(unsigned int i) const;
 		std::vector<std::string> getChildren() const;
+		size_t getNumChildren() const 	{ return children.size();};
 		void print() const;
 		void lock() 					{ return mymutex.lock();};
 		void unlock()   				{ mymutex.unlock();};
@@ -43,7 +44,7 @@ class NODE
 		void decWaiting() 				{ lockWaiting--;}
 		ulong getWaiting() const 		{ return lockWaiting;}
 		friend std::ostream& operator<< (std::ostream &out, const std::shared_ptr<NODE> &node);
-		
+
 	protected:
 		mutable std::recursive_mutex mymutex;
 		std::string id;
@@ -69,7 +70,7 @@ class JOINT: public TRANSFORM
 		JOINT(const std::string& id_, const std::shared_ptr<Inner> &inner_, const std::string &parent_ = ""): TRANSFORM(id_, inner_, parent_)
 		{}
 	private:
-		
+
 };
 
 

@@ -30,9 +30,9 @@
 #include "safe_ptr.h"
 #include "nodes.h"
 
-using NODEPtr = std::shared_ptr<NODE>; 
+using NODEPtr = std::shared_ptr<NODE>;
 using TRANSFORMPtr = std::shared_ptr<TRANSFORM>;
-using JOINTPtr = std::shared_ptr<JOINT>; 
+using JOINTPtr = std::shared_ptr<JOINT>;
 
 using namespace std::chrono_literals;
 
@@ -44,23 +44,20 @@ template <typename T>
 class Proxy : public T
 {
 	public:
-		Proxy(const std::shared_ptr<T> &node_, const std::shared_ptr<Inner> &inner) : T()//T(node_->getId(), inner)
+		Proxy(const std::shared_ptr<T> &node_, const std::shared_ptr<Inner> &inner) : T()
 		{
+			node_->lock();
 			node = node_;
-            node->lock();
-	/*		if (node->lock() == false)
-				throw std::runtime_error("Proxy(): Could not lock the mutex");
-	*/		node->incWaiting();
-			//std::cout << "Waiting at " << node->getId() << " = " << node->getWaiting() << std::endl;
+			node->incWaiting();
 		}
-		~Proxy()										
-		{ 
+		~Proxy()
+		{
 			node->decWaiting();
-			node->unlock(); 
+			node->unlock();
 		}
-		
+
 		std::shared_ptr<T> operator ->() const	{ return node;}
-		
+
 		std::string getId() const 							{ return node->getId();}
 		void setId(const std::string &id_) 					{ node->setId(id_);}
 		void addChild(const std::string id_)				{ node->addChild(id_);};
@@ -69,7 +66,8 @@ class Proxy : public T
 		std::string getParentId() const						{ return node->getParentId();};
 		std::string getChildId(unsigned int i) const		{ return node->getChildId(i);};
 		std::vector<std::string> getChildren() const		{ return node->getChildren();};
-		void print() const									{ node->print(); }								
+		size_t getNumChildren() const 						{ return node->getNumChildren();};
+		void print() const									{ node->print(); }
         void lock() 					                   	{ node->lock();}
 		void unlock()   				                  	{ node->unlock();}
 		bool isMarkedForDelete() const						{ return node->markedForDelete(); };
@@ -78,8 +76,8 @@ class Proxy : public T
 		void decWaiting() 									{ node->decWaiting();}
 		ulong getWaiting() const 							{ return node->getWaiting();}
 		friend std::ostream& operator<< (std::ostream &out, const std::shared_ptr<Proxy<NODE>> &node);
-		
-	protected:		
+
+	protected:
 		std::shared_ptr<T> node;
 };
 
@@ -87,35 +85,35 @@ template <typename K, typename V>
 class ThreadSafeHash
 {
 	using myMap = std::unordered_map<K, V>;
-		
+
 	public:
 		ThreadSafeHash(){};
 		ThreadSafeHash(const ThreadSafeHash &other) = delete;
 		ThreadSafeHash& operator=(const ThreadSafeHash &other) = delete;
-		
-		V at(const K &key)	const					
-		{ //std::shared_lock<std::shared_mutex> lock(mymutex); 
+
+		V at(const K &key)	const
+		{ //std::shared_lock<std::shared_mutex> lock(mymutex);
 			return hash.at(key);
-			
+
 		};
-		
-        auto insert(std::pair<K, V> data)			
-		{ 
-			//std::unique_lock<std::shared_mutex> lock(mymutex); 
-			auto t = hash.insert(data); 
+
+        auto insert(std::pair<K, V> data)
+		{
+			//std::unique_lock<std::shared_mutex> lock(mymutex);
+			auto t = hash.insert(data);
 			return t;
 		}
-		
+
 		void erase(const K &key)
 		{
             //std::unique_lock<std::shared_mutex> lock(mymutex);
 			hash.erase(key);
 		}
-		auto size() const 							
-		{ //std::shared_lock<std::shared_mutex> lock(mymutex); 
+		auto size() const
+		{ //std::shared_lock<std::shared_mutex> lock(mymutex);
 			return hash.size();
 		}
-		
+
 		std::vector<typename myMap::key_type> keys()
 		{
 			//std::shared_lock<std::shared_mutex> lock(mymutex);
@@ -139,7 +137,7 @@ class ThreadSafeHash
 			}
 			return r;
 		}
-		
+
 	private:
 		myMap hash;
 		//mutable std::shared_mutex mymutex;
@@ -147,7 +145,7 @@ class ThreadSafeHash
 
 class Inner
 {
-	
+
 	public:
         Inner(){};
 		Inner(const Inner *inner)
@@ -165,12 +163,12 @@ class Inner
             auto t = std::make_tuple(params...);
 			std::string id = (std::get<0>(t));
             try
-			{  
-                std::shared_ptr<T> node(new T(std::forward<Ts>(params)...)); 
+			{
+                std::shared_ptr<T> node(new T(std::forward<Ts>(params)...));
                 bool ok = hash->insert({id, std::static_pointer_cast<NODE>(node)}).second;
                 if(ok)
                     return node;
-                else 
+                else
                     throw std::out_of_range("Cannot insert id in hash");
             }
 			catch(const std::exception &e)
@@ -179,12 +177,12 @@ class Inner
 		//////////////////////////////////////
 		/// Node getter
 		/////////////////////////////////////
-		template <typename N> 
+		template <typename N>
 		std::shared_ptr<Proxy<N>> getNode(const std::string &id)
         {
             std::unique_lock<std::mutex>(gn_mutex);
-            try 
-            { 
+            try
+            {
                 auto n = hash->at(id);
                 if(n->isMarkedForDelete())
                     return std::shared_ptr<Proxy<N>>(nullptr);
@@ -192,22 +190,22 @@ class Inner
                 return std::shared_ptr<Proxy<N>>(new Proxy<N>(nn, std::shared_ptr<Inner>()));
             }
             catch(const std::exception &e)
-            { 
+            {
                 std::cout << e.what() << " for ID: " << id << std::endl;
                 return std::shared_ptr<Proxy<N>>(nullptr);
             }
         }
 
-		
+
 		void setRootId(const std::string &r);
 		std::string getRootId() const 				{return(rootid);};
 		void print() const;
 		void printIter();
 		void deleteNode(const std::string &id);
                 void removeSubTree(const std::string id, std::vector<std::string> &l);
-	
-		//ThreadSafeHash<std::string, NODEPtr> hash;  
-		sf::safe_ptr<ThreadSafeHash<std::string, NODEPtr>> hash; 
+
+		//ThreadSafeHash<std::string, NODEPtr> hash;
+		sf::safe_ptr<ThreadSafeHash<std::string, NODEPtr>> hash;
 	private:
 		std::string rootid;
 		TRANSFORM *rootptr;

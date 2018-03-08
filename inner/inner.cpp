@@ -1,36 +1,36 @@
 #include "inner.h"
 
 void Inner::setRootId(const std::string &r)
-{ 
+{
 	//rootptr = newNode<TRANSFORM>(r, std::shared_ptr<Inner>(this), "");
-    //std::cout << "----------" << this->rootid  << std::endl; 
+    //std::cout << "----------" << this->rootid  << std::endl;
 	rootid = r;
 	rootptr = new TRANSFORM("root", std::shared_ptr<Inner>(this), "");
 	bool ok = hash->insert({r, std::shared_ptr<NODE>(rootptr)}).second;
 	if(ok)
 		std::cout << "Inner::setRoot Create root node as " << r << std::endl;
 	else
-		std::cout << "Inner::setRoot ERROR Could nor create existing root node" << r << std::endl;	
-	
+		std::cout << "Inner::setRoot ERROR Could nor create existing root node" << r << std::endl;
+
 };
 
-void Inner::print() const 										
-{ 
-// 	std::cout << "---------------------------------------" << std::endl; 
+void Inner::print() const
+{
+// 	std::cout << "---------------------------------------" << std::endl;
 // 	std::cout << "Elements in tree: " << hash.size() << std::endl;
 // 	root->print();
 }
 
-void Inner::printIter() 
+void Inner::printIter()
 {
 	if (rootid == "")
 	{
 		std::cout << "Inner::printIter Cannot print cause root is empty" << std::endl;
 		return;
 	}
+	auto r = getNode<NODE>("root");
 	std::cout << "-------------------------------- PRINTING TREE ----------------------------------" << std::endl;
 	std::stack<std::shared_ptr<Proxy<NODE>>> s;
-	auto r = getNode<NODE>("root");
 	s.push(r);
 	std::stack<int> level;
 	int l=0, count=1;
@@ -64,7 +64,7 @@ void Inner::printIter()
 
 void Inner::deleteNode(const std::string &id)
 {
-	if(id == rootid) 
+	if(id == rootid)
 		return;
 	auto node = getNode<NODE>(id);
         if(!node)
@@ -93,9 +93,10 @@ void Inner::deleteNode(const std::string &id)
 void Inner::removeSubTree(const std::string id, std::vector<std::string> &l)
 {
     auto node = getNode<NODE>(id);
-    if(!node) throw std::runtime_error("Attempt to delete a not existing node.");
+    if(!node)
+		throw std::runtime_error("Attempt to delete a not existing node.");
     for(auto&& n : node->getChildren())
-      removeSubTree(n, l);  
+      removeSubTree(n, l);
     node->markForDelete();
     while( node->getWaiting() > 1)
         std::this_thread::sleep_for(1ms);
@@ -104,9 +105,7 @@ void Inner::removeSubTree(const std::string id, std::vector<std::string> &l)
     hash->erase(id);
     l.push_back(id);
     node.reset();
-}   
-
-
+}
 
 
 // SEG FAULTS when accesing an a deleted node
@@ -114,5 +113,5 @@ void Inner::removeSubTree(const std::string id, std::vector<std::string> &l)
 std::ostream& operator<< (std::ostream &out, const std::shared_ptr<Proxy<NODE>> &node)
 {
 	out << node->node;
-	return out;	
+	return out;
 };
