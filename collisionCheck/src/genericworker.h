@@ -36,28 +36,17 @@
 #include <GenericBase.h>
 #include <Laser.h>
 #include <GenericBase.h>
-#include <agm.h>
 
 #define CHECK_PERIOD 5000
 #define BASIC_PERIOD 100
 
 using namespace std;
-using namespace RoboCompLaser;
-using namespace RoboCompAGMWorldModel;
 using namespace RoboCompOmniRobot;
 using namespace RoboCompGenericBase;
-using namespace RoboCompAGMExecutive;
-using namespace RoboCompPlanning;
-using namespace RoboCompAGMCommonBehavior;
+using namespace RoboCompLaser;
 
 typedef map <string,::IceProxy::Ice::Object*> MapPrx;
 
-
-struct BehaviorParameters
-{
-	RoboCompPlanning::Action action;
-	std::vector< std::vector <std::string> > plan;
-};
 
 class GenericWorker :
 #ifdef USE_QTGUI
@@ -75,39 +64,15 @@ public:
 
 	virtual bool setParams(RoboCompCommonBehavior::ParameterList params) = 0;
 	QMutex *mutex;
-	bool activate(const BehaviorParameters& parameters);
-	bool deactivate();
-	bool isActive() { return active; }
 
 
-	OmniRobotPrx omnirobot_proxy;
 	LaserPrx laser_proxy;
-	AGMExecutivePrx agmexecutive_proxy;
+	OmniRobotPrx omnirobot_proxy;
 
-	virtual bool AGMCommonBehavior_reloadConfigAgent() = 0;
-	virtual bool AGMCommonBehavior_activateAgent(const ParameterMap &prs) = 0;
-	virtual bool AGMCommonBehavior_setAgentParameters(const ParameterMap &prs) = 0;
-	virtual ParameterMap AGMCommonBehavior_getAgentParameters() = 0;
-	virtual void AGMCommonBehavior_killAgent() = 0;
-	virtual int AGMCommonBehavior_uptimeAgent() = 0;
-	virtual bool AGMCommonBehavior_deactivateAgent() = 0;
-	virtual StateStruct AGMCommonBehavior_getAgentState() = 0;
-	virtual void AGMExecutiveTopic_structuralChange(const RoboCompAGMWorldModel::World &w) = 0;
-	virtual void AGMExecutiveTopic_edgesUpdated(const RoboCompAGMWorldModel::EdgeSequence &modifications) = 0;
-	virtual void AGMExecutiveTopic_edgeUpdated(const RoboCompAGMWorldModel::Edge &modification) = 0;
-	virtual void AGMExecutiveTopic_symbolUpdated(const RoboCompAGMWorldModel::Node &modification) = 0;
-	virtual void AGMExecutiveTopic_symbolsUpdated(const RoboCompAGMWorldModel::NodeSequence &modifications) = 0;
 
 protected:
 	QTimer timer;
 	int Period;
-	bool active;
-	AGMModel::SPtr worldModel;
-	BehaviorParameters p;
-	ParameterMap params;
-	int iter;
-	bool setParametersAndPossibleActivation(const ParameterMap &prs, bool &reactivated);
-	RoboCompPlanning::Action createAction(std::string s);
 
 private:
 

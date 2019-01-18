@@ -43,37 +43,20 @@ public:
 	~SpecificWorker();
 	bool setParams(RoboCompCommonBehavior::ParameterList params);
 
-	bool AGMCommonBehavior_reloadConfigAgent();
-	bool AGMCommonBehavior_activateAgent(const ParameterMap &prs);
-	bool AGMCommonBehavior_setAgentParameters(const ParameterMap &prs);
-	ParameterMap AGMCommonBehavior_getAgentParameters();
-	void AGMCommonBehavior_killAgent();
-	int AGMCommonBehavior_uptimeAgent();
-	bool AGMCommonBehavior_deactivateAgent();
-	StateStruct AGMCommonBehavior_getAgentState();
-	void AGMExecutiveTopic_structuralChange(const RoboCompAGMWorldModel::World &w);
-	void AGMExecutiveTopic_edgesUpdated(const RoboCompAGMWorldModel::EdgeSequence &modifications);
-	void AGMExecutiveTopic_edgeUpdated(const RoboCompAGMWorldModel::Edge &modification);
-	void AGMExecutiveTopic_symbolUpdated(const RoboCompAGMWorldModel::Node &modification);
-	void AGMExecutiveTopic_symbolsUpdated(const RoboCompAGMWorldModel::NodeSequence &modifications);
-
 public slots:
 	void compute();
 	void initialize(int period);
 
 private:
 	InnerModel *innerModel;
+	std::vector<QString> robotNodes;
+	std::vector<QString> restNodes;
+	std::set<QString> excludedNodes;
 #ifdef USE_QTGUI
 	OsgView *osgView;
 	InnerModelViewer *innerModelViewer;
 #endif
-	std::string action;
-	ParameterMap params;
-	AGMModel::SPtr worldModel;
-	bool active;
-	void regenerateInnerModelViewer();
-	bool setParametersAndPossibleActivation(const ParameterMap &prs, bool &reactivated);
-	void sendModificationProposal(AGMModel::SPtr &worldModel, AGMModel::SPtr &newModel);
+	void recursiveIncludeMeshes(InnerModelNode *node, QString robotId, bool inside, std::vector<QString> &in, std::vector<QString> &out, std::set<QString> &excluded);
 
 };
 

@@ -81,8 +81,6 @@
 #include "specificmonitor.h"
 #include "commonbehaviorI.h"
 
-#include <agmcommonbehaviorI.h>
-#include <agmexecutivetopicI.h>
 
 #include <OmniRobot.h>
 #include <GenericBase.h>
@@ -141,7 +139,6 @@ int ::collisionCheck::run(int argc, char* argv[])
 
 	LaserPrx laser_proxy;
 	OmniRobotPrx omnirobot_proxy;
-	AGMExecutivePrx agmexecutive_proxy;
 
 	string proxy, tmp;
 	initialize();
@@ -181,33 +178,6 @@ int ::collisionCheck::run(int argc, char* argv[])
 
 	mprx["OmniRobotProxy"] = (::IceProxy::Ice::Object*)(&omnirobot_proxy);//Remote server proxy creation example
 
-	try
-	{
-		if (not GenericMonitor::configGetString(communicator(), prefix, "AGMExecutiveProxy", proxy, ""))
-		{
-			cout << "[" << PROGRAM_NAME << "]: Can't read configuration for proxy AGMExecutiveProxy\n";
-		}
-		agmexecutive_proxy = AGMExecutivePrx::uncheckedCast( communicator()->stringToProxy( proxy ) );
-	}
-	catch(const Ice::Exception& ex)
-	{
-		cout << "[" << PROGRAM_NAME << "]: Exception creating proxy AGMExecutive: " << ex;
-		return EXIT_FAILURE;
-	}
-	rInfo("AGMExecutiveProxy initialized Ok!");
-
-	mprx["AGMExecutiveProxy"] = (::IceProxy::Ice::Object*)(&agmexecutive_proxy);//Remote server proxy creation example
-	IceStorm::TopicManagerPrx topicManager;
-	try
-	{
-		topicManager = IceStorm::TopicManagerPrx::checkedCast(communicator()->propertyToProxy("TopicManager.Proxy"));
-	}
-	catch (const Ice::Exception &ex)
-	{
-		cout << "[" << PROGRAM_NAME << "]: Exception: STORM not running: " << ex << endl;
-		return EXIT_FAILURE;
-	}
-
 	SpecificWorker *worker = new SpecificWorker(mprx);
 	//Monitor thread
 	SpecificMonitor *monitor = new SpecificMonitor(worker,communicator());
@@ -246,64 +216,6 @@ int ::collisionCheck::run(int argc, char* argv[])
 
 
 
-		try
-		{
-			// Server adapter creation and publication
-			if (not GenericMonitor::configGetString(communicator(), prefix, "AGMCommonBehavior.Endpoints", tmp, ""))
-			{
-				cout << "[" << PROGRAM_NAME << "]: Can't read configuration for proxy AGMCommonBehavior";
-			}
-			Ice::ObjectAdapterPtr adapterAGMCommonBehavior = communicator()->createObjectAdapterWithEndpoints("AGMCommonBehavior", tmp);
-			AGMCommonBehaviorI *agmcommonbehavior = new AGMCommonBehaviorI(worker);
-			adapterAGMCommonBehavior->add(agmcommonbehavior, Ice::stringToIdentity("agmcommonbehavior"));
-			adapterAGMCommonBehavior->activate();
-			cout << "[" << PROGRAM_NAME << "]: AGMCommonBehavior adapter created in port " << tmp << endl;
-			}
-			catch (const IceStorm::TopicExists&){
-				cout << "[" << PROGRAM_NAME << "]: ERROR creating or activating adapter for AGMCommonBehavior\n";
-			}
-
-
-
-		// Server adapter creation and publication
-		IceStorm::TopicPrx agmexecutivetopic_topic;
-		Ice::ObjectPrx agmexecutivetopic;
-		try
-		{
-			if (not GenericMonitor::configGetString(communicator(), prefix, "AGMExecutiveTopicTopic.Endpoints", tmp, ""))
-			{
-				cout << "[" << PROGRAM_NAME << "]: Can't read configuration for proxy AGMExecutiveTopicProxy";
-			}
-			Ice::ObjectAdapterPtr AGMExecutiveTopic_adapter = communicator()->createObjectAdapterWithEndpoints("agmexecutivetopic", tmp);
-			AGMExecutiveTopicPtr agmexecutivetopicI_ =  new AGMExecutiveTopicI(worker);
-			Ice::ObjectPrx agmexecutivetopic = AGMExecutiveTopic_adapter->addWithUUID(agmexecutivetopicI_)->ice_oneway();
-			if(!agmexecutivetopic_topic)
-			{
-				try {
-					agmexecutivetopic_topic = topicManager->create("AGMExecutiveTopic");
-				}
-				catch (const IceStorm::TopicExists&) {
-					//Another client created the topic
-					try{
-						cout << "[" << PROGRAM_NAME << "]: Probably other client already opened the topic. Trying to connect.\n";
-						agmexecutivetopic_topic = topicManager->retrieve("AGMExecutiveTopic");
-					}
-					catch(const IceStorm::NoSuchTopic&)
-					{
-						cout << "[" << PROGRAM_NAME << "]: Topic doesn't exists and couldn't be created.\n";
-						//Error. Topic does not exist
-					}
-				}
-				IceStorm::QoS qos;
-				agmexecutivetopic_topic->subscribeAndGetPublisher(qos, agmexecutivetopic);
-			}
-			AGMExecutiveTopic_adapter->activate();
-		}
-		catch(const IceStorm::NoSuchTopic&)
-		{
-			cout << "[" << PROGRAM_NAME << "]: Error creating AGMExecutiveTopic topic.\n";
-			//Error. Topic does not exist
-		}
 
 		// Server adapter creation and publication
 		cout << SERVER_FULL_NAME " started" << endl;
@@ -317,15 +229,6 @@ int ::collisionCheck::run(int argc, char* argv[])
 		// Run QT Application Event Loop
 		a.exec();
 
-		try
-		{
-			std::cout << "Unsubscribing topic: agmexecutivetopic " <<std::endl;
-			agmexecutivetopic_topic->unsubscribe( agmexecutivetopic );
-		}
-		catch(const Ice::Exception& ex)
-		{
-			std::cout << "ERROR Unsubscribing topic: agmexecutivetopic " <<std::endl;
-		}
 
 		status = EXIT_SUCCESS;
 	}

@@ -9,6 +9,6 @@ Component collisionCheck
     };
     language Cpp;
     gui Qt(QWidget);
-	options agmagent, innermodelviewer;
+	options innermodelviewer;
 };
 
