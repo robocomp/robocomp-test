@@ -1,0 +1,19 @@
+import "TrajectoryRobot2D.idsl";
+import "Logger.idsl";
+import "OmniRobot.idsl";
+import "Laser.idsl";
+import "RCISMousePicker.idsl";
+
+Component SocialNavigationAgent
+{
+	Communications
+	{
+		requires OmniRobot,  Laser;
+		publishes Logger;
+		implements TrajectoryRobot2D;
+		subscribesTo RCISMousePicker;
+	};
+	language Cpp;
+	gui Qt(QWidget);
+};
+

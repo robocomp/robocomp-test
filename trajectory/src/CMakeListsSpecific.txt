@@ -1,0 +1,27 @@
+
+# Sources set
+SET ( SOURCES
+  specificworker.cpp
+  specificmonitor.cpp
+  trajectory/pathfinder.cpp
+  trajectory/innerviewer.cpp
+  trajectory/currenttarget.cpp
+  trajectory/road.cpp
+  trajectory/sampler.cpp
+  trajectory/innerviewer.cpp
+  trajectory/drawroad.cpp
+  trajectory/pathplanner.cpp
+  trajectory/projector.cpp
+  trajectory/linesimplifier/simplifyPath.cpp
+  trajectory/controller.cpp
+)
+
+# Headers set
+SET ( HEADERS
+  specificworker.h
+  specificmonitor.h
+)
+
+set(CMAKE_CXX_STANDARD 17)
+SET (LIBS ${LIBS} pthread osg osgViewer osgDB fcl )
+
