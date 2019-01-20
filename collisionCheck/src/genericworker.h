@@ -32,7 +32,7 @@
 
 #include <CommonBehavior.h>
 
-#include <OmniRobot.h>
+#include <DifferentialRobot.h>
 #include <GenericBase.h>
 #include <Laser.h>
 #include <GenericBase.h>
@@ -41,9 +41,9 @@
 #define BASIC_PERIOD 100
 
 using namespace std;
-using namespace RoboCompOmniRobot;
-using namespace RoboCompGenericBase;
 using namespace RoboCompLaser;
+using namespace RoboCompGenericBase;
+using namespace RoboCompDifferentialRobot;
 
 typedef map <string,::IceProxy::Ice::Object*> MapPrx;
 
@@ -67,7 +67,7 @@ public:
 
 
 	LaserPrx laser_proxy;
-	OmniRobotPrx omnirobot_proxy;
+	DifferentialRobotPrx differentialrobot_proxy;
 
 
 protected:

@@ -54,6 +54,8 @@ void SpecificWorker::initialize(int period)
 	innerModel = new InnerModel("/home/robocomp/robocomp/files/innermodel/simpleworld.xml");
 	innerModelViewer = new InnerModelViewer (innerModel, "root", osgView->getRootGroup(), true);
 	excludedNodes.insert("ddG");
+	excludedNodes.insert("sensorL");
+	excludedNodes.insert("rgbd_mesh1");
 	recursiveIncludeMeshes(innerModel->getRoot(), "base", false, robotNodes, restNodes, excludedNodes);
 	for(auto s : robotNodes)
 		qDebug() << s;
@@ -69,12 +71,19 @@ void SpecificWorker::compute()
 	// if (innerModelViewer) innerModelViewer->update();
 	// 	osgView->frame();
 	
+	try
+	{
+		TBaseState bState;
+		differentialrobot_proxy->getBaseState(bState);
+		innerModel->updateTransformValues("base", bState.x, 0, bState.z, 0, bState.alpha, 0);
+	//	qDebug() << bState.x << bState.z;
+	}
+	catch(const Ice::Exception &e){ qDebug() << "shit";}
+	
 	for(auto &in : robotNodes )
 		for ( auto &out : restNodes )
-		{
 			if ( innerModel->collide( in, out))
 				qDebug() << in << " collision with " << out;
-		}
 }
 
 /**
