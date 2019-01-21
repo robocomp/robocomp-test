@@ -18,7 +18,6 @@
 #ifndef PATHFINDER_H
 #define PATHFINDER_H
 #include <genericworker.h>
-#include <AGMCommonBehavior.h>
 #include <CommonBehavior.h>
 #include <thread>
 #include <mutex>
@@ -26,6 +25,7 @@
 #include <functional>
 #include "currenttarget.h"
 #include "road.h"
+#include "path.h"
 #include "sampler.h"
 #include "pathplanner.h"
 #include "drawroad.h"

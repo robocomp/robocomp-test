@@ -7,6 +7,7 @@ SET ( SOURCES
   trajectory/innerviewer.cpp
   trajectory/currenttarget.cpp
   trajectory/road.cpp
+  trajectory/path.cpp
   trajectory/sampler.cpp
   trajectory/innerviewer.cpp
   trajectory/drawroad.cpp
