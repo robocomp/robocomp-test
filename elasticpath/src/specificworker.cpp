@@ -104,12 +104,9 @@ void SpecificWorker::computeForces()
 		//internal force on p2
 		auto iforce = 0.5*((p1-p2)/(p1-p2).length() + (p3-p2)/(p3-p2).length());
 		iforces[k++] = iforce;
-
-		//friction
-		//auto friction = 
-		//fforces.push_back(friction);
-
 	}  
+
+	
 	for(auto &&[point, force] : iter::zip(points, iforces))
 	{
 		auto pos = point->pos();
