@@ -33,6 +33,8 @@
 #include <QGraphicsView>
 #include <QGraphicsEllipseItem>
 #include <QGraphicsLineItem>
+#include <QGraphicsRectItem>
+#include <QGraphicsPolygonItem>
 
 class SpecificWorker : public GenericWorker
 {
@@ -55,8 +57,16 @@ private:
 	QGraphicsView view;
 	std::vector<QGraphicsEllipseItem*> points;
 	QGraphicsEllipseItem *first, *last;
+	QGraphicsRectItem *box;
+	QGraphicsPolygonItem *polygon;
 	std::vector<QGraphicsLineItem*> lforces;
+	struct LData { float dist; float angle;};
+	std::vector<LData> laserData;
+
 	void computeForces();
+	void computeLaser(QGraphicsEllipseItem* ellipse, QGraphicsRectItem *box);
+
+
 };
 
 #endif

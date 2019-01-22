@@ -61,10 +61,10 @@ void SpecificWorker::initialize(int period)
     std::uniform_int_distribution<> dis(-30, 30);
 	for(auto i: iter::range(-180, 180, 20))
 	{
-		auto ellipse = scene.addEllipse(QRectF(0,0, 10, 10), QPen(Qt::blue));
+		auto ellipse = scene.addEllipse(QRectF(0,0, 10, 10), QPen(Qt::blue), QBrush(Qt::blue));
 		ellipse->setFlag(QGraphicsItem::ItemIsMovable);
 		auto y = dis(gen);
-		ellipse->setPos(i,y);
+		ellipse->setPos(i, y);
 		points.push_back(ellipse);
 		//lforces.push_back(scene.addLine(QLineF(i+5,y,i+5, y), QPen(Qt::red)));
 	}
@@ -73,10 +73,20 @@ void SpecificWorker::initialize(int period)
 	last = points.back();
 	last->setPos(last->x(),0);
 
-	auto box = scene.addRect(QRectF(0,0, 50,50), QPen(Qt::magenta), QBrush(Qt::magenta));
+	// Obstacle
+	box = scene.addRect(QRectF(0,0, 50,50), QPen(Qt::magenta), QBrush(Qt::magenta));
 	box->setPos(0, -100);
 	box->setFlag(QGraphicsItem::ItemIsMovable);
 
+	// Laser
+	QPolygonF poly;
+	for( auto &&i : iter::range(-M_PI/2.f, M_PI/2.f, M_PI/100.f) )
+	{
+		laserData.emplace_back(LData{0.f, (float)i});
+		poly << QPointF(1.f*cos(i), 1.f*sin(i));
+	};
+	polygon = scene.addPolygon(poly);
+	
 	timer.start(50);
 	//timer.setSingleShot(true);
 }
@@ -84,6 +94,8 @@ void SpecificWorker::initialize(int period)
 void SpecificWorker::compute()
 {
 	computeForces();
+	computeLaser(points[0], box);
+
 }
 
 void SpecificWorker::computeForces()
@@ -105,7 +117,6 @@ void SpecificWorker::computeForces()
 		auto iforce = 0.5*((p1-p2)/(p1-p2).length() + (p3-p2)/(p3-p2).length());
 		iforces[k++] = iforce;
 	}  
-
 	
 	for(auto &&[point, force] : iter::zip(points, iforces))
 	{
@@ -122,5 +133,30 @@ void SpecificWorker::computeForces()
 	// {
 	// 	speed[i] = QVector2D(points[i]->pos())- posant[i];
 	// }
+}
+
+void SpecificWorker::computeLaser(QGraphicsEllipseItem* ellipse, QGraphicsRectItem *box)
+{
+	int i=0;
+	for( auto &l : laserData )
+	{
+		l.dist = 400;
+		QLineF line(ellipse->pos(), ellipse->mapToScene(QPointF(500*cos(l.angle), 500*sin(l.angle))));
+		//qDebug() << line;
+		for( auto t :  iter::range(0.f,1.f,0.01f) )
+		{
+			auto r = line.pointAt(t);
+			if( box->contains( box->mapFromScene(r)))
+			{	
+				l.dist = QVector2D(r-line.pointAt(0)).length();
+				break;
+			}
+		}
+	}
+	scene.removeItem(polygon);
+	QPolygonF poly;
+	for(auto &&l : laserData)
+		poly << QPointF(ellipse->pos().x()+l.dist*cos(l.angle),ellipse->pos().y()+l.dist*sin(l.angle));
+	polygon = scene.addPolygon(poly);
 }
 
