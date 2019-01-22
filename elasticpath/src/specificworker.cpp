@@ -138,10 +138,11 @@ void SpecificWorker::computeForces()
 void SpecificWorker::computeLaser(QGraphicsEllipseItem* ellipse, QGraphicsRectItem *box)
 {
 	int i=0;
+	const float MAX_LASER = 200;
 	for( auto &l : laserData )
 	{
-		l.dist = 400;
-		QLineF line(ellipse->pos(), ellipse->mapToScene(QPointF(500*cos(l.angle), 500*sin(l.angle))));
+		l.dist = MAX_LASER;
+		QLineF line(ellipse->pos(), ellipse->mapToScene(QPointF(MAX_LASER*cos(l.angle), MAX_LASER*sin(l.angle))));
 		//qDebug() << line;
 		for( auto t :  iter::range(0.f,1.f,0.01f) )
 		{
