@@ -11,5 +11,6 @@ SET ( HEADERS
   specificmonitor.h
 )
 
+add_definitions(-O3 -mavx2  -fmax-errors=1 )
 set(CMAKE_CXX_STANDARD 17)
 
