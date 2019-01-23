@@ -59,7 +59,7 @@ void SpecificWorker::initialize(int period)
 	std::random_device rd;  //Will be used to obtain a seed for the random number engine
     std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
     std::uniform_int_distribution<> dis(-20, 20);
-	for(auto i: iter::range(-180, 180, 20))
+	for(auto i: iter::range(-180, 180, 25))
 	{
 		auto ellipse = scene.addEllipse(QRectF(0,0, 10, 10), QPen(Qt::blue), QBrush(Qt::blue));
 		ellipse->setFlag(QGraphicsItem::ItemIsMovable);
@@ -91,7 +91,7 @@ void SpecificWorker::initialize(int period)
 	QBrush brush; brush.setColor(QColor("LightPink")); brush.setStyle(Qt::Dense6Pattern);
 	polygon = scene.addPolygon(poly, QPen(QColor("LighPink")), brush);
 	
-	timer.start(30);
+	timer.start(10);
 	//timer.setSingleShot(true);
 }
 
@@ -132,26 +132,27 @@ void SpecificWorker::computeForces()
 		auto p3 = QVector2D(group[2]->pos());
 
 		//internal force on p2
-		auto iforce = ((p1-p2)/(p1-p2).length() + (p3-p2)/(p3-p2).length());
+		//auto iforce = ((p1-p2)/(p1-p2).length() + (p3-p2)/(p3-p2).length());
+		auto iforce = (p1-p2) + (p3-p2);
 		iforces[k++] = iforce;
 	}  
 
-	// internal elongation forces
-	std::vector<QVector2D> lforces(points.size(), QVector2D(0.f,0.f));
-	const float force_cero = 10;
-	k=0;
-	for(auto group : iter::sliding_window(points, 2))
-	{
-		if(group.size()<2) break;
-		auto p1 = QVector2D(group[0]->pos());
-		auto p2 = QVector2D(group[1]->pos());
+	// // internal elongation forces
+	// std::vector<QVector2D> lforces(points.size(), QVector2D(0.f,0.f));
+	// const float force_cero = 10;
+	// k=0;
+	// for(auto group : iter::sliding_window(points, 2))
+	// {
+	// 	if(group.size()<2) break;
+	// 	auto p1 = QVector2D(group[0]->pos());
+	// 	auto p2 = QVector2D(group[1]->pos());
 
-		// f = -kx  Hook's law
-		auto force_mod = (p1-p2).length();
-		lforces[k] = (force_mod - force_cero) * ((p2-p1)/force_mod);
-		lforces[k+1] = (force_mod - force_cero) * ((p1-p2)/force_mod);
-		k++;
-	}  
+	// 	// f = -kx  Hook's law
+	// 	auto force_mod = (p1-p2).length();
+	// 	lforces[k] = (force_mod - force_cero) * ((p2-p1)/force_mod);
+	// 	lforces[k+1] = (force_mod - force_cero) * ((p1-p2)/force_mod);
+	// 	k++;
+	// }  
 	
 	// external forces
 	// we need the minimun distance from each point to the obstacle(s)
@@ -172,12 +173,12 @@ void SpecificWorker::computeForces()
 
 	//Apply forces
 	const float KE = 0.09;
-	const float KI = 3;	
-	const float KL = 0.06;	
-	for(auto &&[point, iforce, eforce, lforce, base_line] : iter::zip(points, iforces, eforces, lforces, base_lines))
+	const float KI = 0.3;	
+	//const float KL = 0.06;	
+	for(auto &&[point, iforce, eforce, base_line] : iter::zip(points, iforces, eforces, base_lines))
 	{
 		const auto &idelta = KI * iforce.toPointF();
-		const auto &ldelta = KL * lforce.toPointF();
+		//const auto &ldelta = KL * lforce.toPointF();
 
 		QPointF edelta{0,0}; 
 		if( eforce.length() < 100)
@@ -185,7 +186,7 @@ void SpecificWorker::computeForces()
 		
 		//qDebug() << ldelta;
 		//const auto force =  edelta + idelta + ldelta;
-		const auto force =  ldelta;
+		const auto force =  idelta + edelta;
 
 		// Removing tangential component
 		const auto corrected_force = force - (base_line * QVector2D::dotProduct(QVector2D(force), base_line)).toPointF();
