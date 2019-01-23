@@ -48,6 +48,8 @@ public:
 public slots:
 	void compute();
 	void initialize(int period);
+	void cleanPath();
+	void robot();
    
 private:
 	InnerModel *innerModel;
@@ -61,6 +63,7 @@ private:
 	std::vector<QGraphicsLineItem*> lforces;
 	struct LData { float dist; float angle;};
 	std::vector<LData> laserData;
+	QTimer cleanTimer;
 
 	const float ROBOT_LENGTH = 50;
 	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.8;
@@ -70,6 +73,7 @@ private:
 	void computeLaser(QGraphicsEllipseItem* ellipse, const std::vector<QGraphicsRectItem*> &box);
 	void addPoints();
 	void cleanPoints();
+	void controller();
 
 };
 

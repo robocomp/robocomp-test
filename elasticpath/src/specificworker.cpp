@@ -97,7 +97,9 @@ void SpecificWorker::initialize(int period)
 	QBrush brush; brush.setColor(QColor("LightPink")); brush.setStyle(Qt::Dense6Pattern);
 	polygon = scene.addPolygon(poly, QPen(QColor("LighPink")), brush);
 	
-	timer.start(10);
+	timer.start(0);
+	connect(&cleanTimer, &QTimer::timeout, this, &SpecificWorker::cleanPath);
+	cleanTimer.start(100);
 	//timer.setSingleShot(true);
 }
 
@@ -105,9 +107,17 @@ void SpecificWorker::compute()
 {
 	computeLaser(first, boxes);
 	computeForces();
+}
+
+void SpecificWorker::cleanPath()
+{
 	addPoints();
 	cleanPoints();
 }
+
+/////////////////////////////////////////////////////////////////////7
+/////////
+////////////////////////////////////////////////////////////////////
 
 void SpecificWorker::computeForces()
 {
@@ -156,13 +166,19 @@ void SpecificWorker::computeForces()
 				QVector2D tip(first->mapToScene(QPointF(l.dist*cos(l.angle), l.dist*sin(l.angle))));
 				return std::make_tuple((QVector2D(p->pos()) - tip).length(), QVector2D(p->pos()) - tip);	
 			});
-		auto min = std::min_element(std::begin(distances), std::end(distances), [](auto &a, auto &b){return std::get<0>(a) < std::get<0>(b);});
-		eforces.emplace_back(std::get<1>(*min));
+		auto min = std::min_element(std::begin(distances), std::end(distances), [](auto &a, auto &b){return std::get<float>(a) < std::get<float>(b);});
+		auto force = std::get<QVector2D>(*min);
+		float mag = force.length();
+		if(mag > 100) mag = 100;
+		mag  = (10.f/100)*mag -10.f;
+		force = mag * force.normalized();	
+		eforces.push_back(force);
 	}
+	//qDebug() << "-------";
 
 	//Apply forces to current position
-	const float KE = 0.05;
-	const float KI = 0.3;	
+	const float KE = 0.9;
+	const float KI = 0.2;	
 	auto last_pos = last->pos();
 	//const float KL = 0.06;	
 	for(auto &&[point, iforce, eforce, base_line] : iter::zip(points, iforces, eforces, base_lines))
@@ -174,13 +190,17 @@ void SpecificWorker::computeForces()
 		if( eforce.length() < 100)
 			edelta = KE * eforce.toPointF();
 		
-		const auto force =  idelta + edelta;
+		const auto force =  idelta - edelta;
 
 		// Removing tangential component
-		const auto corrected_force = force - (base_line * QVector2D::dotProduct(QVector2D(force), base_line)).toPointF();
-
-		//if( QVector2D(force).length() > 1 )	
-		point->setPos( point->pos() + force ); 
+		const auto eprod = QVector2D::dotProduct(QVector2D(force), base_line);
+		if(eprod < 5)
+		{
+			const auto corrected_force = force - (QVector2D::dotProduct(QVector2D(force), base_line)*base_line).toPointF();
+			point->setPos( point->pos() + corrected_force ); 
+		}
+		else
+			point->setPos( point->pos() + force ); 
 	}
 	// reposition endpoints
 	first->setPos(-180,0);
@@ -205,19 +225,19 @@ void SpecificWorker::addPoints()
 		}
 		k++;
 	}
+	int l=0;
 	for(auto &&p : points_to_insert)
 	{
 		auto r = scene.addEllipse(0,0,10,10);
 		r->setPos(std::get<QPointF>(p));
-		points.insert(points.begin()+std::get<int>(p), r);
+		points.insert(points.begin() + std::get<int>(p) + l++, r);
 	}
 }
 
 ////// Remove points fromthe path if needed
 void SpecificWorker::cleanPoints()
 {
-	std::vector<int> points_to_remove;
-	int k=1;
+	std::vector<QGraphicsEllipseItem*> points_to_remove;
 	//for(auto &&[group, i] : iter::zip(iter::sliding_window(points, 2), iter::range(1,(int)(points.size()-1))))
 	for(const auto &group : iter::sliding_window(points, 2))
 	{
@@ -227,19 +247,13 @@ void SpecificWorker::cleanPoints()
 			break;
 		float dist = QVector2D(p1->pos()-p2->pos()).length();
 		if (dist < 0.6*ROAD_STEP_SEPARATION)  
-			points_to_remove.push_back(k);
-		k++;
+			points_to_remove.push_back(p2);
 	}
-	qDebug() << "size" << points.size();
 	for(auto p: points_to_remove)
 	{
-		qDebug() << p;
-	 	scene.removeItem(*(points.begin()+p));
-		qDebug() << "after" << p; 
-	 	points.erase(points.begin()+p);
-		qDebug() << "after2" << p; 	 
+		scene.removeItem(p);
+		std::remove_if(points.begin(), points.end(), [p](auto &r){ return p==r;});
 	}
-	qDebug() << "--------";
 }
 
 ////// Render synthetic laser
@@ -267,6 +281,26 @@ void SpecificWorker::computeLaser(QGraphicsEllipseItem* ellipse, const std::vect
 	for(auto &&l : laserData)
 		poly << QPointF(ellipse->pos().x()+l.dist*cos(l.angle),ellipse->pos().y()+l.dist*sin(l.angle));
 	polygon = scene.addPolygon(poly, QPen(QColor("LightPink")), brush);
+}
+
+void SpecificWorker::controller()
+{
+	// Compute rotation speed
+
+
+	
+	// Compute advance speed
+
+
+	
+
+}
+
+///Periodic update of robot's state based on its adv and rot speeds.
+void SpecificWorker::robot()
+{
+
+
 }
 
 
