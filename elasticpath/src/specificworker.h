@@ -48,8 +48,6 @@ public:
 public slots:
 	void compute();
 	void initialize(int period);
-
-protected:
    
 private:
 	InnerModel *innerModel;
@@ -57,15 +55,21 @@ private:
 	QGraphicsView view;
 	std::vector<QGraphicsEllipseItem*> points;
 	QGraphicsEllipseItem *first, *last;
-	QGraphicsRectItem *box;
+	//QGraphicsRectItem *box;
+	std::vector<QGraphicsRectItem*> boxes;
 	QGraphicsPolygonItem *polygon;
 	std::vector<QGraphicsLineItem*> lforces;
 	struct LData { float dist; float angle;};
 	std::vector<LData> laserData;
 
-	void computeForces();
-	void computeLaser(QGraphicsEllipseItem* ellipse, QGraphicsRectItem *box);
+	const float ROBOT_LENGTH = 50;
+	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.8;
 
+
+	void computeForces();
+	void computeLaser(QGraphicsEllipseItem* ellipse, const std::vector<QGraphicsRectItem*> &box);
+	void addPoints();
+	void cleanPoints();
 
 };
 
