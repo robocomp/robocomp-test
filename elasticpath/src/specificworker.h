@@ -35,6 +35,7 @@
 #include <QGraphicsLineItem>
 #include <QGraphicsRectItem>
 #include <QGraphicsPolygonItem>
+#include <math.h>
 
 class SpecificWorker : public GenericWorker
 {
@@ -69,7 +70,7 @@ private:
 	const float ROBOT_LENGTH = 50;
 	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.8;
 	timeval lastCommand_timeval;
-	float advVelx, advVelz, rotVel;
+	float advVelx=0, advVelz=0, rotVel=0;
 	RoboCompGenericBase::TBaseState bState;
 	
 	void computeForces();

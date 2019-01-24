@@ -80,12 +80,9 @@ void SpecificWorker::initialize(int period)
 	}
 	first = points.front();
 	first->setPos(first->x(),0);
-	bState.x = first->x();
-	bState.z = 0;
-	bState.alpha = 0;
-	
 	first->setRect(0,0, 20, 20);
 	first->setBrush(QColor("MediumGreen"));
+
 	last = points.back();
 	last->setPos(last->x(),0);
 	last->setBrush(QColor("LightBlue"));
@@ -117,16 +114,19 @@ void SpecificWorker::initialize(int period)
 	poly2 << QPoint(-size, -size) << QPoint(-size, size) << QPoint(-size/3, size*1.6) << QPoint(size/3, size*1.6) << QPoint(size, size) << QPoint(size, -size);
 	brush.setColor(QColor("Orange")); brush.setStyle(Qt::SolidPattern);
 	robot = scene.addPolygon(poly2, QPen(QColor("Orange")), brush);
+	bState = {0,0,0};
 	robot->setPos(first->x(), first->y());
 	robot->setRotation(0);
 	
-	timer.start(0);
+	timer.start(10);
 	connect(&cleanTimer, &QTimer::timeout, this, &SpecificWorker::cleanPath);
 	cleanTimer.start(100);
 	//timer.setSingleShot(true);
-	timerVel.start(100);
+
+	timerVel.start(500);
 	connect(&timerVel, &QTimer::timeout, this, &SpecificWorker::updateRobot);
-	advVelz = 10;
+	advVelz = 0;
+	rotVel = 0.3;
 }
 
 void SpecificWorker::compute()
@@ -326,39 +326,65 @@ void SpecificWorker::controller()
 void SpecificWorker::updateRobot()
 {
 	// Do nothing if the robot isn't moving
-	if ( (fabs(advVelx)<0.0001 and fabs(advVelz)<0.0001 and fabs(rotVel)<0.0001))
-	{
-		return;
-	}
+	// if ( (fabs(advVelx)<0.0001 and fabs(advVelz)<0.0001 and fabs(rotVel)<0.0001))
+	// {
+	// 	return;
+	// }
 	
-	// Compute idle time
-	timeval now;
-	gettimeofday(&now, NULL);
-	const double msecs = (now.tv_sec - lastCommand_timeval.tv_sec)*1000. +(now.tv_usec - lastCommand_timeval.tv_usec)/1000.;
-	lastCommand_timeval = now;
+	// // Compute idle time
+	// timeval now;
+	// gettimeofday(&now, NULL);
+	// const double msecs = (now.tv_sec - lastCommand_timeval.tv_sec)*1000. +(now.tv_usec - lastCommand_timeval.tv_usec)/1000.;
+	// lastCommand_timeval = now;
 
-	// Compute estimated increments given velocity and time
-	QVec estimatedIncrements = QVec::vec6(advVelx, 0,  advVelz, 0, rotVel, 0).operator*(msecs / 1000.);
-estimatedIncrements.print("increments")	;
+	// // Compute estimated increments given velocity and time
+	// QVec estimatedIncrements = QVec::vec6(advVelx, 0,  advVelz, 0, rotVel, 0).operator*(msecs / 1000.);
+	// estimatedIncrements.print("increments")	;
 
-	// Update raw odometry using estimated pose increments
-	innerModel->updateTransformValues("robot_raw_odometry", estimatedIncrements);
-	QVec finalRawPose = innerModel->transform6D("world", "robot_raw_odometry");
-	innerModel->updateTransformValues("robot_raw_odometry_parent", finalRawPose);
-	innerModel->updateTransformValues("robot_raw_odometry", QVec::vec6(0,0,0,0,0,0));
+	// // Update raw odometry using estimated pose increments
+	// innerModel->updateTransformValues("robot_raw_odometry", estimatedIncrements);
+	// QVec finalRawPose = innerModel->transform6D("world", "robot_raw_odometry");
+	// innerModel->updateTransformValues("robot_raw_odometry_parent", finalRawPose);
+	// innerModel->updateTransformValues("robot_raw_odometry", QVec::vec6(0,0,0,0,0,0));
 	
 	
-	QVec backPose = innerModel->transform6D("world", "robot");
-	innerModel->updateTransformValues("robot", backPose);
+	// QVec backPose = innerModel->transform6D("world", "robot");
+	// innerModel->updateTransformValues("robot", backPose);
 	
 	
-	// read robot pose
-	bState.x = backPose(0);
-	bState.z = backPose(2);
-	bState.alpha = backPose(4);
-	std::cout<<"pose"<<bState.x<<" "<<bState.z<<" "<<bState.alpha<<std::endl;
+	// // read robot pose
+	// bState.x = backPose(0);
+	// bState.z = backPose(2);
+	// bState.alpha = backPose(4);
+	// std::cout<<"pose"<<bState.x<<" "<<bState.z<<" "<<bState.alpha<<std::endl;
+
+	qDebug() << "bState" << bState.x << bState.z;
+	static QTime reloj = QTime::currentTime();
+	QVec incs = QVec::vec3(0, advVelz, rotVel) * ((float)reloj.restart() / 1000.f);
+	bState.alpha += incs.z();
+	
+	QMat m(3,3); 
+	m(0,0) = cos(bState.alpha);
+	m(0,1) = -sin(bState.alpha);
+	m(0,2) = bState.x;
+	m(1,0) = sin(bState.alpha);
+	m(1,1) = cos(bState.alpha);
+	m(1,2) = bState.z;
+	m(2,0) = 0;
+	m(2,1) = 0;
+	m(2,2) = 1;
+	
+	QVec pos = QVec::vec3(incs.x(), incs.y(), 1);
+	incs.print("incs");
+	pos.print("pos");
+	m.print("m");
+	auto r = m * pos;
+	bState.x = r.x();
+	bState.z = r.y();
+	r.print("r after");
+	qDebug() << "bState after" << bState.x << bState.z << bState.alpha;
 	robot->setPos(bState.x, bState.z);
-	robot->setRotation(bState.alpha);
+	robot->setRotation(180.f*bState.alpha/M_PI);
 }
 
 
