@@ -11,6 +11,13 @@ SET ( HEADERS
   specificmonitor.h
 )
 
-add_definitions(-O3 -mavx2  -fmax-errors=1 )
+add_definitions(-O3 -fmax-errors=1 )
 set(CMAKE_CXX_STANDARD 17)
+
+if(COMMAND "cat /proc/cpuinfo | grep avx")
+  ADD_DEFINITIONS( -mavx2 )
+else()
+  message("NO AVX")
+endif()
+
 
