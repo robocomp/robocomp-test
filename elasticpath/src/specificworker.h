@@ -26,7 +26,7 @@
 
 #ifndef SPECIFICWORKER_H
 #define SPECIFICWORKER_H
-
+#include "GenericBase.h"
 #include <genericworker.h>
 #include <innermodel/innermodel.h>
 #include <QGraphicsScene>
@@ -49,7 +49,7 @@ public slots:
 	void compute();
 	void initialize(int period);
 	void cleanPath();
-	void robot();
+	void updateRobot();
    
 private:
 	InnerModel *innerModel;
@@ -57,18 +57,21 @@ private:
 	QGraphicsView view;
 	std::vector<QGraphicsEllipseItem*> points;
 	QGraphicsEllipseItem *first, *last;
+	QGraphicsPolygonItem *robot;
 	//QGraphicsRectItem *box;
 	std::vector<QGraphicsRectItem*> boxes;
 	QGraphicsPolygonItem *polygon;
 	std::vector<QGraphicsLineItem*> lforces;
 	struct LData { float dist; float angle;};
 	std::vector<LData> laserData;
-	QTimer cleanTimer;
+	QTimer cleanTimer, timerVel;
 
 	const float ROBOT_LENGTH = 50;
 	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.8;
-
-
+	timeval lastCommand_timeval;
+	float advVelx, advVelz, rotVel;
+	RoboCompGenericBase::TBaseState bState;
+	
 	void computeForces();
 	void computeLaser(QGraphicsEllipseItem* ellipse, const std::vector<QGraphicsRectItem*> &box);
 	void addPoints();

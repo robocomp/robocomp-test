@@ -41,6 +41,16 @@ SpecificWorker::~SpecificWorker()
 
 bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList params)
 {
+	try
+	{
+		RoboCompCommonBehavior::Parameter par = params.at("InnerModelPath");
+		std::string innermodel_path = par.value;
+		innerModel = new InnerModel(innermodel_path);
+		InnerModelTransform *parent = innerModel->getTransform("robot");
+		InnerModelTransform *rawOdometryParentNode = innerModel->newTransform("robot_raw_odometry_parent", "static", parent, 0, 0, 0, 0, 0, 0, 0);
+		InnerModelTransform *rawOdometryNode = innerModel->newTransform("robot_raw_odometry", "static", rawOdometryParentNode,  0, 0, 0, 0, 0, 0, 0);
+	}
+	catch(std::exception e) { qFatal("Error reading config params"); }
 	return true;
 }
 
@@ -70,6 +80,10 @@ void SpecificWorker::initialize(int period)
 	}
 	first = points.front();
 	first->setPos(first->x(),0);
+	bState.x = first->x();
+	bState.z = 0;
+	bState.alpha = 0;
+	
 	first->setRect(0,0, 20, 20);
 	first->setBrush(QColor("MediumGreen"));
 	last = points.back();
@@ -97,10 +111,22 @@ void SpecificWorker::initialize(int period)
 	QBrush brush; brush.setColor(QColor("LightPink")); brush.setStyle(Qt::Dense6Pattern);
 	polygon = scene.addPolygon(poly, QPen(QColor("LighPink")), brush);
 	
+	// Robot 
+	QPolygonF poly2;
+	float size = 8.f;
+	poly2 << QPoint(-size, -size) << QPoint(-size, size) << QPoint(-size/3, size*1.6) << QPoint(size/3, size*1.6) << QPoint(size, size) << QPoint(size, -size);
+	brush.setColor(QColor("Orange")); brush.setStyle(Qt::SolidPattern);
+	robot = scene.addPolygon(poly2, QPen(QColor("Orange")), brush);
+	robot->setPos(first->x(), first->y());
+	robot->setRotation(0);
+	
 	timer.start(0);
 	connect(&cleanTimer, &QTimer::timeout, this, &SpecificWorker::cleanPath);
 	cleanTimer.start(100);
 	//timer.setSingleShot(true);
+	timerVel.start(100);
+	connect(&timerVel, &QTimer::timeout, this, &SpecificWorker::updateRobot);
+	advVelz = 10;
 }
 
 void SpecificWorker::compute()
@@ -291,16 +317,48 @@ void SpecificWorker::controller()
 	
 	// Compute advance speed
 
-
+	//advVelx, advVelz, rotVel
 	
 
 }
 
 ///Periodic update of robot's state based on its adv and rot speeds.
-void SpecificWorker::robot()
+void SpecificWorker::updateRobot()
 {
+	// Do nothing if the robot isn't moving
+	if ( (fabs(advVelx)<0.0001 and fabs(advVelz)<0.0001 and fabs(rotVel)<0.0001))
+	{
+		return;
+	}
+	
+	// Compute idle time
+	timeval now;
+	gettimeofday(&now, NULL);
+	const double msecs = (now.tv_sec - lastCommand_timeval.tv_sec)*1000. +(now.tv_usec - lastCommand_timeval.tv_usec)/1000.;
+	lastCommand_timeval = now;
 
+	// Compute estimated increments given velocity and time
+	QVec estimatedIncrements = QVec::vec6(advVelx, 0,  advVelz, 0, rotVel, 0).operator*(msecs / 1000.);
+estimatedIncrements.print("increments")	;
 
+	// Update raw odometry using estimated pose increments
+	innerModel->updateTransformValues("robot_raw_odometry", estimatedIncrements);
+	QVec finalRawPose = innerModel->transform6D("world", "robot_raw_odometry");
+	innerModel->updateTransformValues("robot_raw_odometry_parent", finalRawPose);
+	innerModel->updateTransformValues("robot_raw_odometry", QVec::vec6(0,0,0,0,0,0));
+	
+	
+	QVec backPose = innerModel->transform6D("world", "robot");
+	innerModel->updateTransformValues("robot", backPose);
+	
+	
+	// read robot pose
+	bState.x = backPose(0);
+	bState.z = backPose(2);
+	bState.alpha = backPose(4);
+	std::cout<<"pose"<<bState.x<<" "<<bState.z<<" "<<bState.alpha<<std::endl;
+	robot->setPos(bState.x, bState.z);
+	robot->setRotation(bState.alpha);
 }
 
 
