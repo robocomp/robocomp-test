@@ -51,13 +51,14 @@ public slots:
 	void initialize(int period);
 	void cleanPath();
 	void updateRobot();
+	void controller();
    
 private:
 	InnerModel *innerModel;
 	QGraphicsScene scene;
 	QGraphicsView view;
 	std::vector<QGraphicsEllipseItem*> points;
-	QGraphicsEllipseItem *first, *last;
+	QGraphicsEllipseItem *first, *last, *second;
 	QGraphicsPolygonItem *robot;
 	//QGraphicsRectItem *box;
 	std::vector<QGraphicsRectItem*> boxes;
@@ -65,7 +66,7 @@ private:
 	std::vector<QGraphicsLineItem*> lforces;
 	struct LData { float dist; float angle;};
 	std::vector<LData> laserData;
-	QTimer cleanTimer, timerVel;
+	QTimer cleanTimer, timerRobot;
 
 	const float ROBOT_LENGTH = 50;
 	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.8;
@@ -74,11 +75,18 @@ private:
 	RoboCompGenericBase::TBaseState bState;
 	
 	void computeForces();
-	void computeLaser(QGraphicsEllipseItem* ellipse, const std::vector<QGraphicsRectItem*> &box);
+	void computeLaser(QGraphicsItem *r, const std::vector<QGraphicsRectItem*> &box);
 	void addPoints();
 	void cleanPoints();
-	void controller();
-
+	inline float rewrapAngleRestricted(const float angle)
+	// This function takes an angle in the range [-3*pi, 3*pi] and wraps it to the range [-pi, pi].
+	{	
+  		if(angle > M_PI)
+    		return angle - M_PI*2;
+  		else if(angle < -M_PI)
+    		return angle + M_PI*2;
+		else return angle;
+	}
 };
 
 #endif

@@ -43,12 +43,12 @@ bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList params)
 {
 	try
 	{
-		RoboCompCommonBehavior::Parameter par = params.at("InnerModelPath");
-		std::string innermodel_path = par.value;
-		innerModel = new InnerModel(innermodel_path);
-		InnerModelTransform *parent = innerModel->getTransform("robot");
-		InnerModelTransform *rawOdometryParentNode = innerModel->newTransform("robot_raw_odometry_parent", "static", parent, 0, 0, 0, 0, 0, 0, 0);
-		InnerModelTransform *rawOdometryNode = innerModel->newTransform("robot_raw_odometry", "static", rawOdometryParentNode,  0, 0, 0, 0, 0, 0, 0);
+		// RoboCompCommonBehavior::Parameter par = params.at("InnerModelPath");
+		// std::string innermodel_path = par.value;
+		// innerModel = new InnerModel(innermodel_path);
+		// InnerModelTransform *parent = innerModel->getTransform("robot");
+		// InnerModelTransform *rawOdometryParentNode = innerModel->newTransform("robot_raw_odometry_parent", "static", parent, 0, 0, 0, 0, 0, 0, 0);
+		// InnerModelTransform *rawOdometryNode = innerModel->newTransform("robot_raw_odometry", "static", rawOdometryParentNode,  0, 0, 0, 0, 0, 0, 0);
 	}
 	catch(std::exception e) { qFatal("Error reading config params"); }
 	return true;
@@ -58,6 +58,7 @@ void SpecificWorker::initialize(int period)
 {
 	std::cout << "Initialize worker" << std::endl;
 	scene.setSceneRect(-200, -200, 400, 400);
+	view.scale( 1, -1 );
 	view.setScene(&scene);
 	view.setParent(this);
 	QGridLayout* layout = new QGridLayout;
@@ -80,7 +81,7 @@ void SpecificWorker::initialize(int period)
 	}
 	first = points.front();
 	first->setPos(first->x(),0);
-	first->setRect(0,0, 20, 20);
+	first->setRect(-5,-5, 10, 10);
 	first->setBrush(QColor("MediumGreen"));
 
 	last = points.back();
@@ -94,7 +95,7 @@ void SpecificWorker::initialize(int period)
 	boxes.push_back(box);
 
 	box = scene.addRect(QRectF(0,0, 50,50), QPen(Qt::magenta), QBrush(QColor("brown")));
-	box->setPos(100, 150);
+	box->setPos(100, -150);
 	box->setFlag(QGraphicsItem::ItemIsMovable);
 	boxes.push_back(box);
 
@@ -114,24 +115,28 @@ void SpecificWorker::initialize(int period)
 	poly2 << QPoint(-size, -size) << QPoint(-size, size) << QPoint(-size/3, size*1.6) << QPoint(size/3, size*1.6) << QPoint(size, size) << QPoint(size, -size);
 	brush.setColor(QColor("Orange")); brush.setStyle(Qt::SolidPattern);
 	robot = scene.addPolygon(poly2, QPen(QColor("Orange")), brush);
-	bState = {0,0,0};
-	robot->setPos(first->x(), first->y());
+	
+	robot->setPos(0, -200);
 	robot->setRotation(0);
+	bState.x = robot->pos().x(); bState.z = robot->pos().y(); bState.alpha = 0;
 	
 	timer.start(10);
 	connect(&cleanTimer, &QTimer::timeout, this, &SpecificWorker::cleanPath);
 	cleanTimer.start(100);
 	//timer.setSingleShot(true);
 
-	timerVel.start(500);
-	connect(&timerVel, &QTimer::timeout, this, &SpecificWorker::updateRobot);
 	advVelz = 0;
-	rotVel = 0.3;
+	rotVel = 0;
+	//timerRobot.setSingleShot(true);
+	timerRobot.start(100);
+	connect(&timerRobot, &QTimer::timeout, this, &SpecificWorker::updateRobot);
+	//connect(&timerRobot, &QTimer::timeout, this, &SpecificWorker::controller);
+	
 }
 
 void SpecificWorker::compute()
 {
-	computeLaser(first, boxes);
+	computeLaser(robot, boxes);
 	computeForces();
 }
 
@@ -157,9 +162,7 @@ void SpecificWorker::computeForces()
 		if(group.size()<3) break;
 
 		auto p1 = QVector2D(group[0]->pos());
-		auto p2 = QVector2D(group[1]->pos());
 		auto p3 = QVector2D(group[2]->pos());
-
 		base_lines[k++] = (p1 - p3).normalized();
 	}  
 
@@ -189,32 +192,29 @@ void SpecificWorker::computeForces()
 		std::vector<std::tuple<float, QVector2D>> distances;
 		std::transform(std::begin(laserData), std::end(laserData), std::back_inserter(distances), [p, this](auto &l)
 			{ 
-				QVector2D tip(first->mapToScene(QPointF(l.dist*cos(l.angle), l.dist*sin(l.angle))));
+				QVector2D tip(robot->mapToScene(QPointF(l.dist*cos(l.angle), l.dist*sin(l.angle))));
 				return std::make_tuple((QVector2D(p->pos()) - tip).length(), QVector2D(p->pos()) - tip);	
 			});
 		auto min = std::min_element(std::begin(distances), std::end(distances), [](auto &a, auto &b){return std::get<float>(a) < std::get<float>(b);});
 		auto force = std::get<QVector2D>(*min);
 		float mag = force.length();
 		if(mag > 100) mag = 100;
-		mag  = (10.f/100)*mag -10.f;
+		mag  = -(10.f/100)*mag + 10.f;
 		force = mag * force.normalized();	
 		eforces.push_back(force);
 	}
 	//qDebug() << "-------";
 
 	//Apply forces to current position
-	const float KE = 0.9;
+	const float KE = 0.90;
 	const float KI = 0.2;	
 	auto last_pos = last->pos();
 	//const float KL = 0.06;	
 	for(auto &&[point, iforce, eforce, base_line] : iter::zip(points, iforces, eforces, base_lines))
 	{
 		const auto &idelta = KI * iforce.toPointF();
-		//const auto &ldelta = KL * lforce.toPointF();
-
 		QPointF edelta{0,0}; 
-		if( eforce.length() < 100)
-			edelta = KE * eforce.toPointF();
+		edelta = KE * eforce.toPointF();
 		
 		const auto force =  idelta - edelta;
 
@@ -229,8 +229,9 @@ void SpecificWorker::computeForces()
 			point->setPos( point->pos() + force ); 
 	}
 	// reposition endpoints
-	first->setPos(-180,0);
+	first->setPos(robot->pos());
 	last->setPos(last_pos);
+	second = points[1];
 }
 
 ////// Add points to the path if needed
@@ -283,14 +284,14 @@ void SpecificWorker::cleanPoints()
 }
 
 ////// Render synthetic laser
-void SpecificWorker::computeLaser(QGraphicsEllipseItem* ellipse, const std::vector<QGraphicsRectItem*> &box)
+void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsRectItem*> &box)
 {
-	const float MAX_LASER = 400;
+	const float MAX_LASER = 300;
 	const float LASER_DIST_STEP = 0.01;
 	for( auto &&l : laserData )
 	{
 		l.dist = MAX_LASER;
-		QLineF line(ellipse->pos(), ellipse->mapToScene(QPointF(MAX_LASER*cos(l.angle), MAX_LASER*sin(l.angle))));
+		QLineF line(r->pos(), r->mapToScene(QPointF(MAX_LASER*sin(l.angle), MAX_LASER*cos(l.angle))));
 		for( auto t : iter::range(0.f, 1.f, LASER_DIST_STEP))
 		{
 			auto r = line.pointAt(t);
@@ -305,20 +306,29 @@ void SpecificWorker::computeLaser(QGraphicsEllipseItem* ellipse, const std::vect
 	QPolygonF poly;
 	QBrush brush; brush.setColor(QColor("LightPink")); brush.setStyle(Qt::Dense6Pattern);
 	for(auto &&l : laserData)
-		poly << QPointF(ellipse->pos().x()+l.dist*cos(l.angle),ellipse->pos().y()+l.dist*sin(l.angle));
+		//poly << QPointF(r->pos().x() + l.dist*sin(l.angle), r->pos().y() + l.dist*cos(l.angle));
+		poly << r->mapToScene(QPointF(l.dist*sin(l.angle), l.dist*cos(l.angle)));
+		
+		
 	polygon = scene.addPolygon(poly, QPen(QColor("LightPink")), brush);
 }
 
 void SpecificWorker::controller()
 {
-	// Compute rotation speed
+	// Compute rotation speed. We use angle between robot and tangent to line between first and second
+	QLineF road(first->pos(), second->pos());
+	QLineF nose(robot->pos(), robot->mapToScene(QPointF( 0, 30)));
+	float angle = qDegreesToRadians(road.angleTo(nose));
+	angle = rewrapAngleRestricted(angle);
+	//qDebug() << angle;
+	rotVel = 0.7 * angle;
 
-
-	
 	// Compute advance speed
-
-	//advVelx, advVelz, rotVel
-	
+	float total = 0.f;
+	for(auto &&g : iter::sliding_window(points, 2))
+		total += QVector2D(g[1]->pos() - g[0]->pos()).length();
+	advVelz = total;
+	if( advVelz > 20) advVelz = 20;
 
 }
 
@@ -327,38 +337,8 @@ void SpecificWorker::updateRobot()
 {
 	// Do nothing if the robot isn't moving
 	// if ( (fabs(advVelx)<0.0001 and fabs(advVelz)<0.0001 and fabs(rotVel)<0.0001))
-	// {
 	// 	return;
-	// }
 	
-	// // Compute idle time
-	// timeval now;
-	// gettimeofday(&now, NULL);
-	// const double msecs = (now.tv_sec - lastCommand_timeval.tv_sec)*1000. +(now.tv_usec - lastCommand_timeval.tv_usec)/1000.;
-	// lastCommand_timeval = now;
-
-	// // Compute estimated increments given velocity and time
-	// QVec estimatedIncrements = QVec::vec6(advVelx, 0,  advVelz, 0, rotVel, 0).operator*(msecs / 1000.);
-	// estimatedIncrements.print("increments")	;
-
-	// // Update raw odometry using estimated pose increments
-	// innerModel->updateTransformValues("robot_raw_odometry", estimatedIncrements);
-	// QVec finalRawPose = innerModel->transform6D("world", "robot_raw_odometry");
-	// innerModel->updateTransformValues("robot_raw_odometry_parent", finalRawPose);
-	// innerModel->updateTransformValues("robot_raw_odometry", QVec::vec6(0,0,0,0,0,0));
-	
-	
-	// QVec backPose = innerModel->transform6D("world", "robot");
-	// innerModel->updateTransformValues("robot", backPose);
-	
-	
-	// // read robot pose
-	// bState.x = backPose(0);
-	// bState.z = backPose(2);
-	// bState.alpha = backPose(4);
-	// std::cout<<"pose"<<bState.x<<" "<<bState.z<<" "<<bState.alpha<<std::endl;
-
-	qDebug() << "bState" << bState.x << bState.z;
 	static QTime reloj = QTime::currentTime();
 	QVec incs = QVec::vec3(0, advVelz, rotVel) * ((float)reloj.restart() / 1000.f);
 	bState.alpha += incs.z();
@@ -375,16 +355,16 @@ void SpecificWorker::updateRobot()
 	m(2,2) = 1;
 	
 	QVec pos = QVec::vec3(incs.x(), incs.y(), 1);
-	incs.print("incs");
-	pos.print("pos");
-	m.print("m");
+	//incs.print("incs");
+	//pos.print("pos");
+	//m.print("m");
 	auto r = m * pos;
 	bState.x = r.x();
 	bState.z = r.y();
-	r.print("r after");
-	qDebug() << "bState after" << bState.x << bState.z << bState.alpha;
+	//r.print("r after");
+	//qDebug() << "bState after" << bState.x << bState.z << bState.alpha;
 	robot->setPos(bState.x, bState.z);
-	robot->setRotation(180.f*bState.alpha/M_PI);
+	robot->setRotation(qRadiansToDegrees(bState.alpha));
 }
 
 
