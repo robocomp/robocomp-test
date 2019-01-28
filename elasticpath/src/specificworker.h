@@ -54,22 +54,29 @@ public slots:
 	void controller();
    
 private:
+
+	//constants
+	const float ROBOT_LENGTH = 20;
+	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.9;
+	const float MAX_LASER_DIST = 300;
+	const float LASER_DIST_STEP = 0.01;
+	const float ROBOT_MAX_ADVANCE_SPEED = 60;
+	
 	InnerModel *innerModel;
 	QGraphicsScene scene;
 	QGraphicsView view;
 	std::vector<QGraphicsEllipseItem*> points;
 	QGraphicsEllipseItem *first, *last, *second;
 	QGraphicsPolygonItem *robot;
-	//QGraphicsRectItem *box;
+	QGraphicsRectItem *target;
+	
 	std::vector<QGraphicsRectItem*> boxes;
-	QGraphicsPolygonItem *polygon;
-	std::vector<QGraphicsLineItem*> lforces;
+	QGraphicsPolygonItem *laser_polygon = nullptr;
+	
 	struct LData { float dist; float angle;};
 	std::vector<LData> laserData;
 	QTimer cleanTimer, timerRobot;
 
-	const float ROBOT_LENGTH = 50;
-	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.8;
 	timeval lastCommand_timeval;
 	float advVelx=0, advVelz=0, rotVel=0;
 	RoboCompGenericBase::TBaseState bState;
@@ -78,6 +85,8 @@ private:
 	void computeLaser(QGraphicsItem *r, const std::vector<QGraphicsRectItem*> &box);
 	void addPoints();
 	void cleanPoints();
+	void computeVisibility();
+	float exponentialFunction(float value, float xValue, float yValue, float min);
 	inline float rewrapAngleRestricted(const float angle)
 	// This function takes an angle in the range [-3*pi, 3*pi] and wraps it to the range [-pi, pi].
 	{	

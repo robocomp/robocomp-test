@@ -22,6 +22,7 @@
 #include <cppitertools/zip.hpp>
 #include <random>
 #include <QGridLayout>
+#include <QDesktopWidget>
 
 /**
 * \brief Default constructor
@@ -57,6 +58,7 @@ bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList params)
 void SpecificWorker::initialize(int period)
 {
 	std::cout << "Initialize worker" << std::endl;
+	resize(QDesktopWidget().availableGeometry(this).size() * 0.6);
 	scene.setSceneRect(-200, -200, 400, 400);
 	view.scale( 1, -1 );
 	view.setScene(&scene);
@@ -65,64 +67,65 @@ void SpecificWorker::initialize(int period)
     layout->addWidget(&view);
 	this->setLayout(layout);
 	view.fitInView(scene.sceneRect(), Qt::KeepAspectRatio );
-	this->resize(view.size());
+	//this->resize(view.size());
 
+	// Robot 
+	QPolygonF poly2;
+	float size = ROBOT_LENGTH/2.f;
+	poly2 << QPoint(-size, -size) << QPoint(-size, size) << QPoint(-size/3, size*1.6) << QPoint(size/3, size*1.6) << QPoint(size, size) << QPoint(size, -size);
+	QBrush brush;
+	brush.setColor(QColor("Orange")); brush.setStyle(Qt::SolidPattern);
+	robot = scene.addPolygon(poly2, QPen(QColor("Orange")), brush);
+	robot->setPos(0, -200);
+	robot->setRotation(0);
+	bState.x = robot->pos().x(); bState.z = robot->pos().y(); bState.alpha = 0;
+
+	// target
+	target = scene.addRect(QRectF(-8, -8, 16, 16));
+	target->setFlag(QGraphicsItem::ItemIsMovable);
+	target->setPos(40, 200);
+	target->setBrush(QColor("LightBlue"));
+
+	// path
 	std::random_device rd;  //Will be used to obtain a seed for the random number engine
     std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
     std::uniform_int_distribution<> dis(-20, 20);
-	for(auto i: iter::range(-180, 180, 25))
+	for(auto i: iter::range(-200, 200, 25))
 	{
-		auto ellipse = scene.addEllipse(QRectF(0,0, 10, 10), QPen(Qt::blue), QBrush(Qt::blue));
+		auto ellipse = scene.addEllipse(QRectF(-5,-5, 10, 10), QPen(QColor("LightGreen")), QBrush(QColor("LightGreen")));
 		ellipse->setFlag(QGraphicsItem::ItemIsMovable);
 		auto y = dis(gen);
 		ellipse->setPos(i, y);
 		points.push_back(ellipse);
-		//lforces.push_back(scene.addLine(QLineF(i+5,y,i+5, y), QPen(Qt::red)));
 	}
+
+	// bind first and last to robot and target
 	first = points.front();
-	first->setPos(first->x(),0);
-	first->setRect(-5,-5, 10, 10);
+	first->setPos(robot->pos());
 	first->setBrush(QColor("MediumGreen"));
-
 	last = points.back();
-	last->setPos(last->x(),0);
-	last->setBrush(QColor("LightBlue"));
-
+	last->setPos(target->pos());
+	target->setZValue(1);
+	
 	// Boxes
-	auto box = scene.addRect(QRectF(0,0, 50,50), QPen(Qt::magenta), QBrush(Qt::magenta));
-	box->setPos(0, -100);
+	auto box = scene.addRect(QRectF(-25,-25,50,50), QPen(Qt::magenta), QBrush(Qt::magenta));
+	box->setPos(150, 150);
 	box->setFlag(QGraphicsItem::ItemIsMovable);
 	boxes.push_back(box);
 
-	box = scene.addRect(QRectF(0,0, 50,50), QPen(Qt::magenta), QBrush(QColor("brown")));
-	box->setPos(100, -150);
+	box = scene.addRect(QRectF(-25,-25, 50,50), QPen(Qt::magenta), QBrush(QColor("brown")));
+	box->setPos(-160, 150);
 	box->setFlag(QGraphicsItem::ItemIsMovable);
 	boxes.push_back(box);
 
 	// Laser
-	QPolygonF poly;
 	for( auto &&i : iter::range(-M_PI/2.f, M_PI/2.f, M_PI/100.f) )
-	{
 		laserData.emplace_back(LData{0.f, (float)i});
-		poly << QPointF(1.f*cos(i), 1.f*sin(i));
-	};
-	QBrush brush; brush.setColor(QColor("LightPink")); brush.setStyle(Qt::Dense6Pattern);
-	polygon = scene.addPolygon(poly, QPen(QColor("LighPink")), brush);
 	
-	// Robot 
-	QPolygonF poly2;
-	float size = 8.f;
-	poly2 << QPoint(-size, -size) << QPoint(-size, size) << QPoint(-size/3, size*1.6) << QPoint(size/3, size*1.6) << QPoint(size, size) << QPoint(size, -size);
-	brush.setColor(QColor("Orange")); brush.setStyle(Qt::SolidPattern);
-	robot = scene.addPolygon(poly2, QPen(QColor("Orange")), brush);
+	timer.start(50);
 	
-	robot->setPos(0, -200);
-	robot->setRotation(0);
-	bState.x = robot->pos().x(); bState.z = robot->pos().y(); bState.alpha = 0;
-	
-	timer.start(10);
 	connect(&cleanTimer, &QTimer::timeout, this, &SpecificWorker::cleanPath);
-	cleanTimer.start(100);
+	cleanTimer.start(80);
 	//timer.setSingleShot(true);
 
 	advVelz = 0;
@@ -130,13 +133,14 @@ void SpecificWorker::initialize(int period)
 	//timerRobot.setSingleShot(true);
 	timerRobot.start(100);
 	connect(&timerRobot, &QTimer::timeout, this, &SpecificWorker::updateRobot);
-	//connect(&timerRobot, &QTimer::timeout, this, &SpecificWorker::controller);
-	
+	connect(&timerRobot, &QTimer::timeout, this, &SpecificWorker::controller);
 }
 
+// SLOTS
 void SpecificWorker::compute()
 {
 	computeLaser(robot, boxes);
+	computeVisibility();
 	computeForces();
 }
 
@@ -149,6 +153,24 @@ void SpecificWorker::cleanPath()
 /////////////////////////////////////////////////////////////////////7
 /////////
 ////////////////////////////////////////////////////////////////////
+
+void SpecificWorker::computeVisibility()
+{
+	const auto &poly = laser_polygon->polygon();
+	for(auto &&p: points)
+	{
+		if( poly.containsPoint(p->pos(), Qt::OddEvenFill))
+		{
+			p->setData(0, true);
+			p->setBrush(QColor("LightGreen"));
+		}
+		else 
+		{
+			p->setData(0, false);
+			p->setBrush(QColor("DarkGreen"));
+		}
+	}
+}
 
 void SpecificWorker::computeForces()
 {
@@ -184,31 +206,44 @@ void SpecificWorker::computeForces()
 	} 
 	
 	// external forces
-	// we need the minimun distance from each point to the obstacle(s)
-	// we compute the closest laser ray tip to each point
+	// we need the minimun distance from each point to the obstacle(s) we compute the closest laser ray tip to each point
 	std::vector<QVector2D> eforces;
+	static std::vector<QGraphicsLineItem*> lforces;
+	
+	for(auto &&f: lforces)
+		scene.removeItem(f);
+	lforces.clear();
 	for( auto &&p : points)
 	{
-		std::vector<std::tuple<float, QVector2D>> distances;
-		std::transform(std::begin(laserData), std::end(laserData), std::back_inserter(distances), [p, this](auto &l)
-			{ 
-				QVector2D tip(robot->mapToScene(QPointF(l.dist*cos(l.angle), l.dist*sin(l.angle))));
-				return std::make_tuple((QVector2D(p->pos()) - tip).length(), QVector2D(p->pos()) - tip);	
-			});
-		auto min = std::min_element(std::begin(distances), std::end(distances), [](auto &a, auto &b){return std::get<float>(a) < std::get<float>(b);});
-		auto force = std::get<QVector2D>(*min);
-		float mag = force.length();
-		if(mag > 100) mag = 100;
-		mag  = -(10.f/100)*mag + 10.f;
-		force = mag * force.normalized();	
-		eforces.push_back(force);
+		QVector2D force(0,0), f_force(0,0);
+		if(p->data(0).value<bool>() == true) // inside laser field
+		{
+			std::vector<std::tuple<float, QVector2D>> distances;
+			std::transform(std::begin(laserData), std::end(laserData), std::back_inserter(distances), [p, this](auto &l)
+				{ 
+					auto t = QPointF(l.dist*sin(l.angle), l.dist*cos(l.angle));
+					QVector2D tip(robot->mapToScene(t));
+					if(QVector2D(t).length() < MAX_LASER_DIST-1)
+						return std::make_tuple((QVector2D(p->pos()) - tip).length(), QVector2D(p->pos()) - tip);	
+					else
+						return std::make_tuple(MAX_LASER_DIST, QVector2D(0,0));	
+				});
+			auto min = std::min_element(std::begin(distances), std::end(distances), [](auto &a, auto &b){return std::get<float>(a) < std::get<float>(b);});
+			force = std::get<QVector2D>(*min);
+			float mag = force.length();
+			//linear inverse law
+			if(mag > 80) mag = 80;
+			mag  = -(30.f/80)*mag + 30.f;
+			f_force = mag * force.normalized();	
+		}
+		lforces.push_back(scene.addLine(QLineF( p->pos(), p->pos()+f_force.toPointF())));
+		eforces.push_back(f_force);
 	}
 	//qDebug() << "-------";
 
 	//Apply forces to current position
 	const float KE = 0.90;
-	const float KI = 0.2;	
-	auto last_pos = last->pos();
+	const float KI = 0.4;	
 	//const float KL = 0.06;	
 	for(auto &&[point, iforce, eforce, base_line] : iter::zip(points, iforces, eforces, base_lines))
 	{
@@ -216,7 +251,7 @@ void SpecificWorker::computeForces()
 		QPointF edelta{0,0}; 
 		edelta = KE * eforce.toPointF();
 		
-		const auto force =  idelta - edelta;
+		const auto force =  idelta + edelta;
 
 		// Removing tangential component
 		const auto eprod = QVector2D::dotProduct(QVector2D(force), base_line);
@@ -230,7 +265,7 @@ void SpecificWorker::computeForces()
 	}
 	// reposition endpoints
 	first->setPos(robot->pos());
-	last->setPos(last_pos);
+	last->setPos(target->pos());
 	second = points[1];
 }
 
@@ -255,17 +290,17 @@ void SpecificWorker::addPoints()
 	int l=0;
 	for(auto &&p : points_to_insert)
 	{
-		auto r = scene.addEllipse(0,0,10,10);
+		auto r = scene.addEllipse(QRectF(-5,-5,10,10), QPen(QColor("LightGreen")), QBrush(QColor("LightGreen")));
 		r->setPos(std::get<QPointF>(p));
 		points.insert(points.begin() + std::get<int>(p) + l++, r);
 	}
+	//qDebug() << points.size();
 }
 
 ////// Remove points fromthe path if needed
 void SpecificWorker::cleanPoints()
 {
 	std::vector<QGraphicsEllipseItem*> points_to_remove;
-	//for(auto &&[group, i] : iter::zip(iter::sliding_window(points, 2), iter::range(1,(int)(points.size()-1))))
 	for(const auto &group : iter::sliding_window(points, 2))
 	{
 		const auto &p1 = group[0];
@@ -273,25 +308,23 @@ void SpecificWorker::cleanPoints()
 		if(p2 == last)
 			break;
 		float dist = QVector2D(p1->pos()-p2->pos()).length();
-		if (dist < 0.6*ROAD_STEP_SEPARATION)  
+		if (dist < 0.5 * ROAD_STEP_SEPARATION)  
 			points_to_remove.push_back(p2);
 	}
 	for(auto p: points_to_remove)
 	{
 		scene.removeItem(p);
-		std::remove_if(points.begin(), points.end(), [p](auto &r){ return p==r;});
+		points.erase(std::remove_if(points.begin(), points.end(), [p](auto &r){ return p==r;}), points.end());
 	}
 }
 
 ////// Render synthetic laser
 void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsRectItem*> &box)
 {
-	const float MAX_LASER = 300;
-	const float LASER_DIST_STEP = 0.01;
 	for( auto &&l : laserData )
 	{
-		l.dist = MAX_LASER;
-		QLineF line(r->pos(), r->mapToScene(QPointF(MAX_LASER*sin(l.angle), MAX_LASER*cos(l.angle))));
+		l.dist = MAX_LASER_DIST;
+		QLineF line(r->pos(), r->mapToScene(QPointF(MAX_LASER_DIST*sin(l.angle), MAX_LASER_DIST*cos(l.angle))));
 		for( auto t : iter::range(0.f, 1.f, LASER_DIST_STEP))
 		{
 			auto r = line.pointAt(t);
@@ -302,34 +335,55 @@ void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsR
 			}
 		}
 	}
-	scene.removeItem(polygon);
+	if(laser_polygon != nullptr)
+		scene.removeItem(laser_polygon);
 	QPolygonF poly;
-	QBrush brush; brush.setColor(QColor("LightPink")); brush.setStyle(Qt::Dense6Pattern);
+	QBrush brush(QColor("LightPink"), Qt::Dense6Pattern);
 	for(auto &&l : laserData)
-		//poly << QPointF(r->pos().x() + l.dist*sin(l.angle), r->pos().y() + l.dist*cos(l.angle));
 		poly << r->mapToScene(QPointF(l.dist*sin(l.angle), l.dist*cos(l.angle)));
 		
-		
-	polygon = scene.addPolygon(poly, QPen(QColor("LightPink")), brush);
+	laser_polygon = scene.addPolygon(poly, QPen(QColor("LightPink")), brush);
 }
 
 void SpecificWorker::controller()
 {
-	// Compute rotation speed. We use angle between robot and tangent to line between first and second
-	QLineF road(first->pos(), second->pos());
-	QLineF nose(robot->pos(), robot->mapToScene(QPointF( 0, 30)));
-	float angle = qDegreesToRadians(road.angleTo(nose));
-	angle = rewrapAngleRestricted(angle);
-	//qDebug() << angle;
-	rotVel = 0.7 * angle;
+	// Compute distance to target along path
+	float dist_to_target = 0.f;
+	for(auto &&g : iter::sliding_window(points, 2))
+		dist_to_target += QVector2D(g[1]->pos() - g[0]->pos()).length();
+	
+	// Check for arrival
+	if(dist_to_target < ROBOT_LENGTH)
+	{
+		advVelz = 0;
+		rotVel = 0;
+		return;
+	}
+
+	// Compute rotation speed. We use angle between robot's nose and line between first and sucessive points
+	// as an estimation of curvature ahead
+	std::vector<float> angles;
+	auto lim = std::min(6, (int)points.size());
+	QLineF nose(robot->pos(), robot->mapToScene(QPointF( 0, 50)));
+	for(auto &&i: iter::range(1,lim))
+		angles.push_back(rewrapAngleRestricted(qDegreesToRadians(nose.angleTo(QLineF(first->pos(),points[i]->pos())))));
+	auto min_angle = std::min(angles.begin(), angles.end());	
+	rotVel = -0.7 * *min_angle;
 
 	// Compute advance speed
-	float total = 0.f;
-	for(auto &&g : iter::sliding_window(points, 2))
-		total += QVector2D(g[1]->pos() - g[0]->pos()).length();
-	advVelz = total;
-	if( advVelz > 20) advVelz = 20;
+	advVelz = ROBOT_MAX_ADVANCE_SPEED /**	exponentialFunction(1./dist_to_target, 1./700, 0.4, 0.1)*/
+									  * exponentialFunction(rotVel, 0.4, 0.4, 0.f);
+}
 
+float SpecificWorker::exponentialFunction(float value, float xValue, float yValue, float min)
+{
+	if( yValue <= 0) return 1.f;
+	float landa = -fabs(xValue) / log(yValue);
+	float res = exp(-fabs(value)/landa);
+	if( res < min )
+		return min;
+	else
+		return res;
 }
 
 ///Periodic update of robot's state based on its adv and rot speeds.
