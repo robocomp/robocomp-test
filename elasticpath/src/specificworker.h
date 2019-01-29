@@ -56,21 +56,25 @@ public slots:
 private:
 
 	//constants
-	const float ROBOT_LENGTH = 20;
+	const float LEFT = -2500, BOTTOM = -2500, WIDTH = 5000, HEIGHT = 5000;
+	const float ROBOT_LENGTH = 400;
 	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.9;
-	const float MAX_LASER_DIST = 300;
+	const float MAX_LASER_DIST = 4000;
 	const float LASER_DIST_STEP = 0.01;
-	const float ROBOT_MAX_ADVANCE_SPEED = 60;
+	const float ROBOT_MAX_ADVANCE_SPEED = 400;
 	
 	InnerModel *innerModel;
 	QGraphicsScene scene;
 	QGraphicsView view;
 	std::vector<QGraphicsEllipseItem*> points;
+
 	QGraphicsEllipseItem *first, *last, *second;
 	QGraphicsPolygonItem *robot;
 	QGraphicsRectItem *target;
+	QGraphicsRectItem *north, *south, *west, *east, *middle;
 	
-	std::vector<QGraphicsRectItem*> boxes;
+	
+	std::vector<QGraphicsItem*> boxes;
 	QGraphicsPolygonItem *laser_polygon = nullptr;
 	
 	struct LData { float dist; float angle;};
@@ -82,7 +86,7 @@ private:
 	RoboCompGenericBase::TBaseState bState;
 	
 	void computeForces();
-	void computeLaser(QGraphicsItem *r, const std::vector<QGraphicsRectItem*> &box);
+	void computeLaser(QGraphicsItem *r, const std::vector<QGraphicsItem*> &box);
 	void addPoints();
 	void cleanPoints();
 	void computeVisibility();

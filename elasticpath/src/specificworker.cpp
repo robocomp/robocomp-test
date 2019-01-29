@@ -59,7 +59,8 @@ void SpecificWorker::initialize(int period)
 {
 	std::cout << "Initialize worker" << std::endl;
 	resize(QDesktopWidget().availableGeometry(this).size() * 0.6);
-	scene.setSceneRect(-200, -200, 400, 400);
+	//scene.setSceneRect(-200, -200, 400, 400);
+	scene.setSceneRect(LEFT, BOTTOM, WIDTH, HEIGHT);
 	view.scale( 1, -1 );
 	view.setScene(&scene);
 	view.setParent(this);
@@ -76,23 +77,23 @@ void SpecificWorker::initialize(int period)
 	QBrush brush;
 	brush.setColor(QColor("Orange")); brush.setStyle(Qt::SolidPattern);
 	robot = scene.addPolygon(poly2, QPen(QColor("Orange")), brush);
-	robot->setPos(0, -200);
+	robot->setPos(0, -2000);
 	robot->setRotation(0);
 	bState.x = robot->pos().x(); bState.z = robot->pos().y(); bState.alpha = 0;
 
 	// target
-	target = scene.addRect(QRectF(-8, -8, 16, 16));
+	target = scene.addRect(QRectF(-80, -80, 160, 160));
 	target->setFlag(QGraphicsItem::ItemIsMovable);
-	target->setPos(40, 200);
+	target->setPos(400, 2000);
 	target->setBrush(QColor("LightBlue"));
 
 	// path
 	std::random_device rd;  //Will be used to obtain a seed for the random number engine
     std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
-    std::uniform_int_distribution<> dis(-20, 20);
-	for(auto i: iter::range(-200, 200, 25))
+    std::uniform_int_distribution<> dis(-200, 200);
+	for(auto i: iter::range(-2000, 2000, 250))
 	{
-		auto ellipse = scene.addEllipse(QRectF(-5,-5, 10, 10), QPen(QColor("LightGreen")), QBrush(QColor("LightGreen")));
+		auto ellipse = scene.addEllipse(QRectF(-50,-50, 100, 100), QPen(QColor("LightGreen")), QBrush(QColor("LightGreen")));
 		ellipse->setFlag(QGraphicsItem::ItemIsMovable);
 		auto y = dis(gen);
 		ellipse->setPos(i, y);
@@ -108,16 +109,33 @@ void SpecificWorker::initialize(int period)
 	target->setZValue(1);
 	
 	// Boxes
-	auto box = scene.addRect(QRectF(-25,-25,50,50), QPen(Qt::magenta), QBrush(Qt::magenta));
-	box->setPos(150, 150);
+	auto box = scene.addRect(QRectF(-250,-250,500,500), QPen(Qt::magenta), QBrush(Qt::magenta));
+	box->setPos(1500, 1500);
 	box->setFlag(QGraphicsItem::ItemIsMovable);
 	boxes.push_back(box);
 
-	box = scene.addRect(QRectF(-25,-25, 50,50), QPen(Qt::magenta), QBrush(QColor("brown")));
-	box->setPos(-160, 150);
+	box = scene.addRect(QRectF(-250,-250, 500,500), QPen(Qt::magenta), QBrush(QColor("magenta")));
+	box->setPos(-1600, 1500);
 	box->setFlag(QGraphicsItem::ItemIsMovable);
 	boxes.push_back(box);
 
+	//Walls
+	north = scene.addRect(QRectF(-3500, 0, 7000, 50), QPen(QColor("brown")), QBrush(QColor("brown")));
+	north->setPos(0, 3500);
+	boxes.push_back(north);
+	south = scene.addRect(QRectF(-3500, 0, 7000, 50), QPen(QColor("brown")), QBrush(QColor("brown")));
+	south->setPos(0, -3500);
+	boxes.push_back(south);
+	west = scene.addRect(QRectF(0, -3500, 50, 7000), QPen(QColor("brown")), QBrush(QColor("brown")));
+	west->setPos(-3500,0);
+	boxes.push_back(west);
+	east = scene.addRect(QRectF(0, -3500, 50, 7000), QPen(QColor("brown")), QBrush(QColor("brown")));
+	east->setPos(3500,0);
+	boxes.push_back(east);
+
+	middle = scene.addRect(QRectF(-3000, 0, 6000, 160), QPen(QColor("brown")), QBrush(QColor("brown")));
+	middle->setPos(0,0);
+	boxes.push_back(middle);	
 	// Laser
 	for( auto &&i : iter::range(-M_PI/2.f, M_PI/2.f, M_PI/100.f) )
 		laserData.emplace_back(LData{0.f, (float)i});
@@ -130,6 +148,7 @@ void SpecificWorker::initialize(int period)
 
 	advVelz = 0;
 	rotVel = 0;
+
 	//timerRobot.setSingleShot(true);
 	timerRobot.start(100);
 	connect(&timerRobot, &QTimer::timeout, this, &SpecificWorker::updateRobot);
@@ -201,6 +220,8 @@ void SpecificWorker::computeForces()
 
 		//internal force on p2
 		//auto iforce = ((p1-p2)/(p1-p2).length() + (p3-p2)/(p3-p2).length());
+		//QVector2D iforce(0,0);
+		//if(group[1]->data(0).value<bool>() == true) // inside laser field
 		auto iforce = (p1-p2) + (p3-p2);
 		iforces[k++] = iforce;
 	} 
@@ -232,10 +253,11 @@ void SpecificWorker::computeForces()
 			force = std::get<QVector2D>(*min);
 			float mag = force.length();
 			//linear inverse law
-			if(mag > 80) mag = 80;
-			mag  = -(30.f/80)*mag + 30.f;
+			if(mag > 800) mag = 800;
+			mag  = -(200.f/800)*mag + 200.f;
 			f_force = mag * force.normalized();	
 		}
+		
 		lforces.push_back(scene.addLine(QLineF( p->pos(), p->pos()+f_force.toPointF())));
 		eforces.push_back(f_force);
 	}
@@ -290,7 +312,7 @@ void SpecificWorker::addPoints()
 	int l=0;
 	for(auto &&p : points_to_insert)
 	{
-		auto r = scene.addEllipse(QRectF(-5,-5,10,10), QPen(QColor("LightGreen")), QBrush(QColor("LightGreen")));
+		auto r = scene.addEllipse(QRectF(-50,-50,100,100), QPen(QColor("LightGreen")), QBrush(QColor("LightGreen")));
 		r->setPos(std::get<QPointF>(p));
 		points.insert(points.begin() + std::get<int>(p) + l++, r);
 	}
@@ -319,7 +341,7 @@ void SpecificWorker::cleanPoints()
 }
 
 ////// Render synthetic laser
-void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsRectItem*> &box)
+void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsItem*> &box)
 {
 	for( auto &&l : laserData )
 	{
