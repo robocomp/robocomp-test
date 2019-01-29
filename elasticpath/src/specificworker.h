@@ -91,6 +91,9 @@ private:
 	void cleanPoints();
 	void computeVisibility();
 	float exponentialFunction(float value, float xValue, float yValue, float min);
+	void createFreeSpaceMap();
+	void computePath();
+
 	inline float rewrapAngleRestricted(const float angle)
 	// This function takes an angle in the range [-3*pi, 3*pi] and wraps it to the range [-pi, pi].
 	{	

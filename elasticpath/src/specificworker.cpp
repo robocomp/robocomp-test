@@ -133,9 +133,10 @@ void SpecificWorker::initialize(int period)
 	east->setPos(3500,0);
 	boxes.push_back(east);
 
-	middle = scene.addRect(QRectF(-3000, 0, 6000, 160), QPen(QColor("brown")), QBrush(QColor("brown")));
-	middle->setPos(0,0);
-	boxes.push_back(middle);	
+	// middle = scene.addRect(QRectF(-3000, 0, 6000, 160), QPen(QColor("brown")), QBrush(QColor("brown")));
+	// middle->setPos(0,0);
+	// boxes.push_back(middle);
+
 	// Laser
 	for( auto &&i : iter::range(-M_PI/2.f, M_PI/2.f, M_PI/100.f) )
 		laserData.emplace_back(LData{0.f, (float)i});
@@ -444,24 +445,14 @@ void SpecificWorker::updateRobot()
 }
 
 
-///////////////////////////////777777
-/// FUSCA
-////////////////////////////////////////
+void createFreeSpaceMap()
+{
 
 
-// // internal elongation forces
-	// std::vector<QVector2D> lforces(points.size(), QVector2D(0.f,0.f));
-	// const float force_cero = 10;
-	// k=0;
-	// for(auto group : iter::sliding_window(points, 2))
-	// {
-	// 	if(group.size()<2) break;
-	// 	auto p1 = QVector2D(group[0]->pos());
-	// 	auto p2 = QVector2D(group[1]->pos());
 
-	// 	// f = -kx  Hook's law
-	// 	auto force_mod = (p1-p2).length();
-	// 	lforces[k] = (force_mod - force_cero) * ((p2-p1)/force_mod);
-	// 	lforces[k+1] = (force_mod - force_cero) * ((p1-p2)/force_mod);
-	// 	k++;
-	// }  
+}
+
+void computePath()
+{
+	
+}
