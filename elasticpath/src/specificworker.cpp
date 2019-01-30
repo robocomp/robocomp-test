@@ -141,6 +141,25 @@ void SpecificWorker::initialize(int period)
 	for( auto &&i : iter::range(-M_PI/2.f, M_PI/2.f, M_PI/100.f) )
 		laserData.emplace_back(LData{0.f, (float)i});
 	
+	//Grid
+	grid.initialize( TDim{ TILE_SIZE, -3500, 3500, -3500, 3500}, TCell{true, false, nullptr} );
+	// check is cell key.x, key.z is free by checking is there are boxes in it
+	for(auto &&[k, cell] : grid)
+	{
+		if(std::any_of(std::begin(boxes), std::end(boxes),[k](auto &box){ return box->contains(box->mapFromScene(QPointF(k.x,k.z)));}))
+		{
+			cell.free = false;		
+			cell.rect = scene.addRect(QRectF(k.x, k.z, 100, 100), QPen(QColor("Orange")), QBrush(QColor("Orange"),  Qt::Dense6Pattern));
+			cell.rect->setZValue(-1);
+		}
+		else
+		{
+			cell.rect = scene.addRect(QRectF(k.x, k.z, 100, 100), QPen(QColor("LightGreen")), QBrush(QColor("LightGreen"), Qt::Dense6Pattern));
+			cell.rect->setZValue(-1);
+		}
+	}
+	qDebug() << "Grid initialize ok";
+
 	timer.start(50);
 	
 	connect(&cleanTimer, &QTimer::timeout, this, &SpecificWorker::cleanPath);
@@ -398,16 +417,6 @@ void SpecificWorker::controller()
 									  * exponentialFunction(rotVel, 0.4, 0.4, 0.f);
 }
 
-float SpecificWorker::exponentialFunction(float value, float xValue, float yValue, float min)
-{
-	if( yValue <= 0) return 1.f;
-	float landa = -fabs(xValue) / log(yValue);
-	float res = exp(-fabs(value)/landa);
-	if( res < min )
-		return min;
-	else
-		return res;
-}
 
 ///Periodic update of robot's state based on its adv and rot speeds.
 void SpecificWorker::updateRobot()
@@ -445,14 +454,88 @@ void SpecificWorker::updateRobot()
 }
 
 
-void createFreeSpaceMap()
+void SpecificWorker::updateFreeSpaceMap()
 {
-
-
-
 }
 
-void computePath()
+std::list<QVec> SpecificWorker::djikstra(const Grid<TCell>::Key &source, const Grid<TCell>::Key &target)
 {
+    std::vector<uint> min_distance(grid.size(), INT_MAX);
+	std::vector<std::pair<uint, Grid<TCell>::Key>> previous(graph.size(), std::make_pair(-1, Key()));
 	
+    min_distance[ grid[source].id ] = 0;
+	auto comp = [this](std::pair<uint, Grid<TCell>::Key> x, std::pair<uint, Grid<TCell>::Key> y)
+		{ return x.first < y.first or (!(y.first < x.first) and this->grid[x.second].id < this->grid[y.second].id); };
+    std::set< std::pair<uint, Grid<TCell>::Key>, decltype(comp)> active_vertices(comp);
+	
+    active_vertices.insert({0,source});
+    while (!active_vertices.empty()) 
+	{
+        Key where = active_vertices.begin()->second;
+	
+	    if (where == target) 
+		{
+			qDebug() << __FILE__ << __FUNCTION__  << "Min distance found:" << min_distance[grid[where].id];  //exit point 
+			return orderPath(previous, source, target);
+		}
+        active_vertices.erase( active_vertices.begin() );
+	    for (auto ed : neighboors(where)) 
+		{
+			//qDebug() << __FILE__ << __FUNCTION__ << "antes del if" << ed.first.x << ed.first.z << ed.second.id << grid[where].id << min_distance[ed.second.id] << min_distance[grid[where].id];
+            if (min_distance[ed.second.id] > min_distance[grid[where].id] + ed.second.cost) 
+			{
+				active_vertices.erase( { min_distance[ed.second.id], ed.first } );
+                min_distance[ed.second.id] = min_distance[grid[where].id] + ed.second.cost;
+				previous[ed.second.id] = std::make_pair(grid[where].id, where);
+                active_vertices.insert( { min_distance[ed.second.id], ed.first } );
+            }
+		}
+    }
+    return std::list<QVec>();
+}
+
+
+//////////////////////////////////////////////////////////////////777
+////// Utilities
+////////////////////////////////////////////////////////////////////
+float SpecificWorker::rewrapAngleRestricted(const float angle)
+{	
+	if(angle > M_PI)
+   		return angle - M_PI*2;
+	else if(angle < -M_PI)
+   		return angle + M_PI*2;
+	else return angle;
+}
+
+float SpecificWorker::exponentialFunction(float value, float xValue, float yValue, float min)
+{
+	if( yValue <= 0) return 1.f;
+	float landa = -fabs(xValue) / log(yValue);
+	float res = exp(-fabs(value)/landa);
+	if( res < min )
+		return min;
+	else
+		return res;
+}
+
+std::vector<std::pair<Key,T>> SpecificWorker::neighboors(const Key &k) const
+{
+	std::vector<std::pair<Key,Value>> neigh;
+	// list of increments to access the neighboors of a given position
+	const int T = TILE_SIZE;
+	const std::vector<int> xincs = {T,T,T,0,-T,-T,-T,0};
+	const std::vector<int> zincs = {T,0,-T,-T,-T,0,T,T};
+
+	for (auto itx = xincs.begin(), itz = zincs.begin(); itx != xincs.end(); ++itx, ++itz)
+	{
+		Key lk{k.x + *itx, k.z + *itz}; 
+		grid::const_iterator it = grid.find(lk);
+		if( it != grid.end() and it->second.free )
+		{
+			Value v(it->second);					// bacause iterator is const
+			if (abs(*itx)>0 and abs(*itz)>0) v.cost = v.cost * 1.41;		// if neighboor in diagonal, cost is sqrt(2)
+			neigh.push_back(std::make_pair(lk,v));
+		}
+	};
+	return neigh;
 }
