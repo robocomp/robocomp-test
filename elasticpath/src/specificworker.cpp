@@ -23,6 +23,7 @@
 #include <random>
 #include <QGridLayout>
 #include <QDesktopWidget>
+#include <algorithm>
 
 /**
 * \brief Default constructor
@@ -58,8 +59,7 @@ bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList params)
 void SpecificWorker::initialize(int period)
 {
 	std::cout << "Initialize worker" << std::endl;
-	resize(QDesktopWidget().availableGeometry(this).size() * 0.6);
-	//scene.setSceneRect(-200, -200, 400, 400);
+	resize(QDesktopWidget().availableGeometry(this).size() * 0.4);
 	scene.setSceneRect(LEFT, BOTTOM, WIDTH, HEIGHT);
 	view.scale( 1, -1 );
 	view.setScene(&scene);
@@ -75,16 +75,17 @@ void SpecificWorker::initialize(int period)
 	float size = ROBOT_LENGTH/2.f;
 	poly2 << QPoint(-size, -size) << QPoint(-size, size) << QPoint(-size/3, size*1.6) << QPoint(size/3, size*1.6) << QPoint(size, size) << QPoint(size, -size);
 	QBrush brush;
-	brush.setColor(QColor("Orange")); brush.setStyle(Qt::SolidPattern);
-	robot = scene.addPolygon(poly2, QPen(QColor("Orange")), brush);
-	robot->setPos(0, -2000);
+	brush.setColor(QColor("DarkRed")); brush.setStyle(Qt::SolidPattern);
+	robot = scene.addPolygon(poly2, QPen(QColor("DarkRed")), brush);
+	robot->setPos(0, -1000);
 	robot->setRotation(0);
 	bState.x = robot->pos().x(); bState.z = robot->pos().y(); bState.alpha = 0;
+	robot->setZValue(1);
 
 	// target
 	target = scene.addRect(QRectF(-80, -80, 160, 160));
 	target->setFlag(QGraphicsItem::ItemIsMovable);
-	target->setPos(400, 2000);
+	target->setPos(500, -1000);
 	target->setBrush(QColor("LightBlue"));
 
 	// path
@@ -137,79 +138,89 @@ void SpecificWorker::initialize(int period)
 	boxes.push_back(axisX);
 	auto axisZ = scene.addRect(QRectF(0, 0, 20, 200), QPen(Qt::blue), QBrush(QColor("blue")));
 	boxes.push_back(axisZ);
-	//AutonomyLab
-	std::vector<QVector<float>> autonomy;
+	//wallsLab
+	std::vector<QVector<float>> walls, tables;
+	
 	//tables
-	autonomy.push_back({1274, 3167, 800, 1820, 0}); //0.05 *180/3.141592 angles in degrees
-	autonomy.push_back({3250, 3770, 1200, 800, 0});
- 	autonomy.push_back({4880, 3320, 800, 1820, 0});
- 	autonomy.push_back({6400, -2260, 800, 1820, 0});
- 	autonomy.push_back({450, -2920, 650, 2500, 0});
- 	autonomy.push_back({1880, -3800, 2110, 650, 0});
- 	autonomy.push_back({3210, -3720, 600, 600, 0});
+	// walls.push_back({1274, 3167, 800, 1820, 0}); //0.05 *180/3.141592 angles in degrees
+	// walls.push_back({3250, 3770, 1200, 800, 0});
+ 	// walls.push_back({4880, 3320, 800, 1820, 0});
+ 	// walls.push_back({6400, -2260, 800, 1820, 0});
+ 	tables.push_back({450, -2920, 650, 2500, 0});
+ 	tables.push_back({1880, -3800, 2110, 650, 0});
+ 	tables.push_back({3210, -3720, 600, 600, 0});
+	tables.push_back({1800, -2000, 2000, 600, 0});  //isla nueva
+
 	//walls
-	autonomy.push_back({-91.899048, 2066.808899, 40, 3994.28575118, 0});
-	autonomy.push_back({3235.375366, 4200.796875, 6771.97065285, 40, 0});
-	autonomy.push_back({6695.069336, 2831.4042355, 40, 3017.92168155, 0});
-	autonomy.push_back({6386.7331545, 1287.8814695, 773.140593081, 40, 0});
-	autonomy.push_back({6028.6247555, 854.135925, 40, 796.283002455, 0});
-	autonomy.push_back({5226.416748, 411.503479, 1660.36874635, 40, 0});
-	autonomy.push_back({4418.209473, 245, 40, 240, 0});
-	autonomy.push_back({4744.1069335, -70.0668945, 40, 309.047252049, 0});
-	autonomy.push_back({4593.4101565, 105.78302, 312, 40, 0});
-	autonomy.push_back({5408.647705, -222.950745, 1337.58235343, 40, 0});
-	autonomy.push_back({6087.995361, -598.3643495, 40, 754.285723878, 0});
-	autonomy.push_back({6501.73291, -981.21698, 806.443495956, 40, 0});
-	autonomy.push_back({6895.427734, -2179.236023, 40, 2384.39832882, 0});
-	autonomy.push_back({5404.627197, -3447.184326, 2966.5071857, 40, 0});
-	autonomy.push_back({3928.830322, -3720.036865, 40, 394.285898292, 0});
-	autonomy.push_back({3728.9559325, -3931.4294435, 411.785558377, 40, 0});
-	autonomy.push_back({1771.4277345, -4100, 3500, 40, 0});
-	autonomy.push_back({96.8421635, -2989.551636, 40, 2590, 0});
-	autonomy.push_back({-1038.0255125, -1739.7702635, 2041, 40, 0});
-	autonomy.push_back({-2030.214111, -980.0798645, 40, 1600, 0});
-	autonomy.push_back({64.261719, -141.1133725, 4234.32036548, 40, 0});
-	autonomy.push_back({1060.7264405, 101.164795, 2190, 40, 0});
-	autonomy.push_back({2160.31897, 29.063904, 40, 208.552023055, 0});
-	for (auto &object: autonomy)
+	// walls.push_back({-91.899048, 2066.808899, 40, 3994.28575118, 0});
+	// walls.push_back({3235.375366, 4200.796875, 6771.97065285, 40, 0});
+	// walls.push_back({6695.069336, 2831.4042355, 40, 3017.92168155, 0});
+	// walls.push_back({6386.7331545, 1287.8814695, 773.140593081, 40, 0});
+	// walls.push_back({6028.6247555, 854.135925, 40, 796.283002455, 0});
+	// walls.push_back({5226.416748, 411.503479, 1660.36874635, 40, 0});
+	// walls.push_back({4418.209473, 245, 40, 240, 0});
+	// walls.push_back({4744.1069335, -70.0668945, 40, 309.047252049, 0});
+	// walls.push_back({4593.4101565, 105.78302, 312, 40, 0});
+	//walls.push_back({5408.647705, -222.950745, 1337.58235343, 40, 0});
+	walls.push_back({6087.995361, -598.3643495, 80, 754.285723878, 0});
+	walls.push_back({6501.73291, -981.21698, 806.443495956, 80, 0});
+	walls.push_back({6895.427734, -2179.236023, 80, 2384.39832882, 0});
+	walls.push_back({5404.627197, -3447.184326, 2966.5071857, 80, 0});
+	walls.push_back({3928.830322, -3720.036865, 80, 394.285898292, 0});
+	walls.push_back({3728.9559325, -3931.4294435, 411.785558377, 80, 0});
+	walls.push_back({1771.4277345, -4100, 3500, 80, 0});
+	walls.push_back({96.8421635, -2989.551636, 80, 2590, 0});
+	walls.push_back({-1038.0255125, -1739.7702635, 2041, 80, 0});
+	walls.push_back({-2030.214111, -980.0798645, 80, 1600, 0});
+//	walls.push_back({64.261719, -141.1133725, 4234.32036548, 40, 0});
+	walls.push_back({2064.261719, -141.1133725, 8000, 80, 0});
+	// walls.push_back({1060.7264405, 101.164795, 2190, 40, 0});
+	// walls.push_back({2160.31897, 29.063904, 40, 208.552023055, 0});
+
+	for (auto &object: walls)
 	{
-		box = scene.addRect(QRectF(object[0]-object[2]/2 , object[1]-object[3]/2, object[2], object[3]), QPen(Qt::magenta), QBrush(QColor("magenta")));
+		box = scene.addRect(QRectF(object[0]-object[2]/2 , object[1]-object[3]/2, object[2], object[3]), QPen(QColor("Brown")), QBrush(QColor("Brown")));
 		box->setRotation(object[5]);
 		boxes.push_back(box);
 	}
+	for (auto &object: tables)
+	{
+		box = scene.addRect(QRectF(object[0]-object[2]/2 , object[1]-object[3]/2, object[2], object[3]), QPen(QColor("SandyBrown")), QBrush(QColor("SandyBrown")));
+		box->setRotation(object[5]);
+		boxes.push_back(box);
+	}
+	auto round_table = scene.addEllipse(QRectF(-500,-500, 1000, 1000), QPen(QColor("Khaki")), QBrush(QColor("Khaki"))); 
+	round_table->setPos(4800, -1700);
+	boxes.push_back(round_table);
 	
-	
-	
-	
-	
-// 	QPolygonF wall1p << QPoint(-size, -size) << QPoint(-size, size) << QPoint(-size/3, size*1.6) << QPoint(size/3, size*1.6) << QPoint(size, size) << QPoint(size, -size);
-// 	QBrush brush;
-// 	brush.setColor(QColor("Orange")); brush.setStyle(Qt::SolidPattern);
-// 	QGraphicsPolygonItem wall1 = scene.addPolygon(poly2, QPen(QColor("Orange")), brush);
-// 	boxes.push_back(wall1);
-	
+	// 	QPolygonF wall1p << QPoint(-size, -size) << QPoint(-size, size) << QPoint(-size/3, size*1.6) << QPoint(size/3, size*1.6) << QPoint(size, size) << QPoint(size, -size);
+	// 	QBrush brush;
+	// 	brush.setColor(QColor("Orange")); brush.setStyle(Qt::SolidPattern);
+	// 	QGraphicsPolygonItem wall1 = scene.addPolygon(poly2, QPen(QColor("Orange")), brush);
+	// 	boxes.push_back(wall1);
+		
 	
 	// middle = scene.addRect(QRectF(-3000, 0, 6000, 160), QPen(QColor("brown")), QBrush(QColor("brown")));
 	// middle->setPos(0,0);
 	// boxes.push_back(middle);
 
 	// Laser
-	for( auto &&i : iter::range(-M_PI/2.f, M_PI/2.f, M_PI/100.f) )
+	for( auto &&i : iter::range(-M_PI/2.f, M_PI/2.f, M_PI/LASER_ANGLE_STEPS) )
 		laserData.emplace_back(LData{0.f, (float)i});
 	
-	timer.start(50);
+	timer.start(80);
 	
 	connect(&cleanTimer, &QTimer::timeout, this, &SpecificWorker::cleanPath);
-	cleanTimer.start(80);
+	cleanTimer.start(50);
 	//timer.setSingleShot(true);
 
 	advVelz = 0;
 	rotVel = 0;
 
 	//timerRobot.setSingleShot(true);
-	timerRobot.start(100);
-	connect(&timerRobot, &QTimer::timeout, this, &SpecificWorker::updateRobot);
-	connect(&timerRobot, &QTimer::timeout, this, &SpecificWorker::controller);
+	// timerRobot.start(100);
+	// connect(&timerRobot, &QTimer::timeout, this, &SpecificWorker::updateRobot);
+	// connect(&timerRobot, &QTimer::timeout, this, &SpecificWorker::controller);
 }
 
 // SLOTS
@@ -218,6 +229,8 @@ void SpecificWorker::compute()
 	computeLaser(robot, boxes);
 	computeVisibility();
 	computeForces();
+	controller();
+	updateRobot();
 }
 
 void SpecificWorker::cleanPath()
@@ -417,11 +430,12 @@ void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsI
 	if(laser_polygon != nullptr)
 		scene.removeItem(laser_polygon);
 	QPolygonF poly;
-	QBrush brush(QColor("LightPink"), Qt::Dense6Pattern);
+	QBrush brush(QColor("Linen") /*, Qt::Dense7Pattern*/);
 	for(auto &&l : laserData)
 		poly << r->mapToScene(QPointF(l.dist*sin(l.angle), l.dist*cos(l.angle)));
 		
-	laser_polygon = scene.addPolygon(poly, QPen(QColor("LightPink")), brush);
+	laser_polygon = scene.addPolygon(poly, QPen(QColor("Linen")), brush);
+	laser_polygon->setZValue(-1);
 }
 
 void SpecificWorker::controller()
@@ -511,4 +525,9 @@ void createFreeSpaceMap()
 void computePath()
 {
 	
+}
+
+void SpecificWorker::mousePressEvent(QMouseEvent *event)
+{
+    qDebug() <<  view.mapToScene(event->x(), event->y());
 }

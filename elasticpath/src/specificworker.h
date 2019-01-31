@@ -56,12 +56,13 @@ public slots:
 private:
 
 	//constants
-	const float LEFT = -2500, BOTTOM = -2500, WIDTH = 5000, HEIGHT = 5000;
+	const float LEFT = -2500, BOTTOM = -4500, WIDTH = 10000, HEIGHT = 5000;
 	const float ROBOT_LENGTH = 400;
 	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.9;
 	const float MAX_LASER_DIST = 4000;
 	const float LASER_DIST_STEP = 0.01;
-	const float ROBOT_MAX_ADVANCE_SPEED = 400;
+	const float LASER_ANGLE_STEPS = 50;	
+	const float ROBOT_MAX_ADVANCE_SPEED = 600;
 	
 	InnerModel *innerModel;
 	QGraphicsScene scene;
@@ -103,6 +104,9 @@ private:
     		return angle + M_PI*2;
 		else return angle;
 	}
+
+	protected:
+		void mousePressEvent(QMouseEvent *event) override;
 };
 
 #endif
