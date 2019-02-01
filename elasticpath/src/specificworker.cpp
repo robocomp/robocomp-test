@@ -109,17 +109,23 @@ void SpecificWorker::initialize(int period)
 	last->setPos(target->pos());
 	target->setZValue(1);
 	
-	// Boxes
-	auto box = scene.addRect(QRectF(-250,-250,500,500), QPen(Qt::magenta), QBrush(Qt::magenta));
-	box->setPos(1500, 1500);
-	box->setFlag(QGraphicsItem::ItemIsMovable);
-	boxes.push_back(box);
+	// People
+    float pSize = 250;
+    QPolygonF polyp1;
+    polyp1 << QPoint(-pSize, -pSize) << QPoint(-pSize*.75, pSize/3) << QPoint(pSize*.75, pSize/3) << QPoint(pSize, -pSize);
+    auto p1 = scene.addPolygon(polyp1, QPen(Qt::magenta), QBrush(Qt::magenta));
+	p1->setPos(3800, -2800);
+    p1->setRotation(-90);
+	p1->setFlag(QGraphicsItem::ItemIsMovable);
+	boxes.push_back(p1);
+    auto p2 = scene.addPolygon(polyp1, QPen(Qt::magenta), QBrush(Qt::magenta));
+	p2->setPos(4400, -2800);
+	p2->setRotation(90);
+    p2->setFlag(QGraphicsItem::ItemIsMovable);
+	boxes.push_back(p2);
 
-	box = scene.addRect(QRectF(-250,-250, 500,500), QPen(Qt::magenta), QBrush(QColor("magenta")));
-	box->setPos(-1600, 1500);
-	box->setFlag(QGraphicsItem::ItemIsMovable);
-	boxes.push_back(box);
-
+    
+	
 	//Walls
 // 	north = scene.addRect(QRectF(-3500, 0, 7000, 50), QPen(QColor("brown")), QBrush(QColor("brown")));
 // 	north->setPos(0, 3500);
@@ -179,14 +185,16 @@ void SpecificWorker::initialize(int period)
 
 	for (auto &object: walls)
 	{
-		box = scene.addRect(QRectF(object[0]-object[2]/2 , object[1]-object[3]/2, object[2], object[3]), QPen(QColor("Brown")), QBrush(QColor("Brown")));
-		box->setRotation(object[5]);
+		auto box = scene.addRect(QRectF(0, 0, object[2], object[3]), QPen(QColor("Brown")), QBrush(QColor("Brown")));
+		box->setPos(object[0]-object[2]/2, object[1]-object[3]/2);
+        box->setRotation(object[5]);
 		boxes.push_back(box);
 	}
 	for (auto &object: tables)
 	{
-		box = scene.addRect(QRectF(object[0]-object[2]/2 , object[1]-object[3]/2, object[2], object[3]), QPen(QColor("SandyBrown")), QBrush(QColor("SandyBrown")));
-		box->setRotation(object[5]);
+		auto box = scene.addRect(QRectF(0, 0, object[2], object[3]), QPen(QColor("SandyBrown")), QBrush(QColor("SandyBrown")));
+		box->setPos(object[0]-object[2]/2 , object[1]-object[3]/2);
+        box->setRotation(object[5]);
 		boxes.push_back(box);
 	}
 	auto round_table = scene.addEllipse(QRectF(-500,-500, 1000, 1000), QPen(QColor("Khaki")), QBrush(QColor("Khaki"))); 
