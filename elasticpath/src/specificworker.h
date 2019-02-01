@@ -57,13 +57,18 @@ public slots:
 private:
 
 	//constants
-	const float LEFT = -2500, BOTTOM = -2500, WIDTH = 5000, HEIGHT = 5000;
+	const float LEFT = -2500, BOTTOM = -4500, WIDTH = 10000, HEIGHT = 5000;
 	const float ROBOT_LENGTH = 400;
 	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.9;
 	const float MAX_LASER_DIST = 4000;
 	const float LASER_DIST_STEP = 0.01;
+<<<<<<< HEAD
 	const float ROBOT_MAX_ADVANCE_SPEED = 400;
 	const int TILE_SIZE = 200;
+=======
+	const float LASER_ANGLE_STEPS = 50;	
+	const float ROBOT_MAX_ADVANCE_SPEED = 600;
+>>>>>>> 1ae17f4ebb889dc346f9ab5ca59423186c7be8a6
 	
 	InnerModel *innerModel;
 	QGraphicsScene scene;
@@ -114,9 +119,22 @@ private:
 	std::list<QVec> djikstra(const Grid<TCell>::Key &source, const Grid<TCell>::Key &target);
 
 	// This function takes an angle in the range [-3*pi, 3*pi] and wraps it to the range [-pi, pi].
+<<<<<<< HEAD
 	float rewrapAngleRestricted(const float angle);
 	std::vector<std::pair<Grid<TCell>::Key,T>> neighboors(const Grid<TCell>::Key &k) const;
 	std::list<QVec> orderPath(const std::vector<std::pair<uint, Grid<TCell>::Key>> &previous, const Grid<TCell>::Key &source, const Grid<TCell>::Key &target);
+=======
+	{	
+  		if(angle > M_PI)
+    		return angle - M_PI*2;
+  		else if(angle < -M_PI)
+    		return angle + M_PI*2;
+		else return angle;
+	}
+
+	protected:
+		void mousePressEvent(QMouseEvent *event) override;
+>>>>>>> 1ae17f4ebb889dc346f9ab5ca59423186c7be8a6
 };
 
 #endif
