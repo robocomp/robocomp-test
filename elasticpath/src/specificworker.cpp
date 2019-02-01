@@ -198,11 +198,6 @@ void SpecificWorker::initialize(int period)
 	// 	brush.setColor(QColor("Orange")); brush.setStyle(Qt::SolidPattern);
 	// 	QGraphicsPolygonItem wall1 = scene.addPolygon(poly2, QPen(QColor("Orange")), brush);
 	// 	boxes.push_back(wall1);
-<<<<<<< HEAD
-	
-=======
-		
->>>>>>> 1ae17f4ebb889dc346f9ab5ca59423186c7be8a6
 	
 	// middle = scene.addRect(QRectF(-3000, 0, 6000, 160), QPen(QColor("brown")), QBrush(QColor("brown")));
 	// middle->setPos(0,0);
@@ -212,7 +207,6 @@ void SpecificWorker::initialize(int period)
 	for( auto &&i : iter::range(-M_PI/2.f, M_PI/2.f, M_PI/LASER_ANGLE_STEPS) )
 		laserData.emplace_back(LData{0.f, (float)i});
 	
-<<<<<<< HEAD
 	//Grid
 	grid.initialize( TDim{ TILE_SIZE, -3500, 3500, -3500, 3500}, TCell{0, true, false, nullptr} );
 	// check is cell key.x, key.z is free by checking is there are boxes in it
@@ -232,10 +226,7 @@ void SpecificWorker::initialize(int period)
 	}
 	qDebug() << "Grid initialize ok";
 
-	timer.start(50);
-=======
 	timer.start(80);
->>>>>>> 1ae17f4ebb889dc346f9ab5ca59423186c7be8a6
 	
 	connect(&cleanTimer, &QTimer::timeout, this, &SpecificWorker::cleanPath);
 	cleanTimer.start(50);
@@ -561,14 +552,15 @@ std::list<QVec> SpecificWorker::djikstra(const Grid<TCell>::Key &source, const G
         active_vertices.erase( active_vertices.begin() );
 	    for (auto ed : neighboors(where)) 
 		{
-			//qDebug() << __FILE__ << __FUNCTION__ << "antes del if" << ed.first.x << ed.first.z << ed.second.id << grid[where].id << min_distance[ed.second.id] << min_distance[grid[where].id];
+//TODO: Descomentar
+/*			//qDebug() << __FILE__ << __FUNCTION__ << "antes del if" << ed.first.x << ed.first.z << ed.second.id << grid[where].id << min_distance[ed.second.id] << min_distance[grid[where].id];
             if (min_distance[ed.second.id] > min_distance[grid[where].id] + ed.second.cost) 
 			{
 				active_vertices.erase( { min_distance[ed.second.id], ed.first } );
                 min_distance[ed.second.id] = min_distance[grid[where].id] + ed.second.cost;
 				previous[ed.second.id] = std::make_pair(grid[where].id, where);
                 active_vertices.insert( { min_distance[ed.second.id], ed.first } );
-            }
+            }*/
 		}
     }
     return std::list<QVec>();
@@ -599,9 +591,9 @@ float SpecificWorker::exponentialFunction(float value, float xValue, float yValu
 }
 
 
-std::vector<std::pair<Key, T>> SpecificWorker::neighboors(const Key &k) const
+std::vector<std::pair<Grid<TCell>::Key, T>> SpecificWorker::neighboors(const Grid<TCell>::Key &k) const
 {
-	std::vector<std::pair<Grid<TCell>::Key, Value>> neigh;
+	std::vector<std::pair<Grid<TCell>::Key, T>> neigh;
 	// list of increments to access the neighboors of a given position
 	const int T = TILE_SIZE;
 	const std::vector<int> xincs = {T,T,T,0,-T,-T,-T,0};
@@ -610,13 +602,14 @@ std::vector<std::pair<Key, T>> SpecificWorker::neighboors(const Key &k) const
 	for (auto itx = xincs.begin(), itz = zincs.begin(); itx != xincs.end(); ++itx, ++itz)
 	{
 		Grid<TCell>::Key lk{k.x + *itx, k.z + *itz}; 
-		grid::const_iterator it = grid.find(lk);
+//TODO: Descomentar
+/*        grid::const_iterator it = grid.find(lk);
 		if( it != grid.end() and it->second.free )
 		{
 			Value v(it->second);					// bacause iterator is const
 			if (abs(*itx)>0 and abs(*itz)>0) v.cost = v.cost * 1.41;		// if neighboor in diagonal, cost is sqrt(2)
 			neigh.push_back(std::make_pair(lk,v));
-		}
+		}*/
 	};
 	return neigh;
 }
@@ -629,11 +622,11 @@ std::vector<std::pair<Key, T>> SpecificWorker::neighboors(const Key &k) const
  * @param target p_target:...
  * @return std::__cxx11::list< RMat::QVec, std::allocator< RMat::QVec > >
  */
-std::list<QVec> SpecificWorker::orderPath(const std::vector<std::pair<uint,Key>> &previous, const Key &source, const Key &target)
+std::list<QVec> SpecificWorker::orderPath(const std::vector<std::pair<uint,Grid<TCell>::Key>> &previous, const Grid<TCell>::Key &source, const Grid<TCell>::Key &target)
 {
 	std::list<QVec> res;
-	Key k = target;
-	uint u = fmap[k].id;
+	Grid<TCell>::Key k = target;
+	uint u = grid.at(k).id;
 	while(previous[u].first != (uint)-1)
 	{
 		QVec p = QVec::vec3(k.x, 0, k.z);

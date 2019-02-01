@@ -38,6 +38,21 @@
 #include <math.h>
 #include "grid.h"
 
+
+// Map
+struct TCell
+{
+    uint id;
+    bool free;
+    bool visited;
+    QGraphicsRectItem* rect;
+    
+    // method to save the value
+    void save(std::ostream &os) const {	os << free << " " << visited; };
+    void read(std::istream &is) {	is >> free >> visited ;};
+};
+		
+
 class SpecificWorker : public GenericWorker
 {
 Q_OBJECT
@@ -62,13 +77,9 @@ private:
 	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.9;
 	const float MAX_LASER_DIST = 4000;
 	const float LASER_DIST_STEP = 0.01;
-<<<<<<< HEAD
-	const float ROBOT_MAX_ADVANCE_SPEED = 400;
 	const int TILE_SIZE = 200;
-=======
 	const float LASER_ANGLE_STEPS = 50;	
 	const float ROBOT_MAX_ADVANCE_SPEED = 600;
->>>>>>> 1ae17f4ebb889dc346f9ab5ca59423186c7be8a6
 	
 	InnerModel *innerModel;
 	QGraphicsScene scene;
@@ -92,19 +103,6 @@ private:
 	float advVelx=0, advVelz=0, rotVel=0;
 	RoboCompGenericBase::TBaseState bState;
 
-	// Map
-	struct TCell
-	{
-		uint id;
-		bool free;
-		bool visited;
-		QGraphicsRectItem* rect;
-		
-		// method to save the value
-		void save(std::ostream &os) const {	os << free << " " << visited; };
-		void read(std::istream &is) {	is >> free >> visited ;};
-	};
-		
 	using TDim = Grid<TCell>::Dimensions;
 	Grid<TCell> grid;
 
@@ -119,22 +117,13 @@ private:
 	std::list<QVec> djikstra(const Grid<TCell>::Key &source, const Grid<TCell>::Key &target);
 
 	// This function takes an angle in the range [-3*pi, 3*pi] and wraps it to the range [-pi, pi].
-<<<<<<< HEAD
 	float rewrapAngleRestricted(const float angle);
-	std::vector<std::pair<Grid<TCell>::Key,T>> neighboors(const Grid<TCell>::Key &k) const;
+    std::vector<std::pair<Grid<TCell>::Key,T>> neighboors(const Grid<TCell>::Key &k) const;
 	std::list<QVec> orderPath(const std::vector<std::pair<uint, Grid<TCell>::Key>> &previous, const Grid<TCell>::Key &source, const Grid<TCell>::Key &target);
-=======
-	{	
-  		if(angle > M_PI)
-    		return angle - M_PI*2;
-  		else if(angle < -M_PI)
-    		return angle + M_PI*2;
-		else return angle;
-	}
-
+	
 	protected:
-		void mousePressEvent(QMouseEvent *event) override;
->>>>>>> 1ae17f4ebb889dc346f9ab5ca59423186c7be8a6
+//TODO
+        //void mousePressEvent(QMouseEvent *event) override;
 };
 
 #endif
