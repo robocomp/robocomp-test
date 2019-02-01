@@ -90,6 +90,7 @@ private:
 	// Map
 	struct TCell
 	{
+		uint id;
 		bool free;
 		bool visited;
 		QGraphicsRectItem* rect;
@@ -115,6 +116,7 @@ private:
 	// This function takes an angle in the range [-3*pi, 3*pi] and wraps it to the range [-pi, pi].
 	float rewrapAngleRestricted(const float angle);
 	std::vector<std::pair<Grid<TCell>::Key,T>> neighboors(const Grid<TCell>::Key &k) const;
+	std::list<QVec> orderPath(const std::vector<std::pair<uint, Grid<TCell>::Key>> &previous, const Grid<TCell>::Key &source, const Grid<TCell>::Key &target);
 };
 
 #endif

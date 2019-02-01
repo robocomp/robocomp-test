@@ -120,19 +120,71 @@ void SpecificWorker::initialize(int period)
 	boxes.push_back(box);
 
 	//Walls
-	north = scene.addRect(QRectF(-3500, 0, 7000, 50), QPen(QColor("brown")), QBrush(QColor("brown")));
-	north->setPos(0, 3500);
-	boxes.push_back(north);
-	south = scene.addRect(QRectF(-3500, 0, 7000, 50), QPen(QColor("brown")), QBrush(QColor("brown")));
-	south->setPos(0, -3500);
-	boxes.push_back(south);
-	west = scene.addRect(QRectF(0, -3500, 50, 7000), QPen(QColor("brown")), QBrush(QColor("brown")));
-	west->setPos(-3500,0);
-	boxes.push_back(west);
-	east = scene.addRect(QRectF(0, -3500, 50, 7000), QPen(QColor("brown")), QBrush(QColor("brown")));
-	east->setPos(3500,0);
-	boxes.push_back(east);
+// 	north = scene.addRect(QRectF(-3500, 0, 7000, 50), QPen(QColor("brown")), QBrush(QColor("brown")));
+// 	north->setPos(0, 3500);
+// 	boxes.push_back(north);
+// 	south = scene.addRect(QRectF(-3500, 0, 7000, 50), QPen(QColor("brown")), QBrush(QColor("brown")));
+// 	south->setPos(0, -3500);
+// 	boxes.push_back(south);
+// 	west = scene.addRect(QRectF(0, -3500, 50, 7000), QPen(QColor("brown")), QBrush(QColor("brown")));
+// 	west->setPos(-3500,0);
+// 	boxes.push_back(west);
+// 	east = scene.addRect(QRectF(0, -3500, 50, 7000), QPen(QColor("brown")), QBrush(QColor("brown")));
+// 	east->setPos(3500,0);
+// 	boxes.push_back(east);
 
+	auto axisX = scene.addRect(QRectF(0, 0, 200, 20), QPen(Qt::red), QBrush(QColor("red")));
+	boxes.push_back(axisX);
+	auto axisZ = scene.addRect(QRectF(0, 0, 20, 200), QPen(Qt::blue), QBrush(QColor("blue")));
+	boxes.push_back(axisZ);
+	//AutonomyLab
+	std::vector<QVector<float>> autonomy;
+	//tables
+	autonomy.push_back({1274, 3167, 800, 1820, 0}); //0.05 *180/3.141592 angles in degrees
+	autonomy.push_back({3250, 3770, 1200, 800, 0});
+ 	autonomy.push_back({4880, 3320, 800, 1820, 0});
+ 	autonomy.push_back({6400, -2260, 800, 1820, 0});
+ 	autonomy.push_back({450, -2920, 650, 2500, 0});
+ 	autonomy.push_back({1880, -3800, 2110, 650, 0});
+ 	autonomy.push_back({3210, -3720, 600, 600, 0});
+	//walls
+	autonomy.push_back({-91.899048, 2066.808899, 40, 3994.28575118, 0});
+	autonomy.push_back({3235.375366, 4200.796875, 6771.97065285, 40, 0});
+	autonomy.push_back({6695.069336, 2831.4042355, 40, 3017.92168155, 0});
+	autonomy.push_back({6386.7331545, 1287.8814695, 773.140593081, 40, 0});
+	autonomy.push_back({6028.6247555, 854.135925, 40, 796.283002455, 0});
+	autonomy.push_back({5226.416748, 411.503479, 1660.36874635, 40, 0});
+	autonomy.push_back({4418.209473, 245, 40, 240, 0});
+	autonomy.push_back({4744.1069335, -70.0668945, 40, 309.047252049, 0});
+	autonomy.push_back({4593.4101565, 105.78302, 312, 40, 0});
+	autonomy.push_back({5408.647705, -222.950745, 1337.58235343, 40, 0});
+	autonomy.push_back({6087.995361, -598.3643495, 40, 754.285723878, 0});
+	autonomy.push_back({6501.73291, -981.21698, 806.443495956, 40, 0});
+	autonomy.push_back({6895.427734, -2179.236023, 40, 2384.39832882, 0});
+	autonomy.push_back({5404.627197, -3447.184326, 2966.5071857, 40, 0});
+	autonomy.push_back({3928.830322, -3720.036865, 40, 394.285898292, 0});
+	autonomy.push_back({3728.9559325, -3931.4294435, 411.785558377, 40, 0});
+	autonomy.push_back({1771.4277345, -4100, 3500, 40, 0});
+	autonomy.push_back({96.8421635, -2989.551636, 40, 2590, 0});
+	autonomy.push_back({-1038.0255125, -1739.7702635, 2041, 40, 0});
+	autonomy.push_back({-2030.214111, -980.0798645, 40, 1600, 0});
+	autonomy.push_back({64.261719, -141.1133725, 4234.32036548, 40, 0});
+	autonomy.push_back({1060.7264405, 101.164795, 2190, 40, 0});
+	autonomy.push_back({2160.31897, 29.063904, 40, 208.552023055, 0});
+	for (auto &object: autonomy)
+	{
+		box = scene.addRect(QRectF(object[0]-object[2]/2 , object[1]-object[3]/2, object[2], object[3]), QPen(Qt::magenta), QBrush(QColor("magenta")));
+		box->setRotation(object[5]);
+		boxes.push_back(box);
+	}
+	
+	// 	QPolygonF wall1p << QPoint(-size, -size) << QPoint(-size, size) << QPoint(-size/3, size*1.6) << QPoint(size/3, size*1.6) << QPoint(size, size) << QPoint(size, -size);
+	// 	QBrush brush;
+	// 	brush.setColor(QColor("Orange")); brush.setStyle(Qt::SolidPattern);
+	// 	QGraphicsPolygonItem wall1 = scene.addPolygon(poly2, QPen(QColor("Orange")), brush);
+	// 	boxes.push_back(wall1);
+	
+	
 	// middle = scene.addRect(QRectF(-3000, 0, 6000, 160), QPen(QColor("brown")), QBrush(QColor("brown")));
 	// middle->setPos(0,0);
 	// boxes.push_back(middle);
@@ -142,7 +194,7 @@ void SpecificWorker::initialize(int period)
 		laserData.emplace_back(LData{0.f, (float)i});
 	
 	//Grid
-	grid.initialize( TDim{ TILE_SIZE, -3500, 3500, -3500, 3500}, TCell{true, false, nullptr} );
+	grid.initialize( TDim{ TILE_SIZE, -3500, 3500, -3500, 3500}, TCell{0, true, false, nullptr} );
 	// check is cell key.x, key.z is free by checking is there are boxes in it
 	for(auto &&[k, cell] : grid)
 	{
@@ -461,21 +513,23 @@ void SpecificWorker::updateFreeSpaceMap()
 std::list<QVec> SpecificWorker::djikstra(const Grid<TCell>::Key &source, const Grid<TCell>::Key &target)
 {
     std::vector<uint> min_distance(grid.size(), INT_MAX);
-	std::vector<std::pair<uint, Grid<TCell>::Key>> previous(graph.size(), std::make_pair(-1, Key()));
+	std::vector<std::pair<uint, Grid<TCell>::Key>> previous(grid.size(), std::make_pair(-1, Grid<TCell>::Key()));
 	
-    min_distance[ grid[source].id ] = 0;
+	auto id = grid.at(source).id;
+    min_distance[id] = 0;
+
 	auto comp = [this](std::pair<uint, Grid<TCell>::Key> x, std::pair<uint, Grid<TCell>::Key> y)
-		{ return x.first < y.first or (!(y.first < x.first) and this->grid[x.second].id < this->grid[y.second].id); };
+		{ return x.first < y.first or (!(y.first < x.first) and grid.at(x.second).id < grid.at(y.second).id); };
     std::set< std::pair<uint, Grid<TCell>::Key>, decltype(comp)> active_vertices(comp);
 	
     active_vertices.insert({0,source});
     while (!active_vertices.empty()) 
 	{
-        Key where = active_vertices.begin()->second;
+        Grid<TCell>::Key where = active_vertices.begin()->second;
 	
 	    if (where == target) 
 		{
-			qDebug() << __FILE__ << __FUNCTION__  << "Min distance found:" << min_distance[grid[where].id];  //exit point 
+			qDebug() << __FILE__ << __FUNCTION__  << "Min distance found:" << min_distance[grid.at(where).id];  //exit point 
 			return orderPath(previous, source, target);
 		}
         active_vertices.erase( active_vertices.begin() );
@@ -518,9 +572,10 @@ float SpecificWorker::exponentialFunction(float value, float xValue, float yValu
 		return res;
 }
 
-std::vector<std::pair<Key,T>> SpecificWorker::neighboors(const Key &k) const
+
+std::vector<std::pair<Key, T>> SpecificWorker::neighboors(const Key &k) const
 {
-	std::vector<std::pair<Key,Value>> neigh;
+	std::vector<std::pair<Grid<TCell>::Key, Value>> neigh;
 	// list of increments to access the neighboors of a given position
 	const int T = TILE_SIZE;
 	const std::vector<int> xincs = {T,T,T,0,-T,-T,-T,0};
@@ -528,7 +583,7 @@ std::vector<std::pair<Key,T>> SpecificWorker::neighboors(const Key &k) const
 
 	for (auto itx = xincs.begin(), itz = zincs.begin(); itx != xincs.end(); ++itx, ++itz)
 	{
-		Key lk{k.x + *itx, k.z + *itz}; 
+		Grid<TCell>::Key lk{k.x + *itx, k.z + *itz}; 
 		grid::const_iterator it = grid.find(lk);
 		if( it != grid.end() and it->second.free )
 		{
@@ -539,3 +594,27 @@ std::vector<std::pair<Key,T>> SpecificWorker::neighboors(const Key &k) const
 	};
 	return neigh;
 }
+
+/**
+ * @brief Recovers the optimal path from the list of previous nodes
+ * 
+ * @param previous p_previous:...
+ * @param source p_source:...
+ * @param target p_target:...
+ * @return std::__cxx11::list< RMat::QVec, std::allocator< RMat::QVec > >
+ */
+std::list<QVec> SpecificWorker::orderPath(const std::vector<std::pair<uint,Key>> &previous, const Key &source, const Key &target)
+{
+	std::list<QVec> res;
+	Key k = target;
+	uint u = fmap[k].id;
+	while(previous[u].first != (uint)-1)
+	{
+		QVec p = QVec::vec3(k.x, 0, k.z);
+		res.push_front(p);
+		u = previous[u].first;
+		k = previous[u].second;
+	}
+	qDebug() << __FILE__ << __FUNCTION__ << "Path length:" << res.size();  //exit point 
+	return res;
+};
