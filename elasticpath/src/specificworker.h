@@ -42,10 +42,11 @@
 // Map
 struct TCell
 {
-    uint id;
+   	std::uint32_t id;
     bool free;
     bool visited;
-    QGraphicsRectItem* rect;
+    QGraphicsItem* rect;
+	float cost;
     
     // method to save the value
     void save(std::ostream &os) const {	os << free << " " << visited; };
@@ -95,14 +96,17 @@ private:
 	std::vector<QGraphicsItem*> boxes;
 	QGraphicsPolygonItem *laser_polygon = nullptr;
 	
+	// Laser
 	struct LData { float dist; float angle;};
 	std::vector<LData> laserData;
 	QTimer cleanTimer, timerRobot;
 
+	// Robot sim
 	timeval lastCommand_timeval;
 	float advVelx=0, advVelz=0, rotVel=0;
 	RoboCompGenericBase::TBaseState bState;
 
+	// Grid
 	using TDim = Grid<TCell>::Dimensions;
 	Grid<TCell> grid;
 
@@ -114,16 +118,22 @@ private:
 	void computeVisibility();
 	float exponentialFunction(float value, float xValue, float yValue, float min);
 	void updateFreeSpaceMap();
-	std::list<QVec> djikstra(const Grid<TCell>::Key &source, const Grid<TCell>::Key &target);
+	void createPathFromGraph(const std::list<QVec> &path);
+
+	// Target
+	struct Target 
+	{ 
+		QPointF p; 
+		bool active = false; 
+		QGraphicsRectItem *item;
+	};
+	Target current_target;
 
 	// This function takes an angle in the range [-3*pi, 3*pi] and wraps it to the range [-pi, pi].
 	float rewrapAngleRestricted(const float angle);
-    std::vector<std::pair<Grid<TCell>::Key,T>> neighboors(const Grid<TCell>::Key &k) const;
-	std::list<QVec> orderPath(const std::vector<std::pair<uint, Grid<TCell>::Key>> &previous, const Grid<TCell>::Key &source, const Grid<TCell>::Key &target);
-	
-	protected:
-//TODO
-        //void mousePressEvent(QMouseEvent *event) override;
+  	
+protected:
+	void mousePressEvent(QMouseEvent *event) override;
 };
 
 #endif

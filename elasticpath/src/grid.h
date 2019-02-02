@@ -42,7 +42,7 @@ class Grid
 		struct Dimensions
 		{
 			int TILE_SIZE = 200;
-			int HMIN=-2500, HMAX=2500, VMIN=-2500, VMAX=2500;
+			float HMIN=-2500, VMIN=-2500, WIDTH=2500, HEIGHT=2500;
 		};
 		
 		struct Key
@@ -55,6 +55,7 @@ class Grid
 				Key(long int &&x, long int &&z): x(std::move(x)), z(std::move(z)){};
 				Key(long int &x, long int &z): x(x), z(z){};
 				Key(const long int &x, const long int &z): x(x), z(z){};
+				Key(const QPointF &p){ x=p.x(); z=p.y();};
 				bool operator==(const Key &other) const
 					{ return x == other.x && z == other.z; };
 				void save(std::ostream &os) const { os << x << " " << z << " "; };	//method to save the keys
@@ -80,14 +81,21 @@ class Grid
 			
 		using FMap = std::unordered_map<Key, T, KeyHasher>;
 		
-		Grid()																				{};
+		//Grid(){};
 		
 		std::tuple<bool,T&> getCell(long int x, long int z) 											
 		{
- 			if(x <= dim.HMIN or x >= dim.HMAX or z <= dim.VMIN or z >= dim.VMAX)
- 			{ return std::forward_as_tuple(false, T());}
+ 			if(!(x >= dim.HMIN and x < dim.HMIN+dim.WIDTH and z >= dim.VMIN and z < dim.VMIN + dim.HEIGHT))
+ 				return std::forward_as_tuple(false, T());
 			else
 				return std::forward_as_tuple(true, fmap.at(pointToGrid(x,z)));
+		}
+		std::tuple<bool,T&> getCell(const Key &k) 			//overladed version								
+		{
+ 			if(!(k.x >= dim.HMIN and k.x < dim.HMIN+dim.WIDTH and k.z >= dim.VMIN and k.z < dim.VMIN + dim.HEIGHT))
+ 				return std::forward_as_tuple(false, T());
+			else
+				return std::forward_as_tuple(true, fmap.at(pointToGrid(k.x,k.z)));
 		}
 		T at(const Key &k) const 									{ return fmap.at(k);};
 		T& at(const Key &k) 										{ return fmap.at(k);};
@@ -101,10 +109,9 @@ class Grid
 		{
 			dim = dim_;
 			fmap.clear();
-			for( int i = dim.HMIN ; i < dim.HMAX ; i += dim.TILE_SIZE)
-				for( int j = dim.VMIN ; j < dim.VMAX ; j += dim.TILE_SIZE)
-					//fmap.emplace( Key(i,j), initValue); 
-					fmap.insert_or_assign( Key(i,j), initValue);
+			for( int i = dim.HMIN ; i < dim.HMIN + dim.WIDTH ; i += dim.TILE_SIZE)
+				for( int j = dim.VMIN ; j < dim.VMIN + dim.HEIGHT ; j += dim.TILE_SIZE)
+					fmap.emplace( Key(i,j), initValue);
 	
 			// list of increments to access the neighboors of a given position
 			I = dim.TILE_SIZE;
@@ -136,24 +143,105 @@ class Grid
 			myfile.close();
 			std::cout << fmap.size() << " elements written to " << fich << std::endl;
 		}
-		
-		
- 		std::vector<std::pair<Key,T>> neighbours(const Key &k) const
+     
+		std::list<QVec> djikstra(const Key &source_, const Key &target_)
 		{
-			using Cell = std::pair<Key,T>;
-			std::vector<Cell> neigh;
-			
-			for (auto itx = this->xincs.begin(), itz = this->zincs.begin(); itx != this->xincs.end(); ++itx, ++itz)
+			qDebug() << __FUNCTION__;
+			Key source = source_;
+			Key target = target_;
+
+			// Admission rules
+			if( !(target.x >= dim.HMIN and target.x < dim.HMIN+dim.WIDTH and target.z >= dim.VMIN and target.z < dim.VMIN + dim.HEIGHT))
 			{
-				Key lk{k.x + *itx, k.z + *itz}; 
-				typename FMap::const_iterator it = fmap.find(lk);
-				if( it != fmap.end() )
-					neigh.push_back({lk,it->second});
-			};
-			return neigh;
-		}	
-     
-     
+				qDebug() << __FUNCTION__ << "Target out of limits. Returning empty path";
+				return std::list<QVec>();
+			}
+			if(fmap.find(source) == fmap.end())
+				source = pointToGrid(source_.x, source.z);
+			if(fmap.find(target) == fmap.end())
+				target = pointToGrid(target_.x, target.z);
+
+			std::vector<std::uint32_t> min_distance(fmap.size(), INT_MAX);
+			std::vector<std::pair<std::uint32_t, Key>> previous(fmap.size(), std::make_pair(-1, Key()));
+			
+			//min_distance[std::get<T&>(getCell(source)).id] = 0;
+			auto id = std::get<T&>(getCell(source)).id;
+			min_distance[id] = 0;
+			
+			auto comp = [this](std::pair<std::uint32_t, Key> x, std::pair<std::uint32_t, Key> y)
+				{ return x.first < y.first or (!(y.first < x.first) and std::get<T&>(getCell(x.second)).id < std::get<T&>(getCell(y.second)).id);};
+			std::set< std::pair<std::uint32_t, Key>, decltype(comp)> active_vertices(comp);
+			
+			active_vertices.insert({0,source});
+			while (!active_vertices.empty()) 
+			{
+				Key where = active_vertices.begin()->second;		
+				if (where == target) 
+				{
+					qDebug() << __FILE__ << __FUNCTION__  << "Min distance found:" << min_distance[fmap.at(where).id];  //exit point 
+					return orderPath(previous, source, target);
+				}
+				active_vertices.erase( active_vertices.begin() );
+				for (auto ed : neighboors(where)) 
+				{
+					qDebug() << __FILE__ << __FUNCTION__ << "antes del if" << ed.first.x << ed.first.z << ed.second.id << fmap[where].id << min_distance[ed.second.id] << min_distance[fmap[where].id];
+					if (min_distance[ed.second.id] > min_distance[fmap[where].id] + ed.second.cost) 
+					{
+						active_vertices.erase( { min_distance[ed.second.id], ed.first } );
+						min_distance[ed.second.id] = min_distance[fmap[where].id] + ed.second.cost;
+						previous[ed.second.id] = std::make_pair(fmap[where].id, where);
+						active_vertices.insert( { min_distance[ed.second.id], ed.first } );
+					}
+				}
+			}
+			qDebug() << __FUNCTION__ << "Path from (" << source.x << "," << source.z << ") not  found. Returning empty path";
+			return std::list<QVec>();
+		};
+
+	std::vector<std::pair<Key, T>> neighboors(const Key &k) const
+	{
+		qDebug() << __FUNCTION__;
+		std::vector<std::pair<Key, T>> neigh;
+		// list of increments to access the neighboors of a given position
+		const int I = dim.TILE_SIZE;
+		const std::vector<int> xincs = {I,I,I,0,-I,-I,-I,0};
+		const std::vector<int> zincs = {I,0,-I,-I,-I,0,I,I};
+
+		for (auto itx = xincs.begin(), itz = zincs.begin(); itx != xincs.end(); ++itx, ++itz)
+		{
+			Key lk{k.x + *itx, k.z + *itz}; 
+			qDebug() << lk.x << lk.z;
+	        typename FMap::const_iterator it = fmap.find(lk);
+			if( it != fmap.end() and it->second.free )
+			{
+				T v(it->second);					// bacause iterator is const
+				if (abs(*itx)>0 and abs(*itz)>0) v.cost = v.cost * 1.41;		// if neighboor in diagonal, cost is sqrt(2)
+				neigh.push_back(std::make_pair(lk,v));
+			}
+		};
+		return neigh;
+	}
+
+	/**
+	 * @brief Recovers the optimal path from the list of previous nodes
+	 * 
+	 */
+	std::list<QVec> orderPath(const std::vector<std::pair<std::uint32_t,Key>> &previous, const Key &source, const Key &target)
+	{
+		std::list<QVec> res;
+		Key k = target;
+		uint u = fmap.at(k).id;
+		while(previous[u].first != (std::uint32_t)-1)
+		{
+			QVec p = QVec::vec3(k.x, 0, k.z);
+			res.push_front(p);
+			u = previous[u].first;
+			k = previous[u].second;
+		}
+		qDebug() << __FILE__ << __FUNCTION__ << "Path length:" << res.size();  //exit point 
+		return res;
+	};
+
 	private:
 		FMap fmap;
 		Dimensions dim;
@@ -169,6 +257,9 @@ class Grid
 			int kz = (z-dim.VMIN)/dim.TILE_SIZE;
 			return Key(dim.HMIN + kx*dim.TILE_SIZE, dim.VMIN + kz*dim.TILE_SIZE);
 		};
+
+		
+
 };
 
 #endif // FLOORMETER_H

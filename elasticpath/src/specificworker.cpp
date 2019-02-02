@@ -123,22 +123,20 @@ void SpecificWorker::initialize(int period)
 	p2->setRotation(90);
     p2->setFlag(QGraphicsItem::ItemIsMovable);
 	boxes.push_back(p2);
-
-    
 	
 	//Walls
-// 	north = scene.addRect(QRectF(-3500, 0, 7000, 50), QPen(QColor("brown")), QBrush(QColor("brown")));
-// 	north->setPos(0, 3500);
-// 	boxes.push_back(north);
-// 	south = scene.addRect(QRectF(-3500, 0, 7000, 50), QPen(QColor("brown")), QBrush(QColor("brown")));
-// 	south->setPos(0, -3500);
-// 	boxes.push_back(south);
-// 	west = scene.addRect(QRectF(0, -3500, 50, 7000), QPen(QColor("brown")), QBrush(QColor("brown")));
-// 	west->setPos(-3500,0);
-// 	boxes.push_back(west);
-// 	east = scene.addRect(QRectF(0, -3500, 50, 7000), QPen(QColor("brown")), QBrush(QColor("brown")));
-// 	east->setPos(3500,0);
-// 	boxes.push_back(east);
+	// 	north = scene.addRect(QRectF(-3500, 0, 7000, 50), QPen(QColor("brown")), QBrush(QColor("brown")));
+	// 	north->setPos(0, 3500);
+	// 	boxes.push_back(north);
+	// 	south = scene.addRect(QRectF(-3500, 0, 7000, 50), QPen(QColor("brown")), QBrush(QColor("brown")));
+	// 	south->setPos(0, -3500);
+	// 	boxes.push_back(south);
+	// 	west = scene.addRect(QRectF(0, -3500, 50, 7000), QPen(QColor("brown")), QBrush(QColor("brown")));
+	// 	west->setPos(-3500,0);
+	// 	boxes.push_back(west);
+	// 	east = scene.addRect(QRectF(0, -3500, 50, 7000), QPen(QColor("brown")), QBrush(QColor("brown")));
+	// 	east->setPos(3500,0);
+	// 	boxes.push_back(east);
 
 	auto axisX = scene.addRect(QRectF(0, 0, 200, 20), QPen(Qt::red), QBrush(QColor("red")));
 	boxes.push_back(axisX);
@@ -216,21 +214,25 @@ void SpecificWorker::initialize(int period)
 		laserData.emplace_back(LData{0.f, (float)i});
 	
 	//Grid
-	grid.initialize( TDim{ TILE_SIZE, -3500, 3500, -3500, 3500}, TCell{0, true, false, nullptr} );
+	grid.initialize( TDim{ TILE_SIZE, LEFT, BOTTOM, WIDTH, HEIGHT}, TCell{0, true, false, nullptr, 1.f} );
 	// check is cell key.x, key.z is free by checking is there are boxes in it
+	std::uint32_t id_cont=0;
 	for(auto &&[k, cell] : grid)
 	{
 		if(std::any_of(std::begin(boxes), std::end(boxes),[k](auto &box){ return box->contains(box->mapFromScene(QPointF(k.x,k.z)));}))
 		{
 			cell.free = false;		
-			cell.rect = scene.addRect(QRectF(k.x, k.z, 100, 100), QPen(QColor("Orange")), QBrush(QColor("Orange"),  Qt::Dense6Pattern));
+			cell.rect = scene.addEllipse(QRectF(-100, -100, 200, 200), QPen(QColor("Orange")), QBrush(QColor("Orange"),  Qt::Dense6Pattern));
+			cell.rect->setPos(k.x, k.z);
 			cell.rect->setZValue(-1);
 		}
 		else
 		{
-			cell.rect = scene.addRect(QRectF(k.x, k.z, 100, 100), QPen(QColor("LightGreen")), QBrush(QColor("LightGreen"), Qt::Dense6Pattern));
+			cell.rect = scene.addEllipse(QRectF(-100, -100, 200, 200), QPen(QColor("OldLace")), QBrush(QColor("OldLace"), Qt::Dense6Pattern));
+			cell.rect->setPos(k.x, k.z);
 			cell.rect->setZValue(-1);
 		}
+		cell.id = id_cont++; 
 	}
 	qDebug() << "Grid initialize ok";
 
@@ -268,6 +270,26 @@ void SpecificWorker::cleanPath()
 /////////////////////////////////////////////////////////////////////7
 /////////
 ////////////////////////////////////////////////////////////////////
+
+void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
+{
+	for(auto &&p: points)
+		scene.removeItem(p);
+	points.clear();
+	for(auto &&p: path)
+	{
+		auto ellipse = scene.addEllipse(QRectF(-50,-50, 100, 100), QPen(QColor("LightGreen")), QBrush(QColor("LightGreen")));
+		ellipse->setFlag(QGraphicsItem::ItemIsMovable);
+		ellipse->setPos(p.x(), p.z());
+		points.push_back(ellipse);
+	}
+	first = points.front();
+	first->setPos(robot->pos());
+	first->setBrush(QColor("MediumGreen"));
+	last = points.back();
+	last->setPos(target->pos());
+	target->setZValue(1);
+}
 
 void SpecificWorker::computeVisibility()
 {
@@ -408,7 +430,7 @@ void SpecificWorker::addPoints()
 	int l=0;
 	for(auto &&p : points_to_insert)
 	{
-		auto r = scene.addEllipse(QRectF(-50,-50,100,100), QPen(QColor("LightGreen")), QBrush(QColor("LightGreen")));
+		auto r = scene.addEllipse(QRectF(-50,-50,100,100), QPen(QColor("Green")), QBrush(QColor("Green")));
 		r->setPos(std::get<QPointF>(p));
 		points.insert(points.begin() + std::get<int>(p) + l++, r);
 	}
@@ -535,44 +557,6 @@ void SpecificWorker::updateFreeSpaceMap()
 {
 }
 
-std::list<QVec> SpecificWorker::djikstra(const Grid<TCell>::Key &source, const Grid<TCell>::Key &target)
-{
-    std::vector<uint> min_distance(grid.size(), INT_MAX);
-	std::vector<std::pair<uint, Grid<TCell>::Key>> previous(grid.size(), std::make_pair(-1, Grid<TCell>::Key()));
-	
-	auto id = grid.at(source).id;
-    min_distance[id] = 0;
-
-	auto comp = [this](std::pair<uint, Grid<TCell>::Key> x, std::pair<uint, Grid<TCell>::Key> y)
-		{ return x.first < y.first or (!(y.first < x.first) and grid.at(x.second).id < grid.at(y.second).id); };
-    std::set< std::pair<uint, Grid<TCell>::Key>, decltype(comp)> active_vertices(comp);
-	
-    active_vertices.insert({0,source});
-    while (!active_vertices.empty()) 
-	{
-        Grid<TCell>::Key where = active_vertices.begin()->second;
-	
-	    if (where == target) 
-		{
-			qDebug() << __FILE__ << __FUNCTION__  << "Min distance found:" << min_distance[grid.at(where).id];  //exit point 
-			return orderPath(previous, source, target);
-		}
-        active_vertices.erase( active_vertices.begin() );
-	    for (auto ed : neighboors(where)) 
-		{
-//TODO: Descomentar
-/*			//qDebug() << __FILE__ << __FUNCTION__ << "antes del if" << ed.first.x << ed.first.z << ed.second.id << grid[where].id << min_distance[ed.second.id] << min_distance[grid[where].id];
-            if (min_distance[ed.second.id] > min_distance[grid[where].id] + ed.second.cost) 
-			{
-				active_vertices.erase( { min_distance[ed.second.id], ed.first } );
-                min_distance[ed.second.id] = min_distance[grid[where].id] + ed.second.cost;
-				previous[ed.second.id] = std::make_pair(grid[where].id, where);
-                active_vertices.insert( { min_distance[ed.second.id], ed.first } );
-            }*/
-		}
-    }
-    return std::list<QVec>();
-}
 
 
 //////////////////////////////////////////////////////////////////777
@@ -598,50 +582,16 @@ float SpecificWorker::exponentialFunction(float value, float xValue, float yValu
 		return res;
 }
 
-
-std::vector<std::pair<Grid<TCell>::Key, T>> SpecificWorker::neighboors(const Grid<TCell>::Key &k) const
+void SpecificWorker::mousePressEvent(QMouseEvent *event)
 {
-	std::vector<std::pair<Grid<TCell>::Key, T>> neigh;
-	// list of increments to access the neighboors of a given position
-	const int T = TILE_SIZE;
-	const std::vector<int> xincs = {T,T,T,0,-T,-T,-T,0};
-	const std::vector<int> zincs = {T,0,-T,-T,-T,0,T,T};
-
-	for (auto itx = xincs.begin(), itz = zincs.begin(); itx != xincs.end(); ++itx, ++itz)
-	{
-		Grid<TCell>::Key lk{k.x + *itx, k.z + *itz}; 
-//TODO: Descomentar
-/*        grid::const_iterator it = grid.find(lk);
-		if( it != grid.end() and it->second.free )
-		{
-			Value v(it->second);					// bacause iterator is const
-			if (abs(*itx)>0 and abs(*itz)>0) v.cost = v.cost * 1.41;		// if neighboor in diagonal, cost is sqrt(2)
-			neigh.push_back(std::make_pair(lk,v));
-		}*/
-	};
-	return neigh;
+	auto p = view.mapToScene(event->x(), event->y());
+	target->setPos(p);
+	qDebug() << "target " << p;
+	
+	std::list<QVec> path = grid.djikstra(Grid<TCell>::Key(robot->pos()), Grid<TCell>::Key(p));
+	if(path.size() > 0) createPathFromGraph(path);
+	// for(auto &&p: path)
+	// 	p.print("p");
+	// qDebug() << "-----------";
+	
 }
-
-/**
- * @brief Recovers the optimal path from the list of previous nodes
- * 
- * @param previous p_previous:...
- * @param source p_source:...
- * @param target p_target:...
- * @return std::__cxx11::list< RMat::QVec, std::allocator< RMat::QVec > >
- */
-std::list<QVec> SpecificWorker::orderPath(const std::vector<std::pair<uint,Grid<TCell>::Key>> &previous, const Grid<TCell>::Key &source, const Grid<TCell>::Key &target)
-{
-	std::list<QVec> res;
-	Grid<TCell>::Key k = target;
-	uint u = grid.at(k).id;
-	while(previous[u].first != (uint)-1)
-	{
-		QVec p = QVec::vec3(k.x, 0, k.z);
-		res.push_front(p);
-		u = previous[u].first;
-		k = previous[u].second;
-	}
-	qDebug() << __FILE__ << __FUNCTION__ << "Path length:" << res.size();  //exit point 
-	return res;
-};
