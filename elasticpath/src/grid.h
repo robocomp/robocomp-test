@@ -21,7 +21,7 @@
 #include <boost/functional/hash.hpp>
 #include <iostream> 
 #include <fstream>
-
+#include <cppitertools/zip.hpp>
 
 template<class T> auto operator<<(std::ostream& os, const T& t) -> decltype(t.save(os), os) 
 { 
@@ -184,7 +184,7 @@ class Grid
 				active_vertices.erase( active_vertices.begin() );
 				for (auto ed : neighboors(where)) 
 				{
-					qDebug() << __FILE__ << __FUNCTION__ << "antes del if" << ed.first.x << ed.first.z << ed.second.id << fmap[where].id << min_distance[ed.second.id] << min_distance[fmap[where].id];
+					//qDebug() << __FILE__ << __FUNCTION__ << "antes del if" << ed.first.x << ed.first.z << ed.second.id << fmap[where].id << min_distance[ed.second.id] << min_distance[fmap[where].id];
 					if (min_distance[ed.second.id] > min_distance[fmap[where].id] + ed.second.cost) 
 					{
 						active_vertices.erase( { min_distance[ed.second.id], ed.first } );
@@ -207,18 +207,19 @@ class Grid
 		const std::vector<int> xincs = {I,I,I,0,-I,-I,-I,0};
 		const std::vector<int> zincs = {I,0,-I,-I,-I,0,I,I};
 
-		for (auto itx = xincs.begin(), itz = zincs.begin(); itx != xincs.end(); ++itx, ++itz)
+		for(auto &&[itx, itz] : iter::zip(xincs, zincs))
 		{
-			Key lk{k.x + *itx, k.z + *itz}; 
+			Key lk{k.x + itx, k.z + itz}; 
 			qDebug() << lk.x << lk.z;
 	        typename FMap::const_iterator it = fmap.find(lk);
 			if( it != fmap.end() and it->second.free )
 			{
 				T v(it->second);					// bacause iterator is const
-				if (abs(*itx)>0 and abs(*itz)>0) v.cost = v.cost * 1.41;		// if neighboor in diagonal, cost is sqrt(2)
-				neigh.push_back(std::make_pair(lk,v));
+				if(itx != 0 and itz != 0 and (fabs(itx) == fabs(itz)))
+					v.cost = v.cost * 1.41;		// if neighboor in diagonal, cost is sqrt(2)
+				neigh.emplace_back(std::make_pair(lk,v));
 			}
-		};
+		}
 		return neigh;
 	}
 
@@ -230,11 +231,10 @@ class Grid
 	{
 		std::list<QVec> res;
 		Key k = target;
-		uint u = fmap.at(k).id;
+		std::uint32_t u = fmap.at(k).id;
 		while(previous[u].first != (std::uint32_t)-1)
 		{
-			QVec p = QVec::vec3(k.x, 0, k.z);
-			res.push_front(p);
+			res.push_front(QVec::vec3(k.x, 0, k.z));
 			u = previous[u].first;
 			k = previous[u].second;
 		}

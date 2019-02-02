@@ -134,6 +134,7 @@ private:
   	
 protected:
 	void mousePressEvent(QMouseEvent *event) override;
+	void wheelEvent(QWheelEvent *event) override;
 };
 
 #endif

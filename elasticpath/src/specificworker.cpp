@@ -25,6 +25,7 @@
 #include <QDesktopWidget>
 #include <algorithm>
 
+
 /**
 * \brief Default constructor
 */
@@ -256,8 +257,8 @@ void SpecificWorker::compute()
 {
 	computeLaser(robot, boxes);
 	computeVisibility();
-	computeForces();
-	controller();
+	//computeForces();
+	//controller();
 	updateRobot();
 }
 
@@ -582,6 +583,10 @@ float SpecificWorker::exponentialFunction(float value, float xValue, float yValu
 		return res;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////7
+///// Qt Events
+////////////////////////////////////////////////////////////////////////////////////////
+
 void SpecificWorker::mousePressEvent(QMouseEvent *event)
 {
 	auto p = view.mapToScene(event->x(), event->y());
@@ -590,8 +595,31 @@ void SpecificWorker::mousePressEvent(QMouseEvent *event)
 	
 	std::list<QVec> path = grid.djikstra(Grid<TCell>::Key(robot->pos()), Grid<TCell>::Key(p));
 	if(path.size() > 0) createPathFromGraph(path);
-	// for(auto &&p: path)
-	// 	p.print("p");
-	// qDebug() << "-----------";
+	for(auto &&p: path)
+		p.print("p");
+	qDebug() << "-----------";
 	
+}
+
+// zoom
+void SpecificWorker::wheelEvent(QWheelEvent *event)
+{
+	const QGraphicsView::ViewportAnchor anchor = view.transformationAnchor();
+	view.setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
+	int angle = event->angleDelta().y();
+	qreal factor;
+	if (angle > 0) 
+	{
+		factor = 1.1;
+		QRectF r = scene.sceneRect();
+		this->scene.setSceneRect(r);
+	}
+	else
+	{
+		factor = 0.9;
+		QRectF r = scene.sceneRect();
+		this->scene.setSceneRect(r);
+	}
+	view.scale(factor, factor);
+	view.setTransformationAnchor(anchor);
 }
