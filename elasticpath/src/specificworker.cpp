@@ -111,21 +111,36 @@ void SpecificWorker::initialize(int period)
 	target->setZValue(1);
 	
 	// People
-    float pSize = 250;
-    QPolygonF polyp1;
-    polyp1 << QPoint(-pSize, -pSize) << QPoint(-pSize*.75, pSize/3) << QPoint(pSize*.75, pSize/3) << QPoint(pSize, -pSize);
-    auto p1 = scene.addPolygon(polyp1, QPen(Qt::magenta), QBrush(Qt::magenta));
-	p1->setPos(3800, -2800);
-    p1->setRotation(-90);
-	p1->setFlag(QGraphicsItem::ItemIsMovable);
-	boxes.push_back(p1);
-    auto p2 = scene.addPolygon(polyp1, QPen(Qt::magenta), QBrush(Qt::magenta));
-	p2->setPos(4400, -2800);
-	p2->setRotation(90);
+//     float pSize = 250;
+//     QPolygonF polyp1;
+//     polyp1 << QPoint(-pSize, -pSize) << QPoint(-pSize*.75, pSize/3) << QPoint(pSize*.75, pSize/3) << QPoint(pSize, -pSize);
+//     auto p1 = scene.addPolygon(polyp1, QPen(Qt::magenta), QBrush(Qt::magenta));
+// 	p1->setPos(3800, -2800);
+//     p1->setRotation(-90);
+// 	p1->setFlag(QGraphicsItem::ItemIsMovable);
+// 	boxes.push_back(p1);
+//     auto p2 = scene.addPolygon(polyp1, QPen(Qt::magenta), QBrush(Qt::magenta));
+// 	p2->setPos(4400, -2800);
+// 	p2->setRotation(90);
+//     p2->setFlag(QGraphicsItem::ItemIsMovable);
+// 	boxes.push_back(p2);
+// 	
+    QPixmap pixmap = QPixmap::fromImage(QImage("/home/robocomp/robocomp/components/robocomp-tests/elasticpath/src/person.png")).scaled(800,400);
+    QGraphicsPixmapItem* p1 = new QGraphicsPixmapItem( pixmap);
+    p1->setFlag(QGraphicsItem::ItemIsMovable);
+    scene.addItem(p1);
+    p1->setPos(2800, -2400);
+    p1->setRotation(90);
+    boxes.push_back(p1);
+   
+    QGraphicsPixmapItem* p2 = new QGraphicsPixmapItem( pixmap);
     p2->setFlag(QGraphicsItem::ItemIsMovable);
-	boxes.push_back(p2);
-	
-	//Walls
+    scene.addItem(p2);
+    p2->setPos(3200, -2400);
+    p2->setRotation(-90);
+    boxes.push_back(p2);
+    
+    //Walls
 	// 	north = scene.addRect(QRectF(-3500, 0, 7000, 50), QPen(QColor("brown")), QBrush(QColor("brown")));
 	// 	north->setPos(0, 3500);
 	// 	boxes.push_back(north);
