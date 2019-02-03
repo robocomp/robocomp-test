@@ -167,18 +167,18 @@ void SpecificWorker::initialize(int period)
 	// walls.push_back({4744.1069335, -70.0668945, 40, 309.047252049, 0});
 	// walls.push_back({4593.4101565, 105.78302, 312, 40, 0});
 	//walls.push_back({5408.647705, -222.950745, 1337.58235343, 40, 0});
-	walls.push_back({6087.995361, -598.3643495, 80, 754.285723878, 0});
-	walls.push_back({6501.73291, -981.21698, 806.443495956, 80, 0});
-	walls.push_back({6895.427734, -2179.236023, 80, 2384.39832882, 0});
-	walls.push_back({5404.627197, -3447.184326, 2966.5071857, 80, 0});
-	walls.push_back({3928.830322, -3720.036865, 80, 394.285898292, 0});
-	walls.push_back({3728.9559325, -3931.4294435, 411.785558377, 80, 0});
-	walls.push_back({1771.4277345, -4100, 3500, 80, 0});
-	walls.push_back({96.8421635, -2989.551636, 80, 2590, 0});
-	walls.push_back({-1038.0255125, -1739.7702635, 2041, 80, 0});
-	walls.push_back({-2030.214111, -980.0798645, 80, 1600, 0});
+	walls.push_back({6087.995361, -598.3643495, 100, 754.285723878, 0});
+	walls.push_back({6501.73291, -981.21698, 806.443495956, 100, 0});
+	walls.push_back({6895.427734, -2179.236023, 100, 2384.39832882, 0});
+	walls.push_back({5404.627197, -3447.184326, 2966.5071857, 100, 0});
+	walls.push_back({3928.830322, -3720.036865, 100, 394.285898292, 0});
+	walls.push_back({3728.9559325, -3931.4294435, 411.785558377, 100, 0});
+	walls.push_back({1771.4277345, -4100, 3500, 100, 0});
+	walls.push_back({96.8421635, -2989.551636, 100, 2590, 0});
+	walls.push_back({-1038.0255125, -1739.7702635, 2041, 100, 0});
+	walls.push_back({-2030.214111, -980.0798645, 100, 1600, 0});
 //	walls.push_back({64.261719, -141.1133725, 4234.32036548, 40, 0});
-	walls.push_back({2064.261719, -141.1133725, 8000, 80, 0});
+	walls.push_back({2064.261719, -141.1133725, 8000, 100, 0});
 	// walls.push_back({1060.7264405, 101.164795, 2190, 40, 0});
 	// walls.push_back({2160.31897, 29.063904, 40, 208.552023055, 0});
 
@@ -257,8 +257,8 @@ void SpecificWorker::compute()
 {
 	computeLaser(robot, boxes);
 	computeVisibility();
-	//computeForces();
-	//controller();
+	computeForces();
+	controller();
 	updateRobot();
 }
 
@@ -383,8 +383,8 @@ void SpecificWorker::computeForces()
 	//qDebug() << "-------";
 
 	//Apply forces to current position
-	const float KE = 0.90;
-	const float KI = 0.4;	
+	const float KE = 0.80;
+	const float KI = 0.2;	
 	//const float KL = 0.06;	
 	for(auto &&[point, iforce, eforce, base_line] : iter::zip(points, iforces, eforces, base_lines))
 	{
@@ -494,12 +494,24 @@ void SpecificWorker::controller()
 	for(auto &&g : iter::sliding_window(points, 2))
 		dist_to_target += QVector2D(g[1]->pos() - g[0]->pos()).length();
 	
-	// Check for arrival
+	// Check for arrival to target
 	if(dist_to_target < ROBOT_LENGTH)
 	{
 		advVelz = 0;
 		rotVel = 0;
 		return;
+	}
+
+	// Check for blocking
+	auto num_free = std::count_if(std::begin(points), std::end(points), [](auto &&p){ return p->data(0) == true;});
+	qDebug() << "num free " << num_free;
+	if(num_free < ROBOT_LENGTH / ROAD_STEP_SEPARATION)
+	{
+		qDebug() << __FUNCTION__ << "Blocked!";
+		advVelz = 0;
+		rotVel = 0;
+		std::list<QVec> path = grid.computePath(Grid<TCell>::Key(robot->pos()), Grid<TCell>::Key(target->pos()));
+		if(path.size() > 0) createPathFromGraph(path);
 	}
 
 	// Compute rotation speed. We use angle between robot's nose and line between first and sucessive points
@@ -515,6 +527,7 @@ void SpecificWorker::controller()
 	// Compute advance speed
 	advVelz = ROBOT_MAX_ADVANCE_SPEED /**	exponentialFunction(1./dist_to_target, 1./700, 0.4, 0.1)*/
 									  * exponentialFunction(rotVel, 0.4, 0.4, 0.f);
+	//qDebug() << rotVel << advVelz;
 }
 
 
@@ -559,7 +572,6 @@ void SpecificWorker::updateFreeSpaceMap()
 }
 
 
-
 //////////////////////////////////////////////////////////////////777
 ////// Utilities
 ////////////////////////////////////////////////////////////////////
@@ -593,12 +605,11 @@ void SpecificWorker::mousePressEvent(QMouseEvent *event)
 	target->setPos(p);
 	qDebug() << "target " << p;
 	
-	std::list<QVec> path = grid.djikstra(Grid<TCell>::Key(robot->pos()), Grid<TCell>::Key(p));
+	std::list<QVec> path = grid.computePath(Grid<TCell>::Key(robot->pos()), Grid<TCell>::Key(p));
 	if(path.size() > 0) createPathFromGraph(path);
-	for(auto &&p: path)
-		p.print("p");
-	qDebug() << "-----------";
-	
+	// for(auto &&p: path)
+	// 	p.print("p");
+	// qDebug() << "-----------";
 }
 
 // zoom

@@ -113,11 +113,6 @@ class Grid
 				for( int j = dim.VMIN ; j < dim.VMIN + dim.HEIGHT ; j += dim.TILE_SIZE)
 					fmap.emplace( Key(i,j), initValue);
 	
-			// list of increments to access the neighboors of a given position
-			I = dim.TILE_SIZE;
-			xincs = {I,I,I,0,-I,-I,-I,0};
-			zincs = {I,0,-I,-I,-I,0,I,I};	
-		
 			std::cout << "Grid::Initialize. Grid initialized to map size: " << fmap.size() << std::endl;	
 		}
 		
@@ -144,11 +139,10 @@ class Grid
 			std::cout << fmap.size() << " elements written to " << fich << std::endl;
 		}
      
-		std::list<QVec> djikstra(const Key &source_, const Key &target_)
+		std::list<QVec> computePath(const Key &source_, const Key &target_)
 		{
-			qDebug() << __FUNCTION__;
-			Key source = source_;
-			Key target = target_;
+			Key source = pointToGrid(source_.x, source_.z);
+			Key target = pointToGrid(target_.x, target_.z);
 
 			// Admission rules
 			if( !(target.x >= dim.HMIN and target.x < dim.HMIN+dim.WIDTH and target.z >= dim.VMIN and target.z < dim.VMIN + dim.HEIGHT))
@@ -156,30 +150,41 @@ class Grid
 				qDebug() << __FUNCTION__ << "Target out of limits. Returning empty path";
 				return std::list<QVec>();
 			}
-			if(fmap.find(source) == fmap.end())
-				source = pointToGrid(source_.x, source.z);
-			if(fmap.find(target) == fmap.end())
-				target = pointToGrid(target_.x, target.z);
+			if( !(source.x >= dim.HMIN and source.x < dim.HMIN+dim.WIDTH and source.z >= dim.VMIN and source.z < dim.VMIN + dim.HEIGHT))
+			{
+				qDebug() << __FUNCTION__ << "Robot out of limits. Returning empty path";
+				return std::list<QVec>();
+			}
+			if( source == target)
+			{
+				qDebug() << __FUNCTION__ << "Robot already at target. Returning empty path";
+				return std::list<QVec>();
+			}
 
-			std::vector<std::uint32_t> min_distance(fmap.size(), INT_MAX);
-			std::vector<std::pair<std::uint32_t, Key>> previous(fmap.size(), std::make_pair(-1, Key()));
-			
-			//min_distance[std::get<T&>(getCell(source)).id] = 0;
+			std::vector<double> min_distance(fmap.size(), DBL_MAX);
 			auto id = std::get<T&>(getCell(source)).id;
 			min_distance[id] = 0;
-			
+			std::vector<std::pair<std::uint32_t, Key>> previous(fmap.size(), std::make_pair(-1, Key()));			
 			auto comp = [this](std::pair<std::uint32_t, Key> x, std::pair<std::uint32_t, Key> y)
-				{ return x.first < y.first or (!(y.first < x.first) and std::get<T&>(getCell(x.second)).id < std::get<T&>(getCell(y.second)).id);};
-			std::set< std::pair<std::uint32_t, Key>, decltype(comp)> active_vertices(comp);
+				{ if(x.first < y.first) 
+					return true;
+				  else if(x.first == y.first)
+				  	return std::get<T&>(getCell(x.second)).id <= std::get<T&>(getCell(y.second)).id;
+				  else return false;
+				};
 			
+			std::set< std::pair<double, Key>, decltype(comp)> active_vertices(comp);
 			active_vertices.insert({0,source});
+			
 			while (!active_vertices.empty()) 
 			{
 				Key where = active_vertices.begin()->second;		
 				if (where == target) 
 				{
-					qDebug() << __FILE__ << __FUNCTION__  << "Min distance found:" << min_distance[fmap.at(where).id];  //exit point 
-					return orderPath(previous, source, target);
+					//qDebug() << __FILE__ << __FUNCTION__  << "Min distance found:" << min_distance[fmap.at(where).id];  //exit point 
+					auto p = orderPath(previous, source, target);
+					if(p.size() > 1) return p;
+					else return std::list<QVec>();
 				}
 				active_vertices.erase( active_vertices.begin() );
 				for (auto ed : neighboors(where)) 
@@ -190,7 +195,8 @@ class Grid
 						active_vertices.erase( { min_distance[ed.second.id], ed.first } );
 						min_distance[ed.second.id] = min_distance[fmap[where].id] + ed.second.cost;
 						previous[ed.second.id] = std::make_pair(fmap[where].id, where);
-						active_vertices.insert( { min_distance[ed.second.id], ed.first } );
+						//active_vertices.insert( { min_distance[ed.second.id], ed.first } );    // Djikstra
+						active_vertices.insert( { min_distance[ed.second.id] + heuristicL2(ed.first, target), ed.first } );
 					}
 				}
 			}
@@ -198,58 +204,9 @@ class Grid
 			return std::list<QVec>();
 		};
 
-	std::vector<std::pair<Key, T>> neighboors(const Key &k) const
-	{
-		qDebug() << __FUNCTION__;
-		std::vector<std::pair<Key, T>> neigh;
-		// list of increments to access the neighboors of a given position
-		const int I = dim.TILE_SIZE;
-		const std::vector<int> xincs = {I,I,I,0,-I,-I,-I,0};
-		const std::vector<int> zincs = {I,0,-I,-I,-I,0,I,I};
-
-		for(auto &&[itx, itz] : iter::zip(xincs, zincs))
-		{
-			Key lk{k.x + itx, k.z + itz}; 
-			qDebug() << lk.x << lk.z;
-	        typename FMap::const_iterator it = fmap.find(lk);
-			if( it != fmap.end() and it->second.free )
-			{
-				T v(it->second);					// bacause iterator is const
-				if(itx != 0 and itz != 0 and (fabs(itx) == fabs(itz)))
-					v.cost = v.cost * 1.41;		// if neighboor in diagonal, cost is sqrt(2)
-				neigh.emplace_back(std::make_pair(lk,v));
-			}
-		}
-		return neigh;
-	}
-
-	/**
-	 * @brief Recovers the optimal path from the list of previous nodes
-	 * 
-	 */
-	std::list<QVec> orderPath(const std::vector<std::pair<std::uint32_t,Key>> &previous, const Key &source, const Key &target)
-	{
-		std::list<QVec> res;
-		Key k = target;
-		std::uint32_t u = fmap.at(k).id;
-		while(previous[u].first != (std::uint32_t)-1)
-		{
-			res.push_front(QVec::vec3(k.x, 0, k.z));
-			u = previous[u].first;
-			k = previous[u].second;
-		}
-		qDebug() << __FILE__ << __FUNCTION__ << "Path length:" << res.size();  //exit point 
-		return res;
-	};
-
 	private:
 		FMap fmap;
 		Dimensions dim;
-		
-		// list of increments to access the neighboors of a given position
-		int I;
-		std::vector<int> xincs;
-		std::vector<int> zincs;	
 		
 		auto pointToGrid(long int x, long int z) const -> decltype(Key())
 		{
@@ -258,8 +215,62 @@ class Grid
 			return Key(dim.HMIN + kx*dim.TILE_SIZE, dim.VMIN + kz*dim.TILE_SIZE);
 		};
 
-		
+		/**
+		* @brief Recovers the optimal path from the list of previous nodes
+		* 
+		*/
+		std::list<QVec> orderPath(const std::vector<std::pair<std::uint32_t,Key>> &previous, const Key &source, const Key &target)
+		{
+			std::list<QVec> res;
+			Key k = target;
+			std::uint32_t u = fmap.at(k).id;
+			while(previous[u].first != (std::uint32_t)-1)
+			{
+				res.push_front(QVec::vec3(k.x, 0, k.z));
+				u = previous[u].first;
+				k = previous[u].second;
+			}
+			qDebug() << __FILE__ << __FUNCTION__ << "Path length:" << res.size();  //exit point 
+			return res;
+		};
 
+		inline double heuristicL2(const Key &a, const Key &b) const
+		{
+			return sqrt((a.x-b.x)*(a.x-b.x) + (a.z-b.z)*(a.z-b.z));
+		}
+
+		std::vector<std::pair<Key, T>> neighboors(const Key &k) 
+		{
+			std::vector<std::pair<Key, T>> neigh;
+			// list of increments to access the neighboors of a given position
+			const int &I = dim.TILE_SIZE;
+			static const std::vector<int> xincs = {I,I,I,0,-I,-I,-I,0};
+			static const std::vector<int> zincs = {I,0,-I,-I,-I,0,I,I};
+
+			for(auto &&[itx, itz] : iter::zip(xincs, zincs))
+			{
+				Key lk{k.x + itx, k.z + itz}; 
+				try
+				{
+					T &p = fmap.at(Key(lk.x,lk.z));
+					if(p.free)
+					{
+						if(itx != 0 and itz != 0 and (fabs(itx) == fabs(itz)))
+							p.cost = 1.41;		// if neighboor in diagonal, cost is sqrt(2) Should be computed over the initial value
+						//if neigh node is close to a occupied node, increase its cost
+						for(auto &&[dx, dz] : iter::zip(xincs, zincs))
+							try{ if( !(fmap.at(Key(lk.x+dx, lk.z+dz)).free)) p.cost = 10.f; }
+							catch(const std::exception& e){	};
+						neigh.emplace_back(std::make_pair(lk,p));
+					}
+				}
+				catch(const std::exception& e)
+				{
+					std::cout << e.what() << " neighbour not found in grid " << lk.x << " " << lk.z << '\n';
+				}
+			}
+			return neigh;
+		}
 };
 
-#endif // FLOORMETER_H
+#endif // GRID_H
