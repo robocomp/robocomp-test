@@ -74,6 +74,7 @@ void SpecificWorker::initialize(int period)
 
     //Load World
     initializeWorld();
+	
 	// Robot 
 	QPolygonF poly2;
 	float size = ROBOT_LENGTH/2.f;
@@ -140,16 +141,23 @@ void SpecificWorker::initialize(int period)
 	grid.initialize( TDim{ TILE_SIZE, LEFT, BOTTOM, WIDTH, HEIGHT}, TCell{0, true, false, nullptr, 1.f} );
 	// check is cell key.x, key.z is free by checking is there are boxes in it
 	std::uint32_t id_cont=0;
+	auto robot_back = robot->pos();
 	for(auto &&[k, cell] : grid)
 	{
-		if(std::any_of(std::begin(boxes), std::end(boxes),[k](auto &box){ return box->contains(box->mapFromScene(QPointF(k.x,k.z)));}))
-		{
-			cell.free = false;		
-			cell.rect = scene.addEllipse(QRectF(-100, -100, 200, 200), QPen(QColor("Orange")), QBrush(QColor("Orange"),  Qt::Dense6Pattern));
-			cell.rect->setPos(k.x, k.z);
-			cell.rect->setZValue(-1);
-		}
-		else
+		bool collide = false;
+		robot->setPos(k.x, k.z);
+		for(auto &&p: robot->polygon())
+			//if(std::any_of(std::begin(boxes), std::end(boxes),[k](auto &box){ return box->contains(box->mapFromScene(QPointF(k.x,k.z)));}))
+			if(std::any_of(std::begin(boxes), std::end(boxes),[p, this](auto &box){ return box->contains(box->mapFromItem(robot, p));}))
+			{
+				cell.free = false;		
+				cell.rect = scene.addEllipse(QRectF(-100, -100, 200, 200), QPen(QColor("Magenta")), QBrush(QColor("Magenta"),  Qt::Dense6Pattern));
+				cell.rect->setPos(k.x, k.z);
+				cell.rect->setZValue(-1);
+				collide = true;
+				break;
+			}
+		if(!collide)
 		{
 			cell.rect = scene.addEllipse(QRectF(-100, -100, 200, 200), QPen(QColor("OldLace")), QBrush(QColor("OldLace"), Qt::Dense6Pattern));
 			cell.rect->setPos(k.x, k.z);
@@ -157,6 +165,7 @@ void SpecificWorker::initialize(int period)
 		}
 		cell.id = id_cont++; 
 	}
+	robot->setPos(robot_back);
 	qDebug() << "Grid initialize ok";
 
 	timer.start(80);
