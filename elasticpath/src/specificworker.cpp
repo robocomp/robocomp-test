@@ -200,8 +200,8 @@ void SpecificWorker::initializeWorld()
     {
         QVariantList object = t.toList();
         auto box = scene.addRect(QRectF(-object[2].toFloat()/2, -object[3].toFloat()/2, object[2].toFloat(), object[3].toFloat()), QPen(QColor("SandyBrown")), QBrush(QColor("SandyBrown")));
-        box->setPos(object[0].toFloat(), object[1].toFloat());
-        //box->setRotation(object[5].toFloat()*180/M_PI2);
+        box->setPos(object[4].toFloat(), object[5].toFloat());
+        //box->setRotation(object[6].toFloat()*180/M_PI2);
         boxes.push_back(box);
     }
     //load roundtables
@@ -210,7 +210,7 @@ void SpecificWorker::initializeWorld()
     {
         QVariantList object = t.toList();
         auto box = scene.addEllipse(QRectF(-object[2].toFloat()/2, -object[3].toFloat()/2, object[2].toFloat(), object[3].toFloat()), QPen(QColor("Khaki")), QBrush(QColor("Khaki")));
-        box->setPos(object[0].toFloat(), object[1].toFloat());
+        box->setPos(object[4].toFloat(), object[5].toFloat());
         boxes.push_back(box);
     }
     //load walls
@@ -219,8 +219,8 @@ void SpecificWorker::initializeWorld()
     {
         QVariantList object = t.toList();
         auto box = scene.addRect(QRectF(-object[2].toFloat()/2, -object[3].toFloat()/2, object[2].toFloat(), object[3].toFloat()), QPen(QColor("Brown")), QBrush(QColor("Brown")));
-        box->setPos(object[0].toFloat(), object[1].toFloat());
-        //box->setRotation(object[5].toFloat()*180/M_PI2);
+        box->setPos(object[4].toFloat(), object[5].toFloat());
+        //box->setRotation(object[6].toFloat()*180/M_PI2);
         boxes.push_back(box);
     }
 }
