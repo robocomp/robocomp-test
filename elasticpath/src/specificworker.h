@@ -105,12 +105,13 @@ private:
 	timeval lastCommand_timeval;
 	float advVelx=0, advVelz=0, rotVel=0;
 	RoboCompGenericBase::TBaseState bState;
-
+    RoboCompCommonBehavior::ParameterList params;
 	// Grid
 	using TDim = Grid<TCell>::Dimensions;
 	Grid<TCell> grid;
 
 	// Methods
+    void initializeWorld();
 	void computeForces();
 	void computeLaser(QGraphicsItem *r, const std::vector<QGraphicsItem*> &box);
 	void addPoints();

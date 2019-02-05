@@ -2,6 +2,7 @@ CommonBehavior.Endpoints=tcp -p 10000
 
 
 
+World = /home/robocomp/robocomp/components/robocomp-tests/elasticpath/src/room5.json
 InnerModelPath = innermodel.xml
 
 Ice.Warn.Connections=0
