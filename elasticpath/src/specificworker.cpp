@@ -573,16 +573,26 @@ float SpecificWorker::exponentialFunction(float value, float xValue, float yValu
 
 void SpecificWorker::mousePressEvent(QMouseEvent *event)
 {
-	auto p = view.mapToScene(event->x(), event->y());
-	target->setPos(p);
-	qDebug() << __FUNCTION__ << "target " << p;
+	if(event->button() == Qt::LeftButton)
+	{
+		auto p = view.mapToScene(event->x(), event->y());
+		target->setPos(p);
+		qDebug() << __FUNCTION__ << "target " << p;
 	
-	std::list<QVec> path = grid.computePath(Grid<TCell>::Key(robot->pos()), Grid<TCell>::Key(p));
-	if(path.size() > 0) 
-		createPathFromGraph(path);
-	// for(auto &&p: path)
-	// 	p.print("p");
-	// qDebug() << "-----------";
+		std::list<QVec> path = grid.computePath(Grid<TCell>::Key(robot->pos()), Grid<TCell>::Key(p));
+		if(path.size() > 0) 
+			createPathFromGraph(path);
+		// for(auto &&p: path)
+		// 	p.print("p");
+		// qDebug() << "-----------";
+	}
+	if(event->button() == Qt::RightButton)
+	{
+		// check the item is a person
+		// assign mouse y coordinate to current person angle
+		// move person angle with mouse y coordinate
+		
+	}
 }
 
 // zoom

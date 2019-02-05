@@ -37,6 +37,7 @@
 #include <QGraphicsPolygonItem>
 #include <math.h>
 #include "grid.h"
+#include "human.h"
 
 
 // Map
