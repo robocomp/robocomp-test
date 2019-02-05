@@ -45,7 +45,7 @@ struct TCell
    	std::uint32_t id;
     bool free;
     bool visited;
-    QGraphicsItem* rect;
+    QGraphicsEllipseItem* g_item;
 	float cost;
     
     // method to save the value

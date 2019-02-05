@@ -158,6 +158,7 @@ void SpecificWorker::initialize(int period)
 	boxes.push_back(axisX);
 	auto axisZ = scene.addRect(QRectF(0, 0, 20, 200), QPen(Qt::blue), QBrush(QColor("blue")));
 	boxes.push_back(axisZ);
+	
 	//wallsLab
 	std::vector<QVector<float>> walls, tables;
 	
@@ -214,16 +215,6 @@ void SpecificWorker::initialize(int period)
 	auto round_table = scene.addEllipse(QRectF(-500,-500, 1000, 1000), QPen(QColor("Khaki")), QBrush(QColor("Khaki"))); 
 	round_table->setPos(4800, -1700);
 	boxes.push_back(round_table);
-	
-	// 	QPolygonF wall1p << QPoint(-size, -size) << QPoint(-size, size) << QPoint(-size/3, size*1.6) << QPoint(size/3, size*1.6) << QPoint(size, size) << QPoint(size, -size);
-	// 	QBrush brush;
-	// 	brush.setColor(QColor("Orange")); brush.setStyle(Qt::SolidPattern);
-	// 	QGraphicsPolygonItem wall1 = scene.addPolygon(poly2, QPen(QColor("Orange")), brush);
-	// 	boxes.push_back(wall1);
-	
-	// middle = scene.addRect(QRectF(-3000, 0, 6000, 160), QPen(QColor("brown")), QBrush(QColor("brown")));
-	// middle->setPos(0,0);
-	// boxes.push_back(middle);
 
 	// Laser
 	for( auto &&i : iter::range(-M_PI/2.f, M_PI/2.f, M_PI/LASER_ANGLE_STEPS) )
@@ -235,20 +226,22 @@ void SpecificWorker::initialize(int period)
 	std::uint32_t id_cont=0;
 	for(auto &&[k, cell] : grid)
 	{
+		cell.free = true;
+		cell.g_item = scene.addEllipse(QRectF(-100, -100, 200, 200));		
+		cell.g_item->setPos(k.x, k.z);
+		cell.g_item->setZValue(-1);
+		cell.id = id_cont++; 
 		if(std::any_of(std::begin(boxes), std::end(boxes),[k](auto &box){ return box->contains(box->mapFromScene(QPointF(k.x,k.z)));}))
 		{
 			cell.free = false;		
-			cell.rect = scene.addEllipse(QRectF(-100, -100, 200, 200), QPen(QColor("Orange")), QBrush(QColor("Orange"),  Qt::Dense6Pattern));
-			cell.rect->setPos(k.x, k.z);
-			cell.rect->setZValue(-1);
+			cell.g_item->setPen(QPen(QColor("Orange")));
+			cell.g_item->setBrush(QBrush(QColor("Orange"),  Qt::Dense6Pattern));
 		}
 		else
 		{
-			cell.rect = scene.addEllipse(QRectF(-100, -100, 200, 200), QPen(QColor("OldLace")), QBrush(QColor("OldLace"), Qt::Dense6Pattern));
-			cell.rect->setPos(k.x, k.z);
-			cell.rect->setZValue(-1);
+			cell.g_item->setPen(QPen(QColor("OldLace")));
+			cell.g_item->setBrush(QBrush(QColor("OldLace"),  Qt::Dense6Pattern));
 		}
-		cell.id = id_cont++; 
 	}
 	qDebug() << "Grid initialize ok";
 
