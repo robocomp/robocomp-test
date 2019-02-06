@@ -23,11 +23,16 @@
 #include <cppitertools/zip.hpp>
 #include <QGraphicsItem>
 
-class Human : public QGraphicsItem
+class Human : public QObject, public QGraphicsEllipseItem
 {     
 	public:
-		Human(){};
+		Human();
 	private:
+
+    protected:
+        void mousePressEvent(QGraphicsSceneMouseEvent  *event) override;
+		QRectF boundingRect() const {};
+		void paint(QPainter*, const QStyleOptionGraphicsItem*, QWidget*){};
 		
 };
 

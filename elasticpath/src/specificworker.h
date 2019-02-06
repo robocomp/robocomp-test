@@ -107,6 +107,7 @@ private:
 	float advVelx=0, advVelz=0, rotVel=0;
 	RoboCompGenericBase::TBaseState bState;
     RoboCompCommonBehavior::ParameterList params;
+
 	// Grid
 	using TDim = Grid<TCell>::Dimensions;
 	Grid<TCell> grid;
@@ -130,6 +131,9 @@ private:
 		QGraphicsRectItem *item;
 	};
 	Target current_target;
+
+	//Humans
+	Human *humanA;
 
 	// This function takes an angle in the range [-3*pi, 3*pi] and wraps it to the range [-pi, pi].
 	float rewrapAngleRestricted(const float angle);

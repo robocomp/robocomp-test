@@ -112,14 +112,17 @@ void SpecificWorker::initialize(int period)
 	last = points.back();
 	last->setPos(target->pos());
 	target->setZValue(1);
+
     //People
     QPixmap pixmap = QPixmap::fromImage(QImage("/home/robocomp/robocomp/components/robocomp-tests/elasticpath/src/person.png")).scaled(800,400);
     QGraphicsPixmapItem* p1 = new QGraphicsPixmapItem( pixmap);
     p1->setFlag(QGraphicsItem::ItemIsMovable);
-    scene.addItem(p1);
-    p1->setPos(2800, -2400);
-    p1->setRotation(90);
-    boxes.push_back(p1);
+	humanA = new Human();
+	scene.addItem(humanA);
+	p1->setParentItem(humanA);
+    humanA->setPos(2800, -2400);
+    humanA->setRotation(90);
+    boxes.push_back(humanA);
    
 //     QGraphicsPixmapItem* p2 = new QGraphicsPixmapItem( pixmap);
 //     p2->setFlag(QGraphicsItem::ItemIsMovable);
