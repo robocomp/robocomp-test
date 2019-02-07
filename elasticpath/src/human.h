@@ -31,15 +31,10 @@ class Human : public QObject, public QGraphicsEllipseItem
 	private:
 		QGraphicsPixmapItem* pixmapItem;
 		Qt::MouseButton mouseButton;
+		QGraphicsEllipseItem *ellipseItem;
     protected:
         void mousePressEvent(QGraphicsSceneMouseEvent  *event) override;
 		void mouseMoveEvent(QGraphicsSceneMouseEvent  *event) override;
-		// QRectF boundingRect() const override {return QRectF( -20, -20, 20, 20);};
-		// void paint(QPainter* painter, const QStyleOptionGraphicsItem*, QWidget*) override
-		// { 
-		// 	painter->setBrush(QColor("Blue"));
-		// 	painter->drawEllipse(QRectF(-100, -100, 600, 600));
-		// };
 		
 };
 

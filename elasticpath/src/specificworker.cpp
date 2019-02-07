@@ -61,7 +61,7 @@ bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList _params)
 void SpecificWorker::initialize(int period)
 {
 	std::cout << "Initialize worker" << std::endl;
-	resize(QDesktopWidget().availableGeometry(this).size() * 0.4);
+	resize(QDesktopWidget().availableGeometry(this).size() * 0.6);
 	scene.setSceneRect(LEFT, BOTTOM, WIDTH, HEIGHT);
 	view.scale( 1, -1 );
 	view.setScene(&scene);
@@ -114,26 +114,12 @@ void SpecificWorker::initialize(int period)
 	target->setZValue(1);
 
     //People
-    //p1->setFlag(QGraphicsItem::ItemIsMovable);
-	// humanA = new Human();
-	// scene.addItem(humanA);
 	humanA = new Human(QRectF(-400,-400,800,800));
-	//humanA->setBrush(QColor("Blue"));
 	scene.addItem(humanA);
-	//scene.addEllipse(QRectF(-100,-100,400,400), QPen(Qt::blue), QBrush(QColor("blue")));
- 	//p1->setParentItem(humanA);
-    humanA->setPos(2500, -2000);
-    //humanA->setRotation(90);
+	humanA->setPos(2500, -2000);
     boxes.push_back(humanA);
-	//humanA->setZValue(1);
-   
-//     QGraphicsPixmapItem* p2 = new QGraphicsPixmapItem( pixmap);
-//     p2->setFlag(QGraphicsItem::ItemIsMovable);
-//     scene.addItem(p2);
-//     p2->setPos(3200, -2400);
-//     p2->setRotation(-90);
-//     boxes.push_back(p2);
-//     
+
+	//Axis   
 	auto axisX = scene.addRect(QRectF(0, 0, 200, 20), QPen(Qt::red), QBrush(QColor("red")));
 	boxes.push_back(axisX);
 	auto axisZ = scene.addRect(QRectF(0, 0, 20, 200), QPen(Qt::blue), QBrush(QColor("blue")));
@@ -151,7 +137,7 @@ void SpecificWorker::initialize(int period)
 	for(auto &&[k, cell] : grid)
 	{
 		robot->setPos(k.x, k.z);
-		cell.g_item = scene.addEllipse(QRectF(-200, -200, 400, 400));
+		cell.g_item = scene.addEllipse(QRectF(-200, -200, 200, 200));
 		cell.g_item->setPos(k.x, k.z);
 		cell.g_item->setZValue(-1);		
 		cell.g_item->setPen(QPen(QColor("OldLace")));
@@ -162,8 +148,8 @@ void SpecificWorker::initialize(int period)
 			if(std::any_of(std::begin(boxes), std::end(boxes),[p, this](auto &box){ return box->contains(box->mapFromItem(robot, p));}))
 			{
 				cell.free = false;		
-				cell.g_item->setPen(QPen(QColor("Magenta")));
-				cell.g_item->setBrush(QBrush(QColor("Magenta"),  Qt::Dense6Pattern));
+				cell.g_item->setPen(QPen(QColor("WhiteSmoke")));
+				cell.g_item->setBrush(QBrush(QColor("WhiteSmoke")));
 				break;
 			}
 	}
@@ -581,13 +567,14 @@ void SpecificWorker::mousePressEvent(QMouseEvent *event)
 {
 	if(event->button() == Qt::LeftButton)
 	{
-		auto p = view.mapToScene(event->x(), event->y());
-		target->setPos(p);
+		auto p = view.mapToScene(event->x(), event->y());	
 		qDebug() << __FUNCTION__ << "target " << p;
-	
 		std::list<QVec> path = grid.computePath(Grid<TCell>::Key(robot->pos()), Grid<TCell>::Key(p));
 		if(path.size() > 0) 
+		{
 			createPathFromGraph(path);
+			target->setPos(p);
+		}
 		// for(auto &&p: path)
 		// 	p.print("p");
 		// qDebug() << "-----------";
