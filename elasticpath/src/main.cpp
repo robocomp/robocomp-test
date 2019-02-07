@@ -82,6 +82,7 @@
 #include "commonbehaviorI.h"
 
 
+#include <SocialNavigationGaussian.h>
 
 
 // User includes here
@@ -133,12 +134,29 @@ int ::elasticpath::run(int argc, char* argv[])
 
 	int status=EXIT_SUCCESS;
 
+	SocialNavigationGaussianPrxPtr socialnavigationgaussian_proxy;
 
 	string proxy, tmp;
 	initialize();
 
 
-	//tprx = NULL;
+	try
+	{
+		if (not GenericMonitor::configGetString(communicator(), prefix, "SocialNavigationGaussianProxy", proxy, ""))
+		{
+			cout << "[" << PROGRAM_NAME << "]: Can't read configuration for proxy SocialNavigationGaussianProxy\n";
+		}
+		socialnavigationgaussian_proxy = Ice::uncheckedCast<SocialNavigationGaussianPrx>( communicator()->stringToProxy( proxy ) );
+	}
+	catch(const Ice::Exception& ex)
+	{
+		cout << "[" << PROGRAM_NAME << "]: Exception creating proxy SocialNavigationGaussian: " << ex;
+		return EXIT_FAILURE;
+	}
+	rInfo("SocialNavigationGaussianProxy initialized Ok!");
+
+
+	tprx = std::make_tuple(socialnavigationgaussian_proxy);
 	SpecificWorker *worker = new SpecificWorker(tprx);
 	//Monitor thread
 	SpecificMonitor *monitor = new SpecificMonitor(worker,communicator());

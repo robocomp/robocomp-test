@@ -23,18 +23,27 @@
 #include <cppitertools/zip.hpp>
 #include <QGraphicsItem>
 #include <QPainter>
+#include "SocialNavigationGaussian.h"
 
 class Human : public QObject, public QGraphicsEllipseItem
 {     
+	Q_OBJECT
 	public:
-		Human(const QRectF &r);
+		Human(const QRectF &r);  //pass de proxy
+
 	private:
 		QGraphicsPixmapItem* pixmapItem;
 		Qt::MouseButton mouseButton;
 		QGraphicsEllipseItem *ellipseItem;
+
     protected:
-        void mousePressEvent(QGraphicsSceneMouseEvent  *event) override;
+        void mouseReleaseEvent(QGraphicsSceneMouseEvent  *event) override;
+		void mousePressEvent(QGraphicsSceneMouseEvent  *event) override;
 		void mouseMoveEvent(QGraphicsSceneMouseEvent  *event) override;
+		QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
+
+	signals:
+		void personChangedSingal(const RoboCompSocialNavigationGaussian::SNGPolylineSeq &polys);
 		
 };
 

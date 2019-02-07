@@ -32,13 +32,15 @@
 
 #include <CommonBehavior.h>
 
+#include <SocialNavigationGaussian.h>
 
 #define CHECK_PERIOD 5000
 #define BASIC_PERIOD 100
 
 using namespace std;
+using namespace RoboCompSocialNavigationGaussian;
 
-using TuplePrx = std::tuple<>;
+using TuplePrx = std::tuple<RoboCompSocialNavigationGaussian::SocialNavigationGaussianPrxPtr>;
 
 
 class GenericWorker :
@@ -59,6 +61,7 @@ public:
 	QMutex *mutex;
 
 
+	SocialNavigationGaussianPrxPtr socialnavigationgaussian_proxy;
 
 
 protected:

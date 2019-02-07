@@ -28,6 +28,7 @@ QObject()
 #endif
 
 {
+	socialnavigationgaussian_proxy = std::get<SocialNavigationGaussianPrxPtr>(tprx);
 
 	mutex = new QMutex(QMutex::Recursive);
 

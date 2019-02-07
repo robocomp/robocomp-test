@@ -25,24 +25,38 @@ Human::Human(const QRectF &r) : QGraphicsEllipseItem(r)
 void Human::mousePressEvent(QGraphicsSceneMouseEvent  *event)
 {
 	mouseButton = event->button();
-	if(event->button() == Qt::RightButton)
-	{	
-		//Change color or something
-	}
 	QGraphicsItem::mousePressEvent(event);
+}
+void Human::mouseReleaseEvent(QGraphicsSceneMouseEvent  *event)
+{
+	//auto points = socialnavigationgaussian_proxy->getPersonalSpace(SNGPersonSeq persons, float v, bool d);
+	// emit personChangedSignal(points);
+	QGraphicsItem::mouseReleaseEvent(event);
 }
 void Human::mouseMoveEvent(QGraphicsSceneMouseEvent  *event)
 {
 	qDebug()<<"move";
 	if(mouseButton == Qt::RightButton)
 	{
-		// assign mouse y coordinate to current person angle
   		float angleDegree = atan2(event->pos().x(),event->pos().y()) * -360/(2*M_PI) + 180;
-//		qDebug()<<"y pose"<<event->pos().y();
-		//float angleDegree = this->rotation() + event->pos().y()/8;
 		angleDegree = std::clamp(angleDegree, 0.f, 360.f);
-		qDebug()<<"angle"<<angleDegree;
+		//qDebug()<<"angle"<<angleDegree;
 		ellipseItem->setRotation(angleDegree);
 	}
 	QGraphicsItem::mouseMoveEvent(event);
+}
+
+QVariant Human::itemChange(GraphicsItemChange change, const QVariant &value)
+{
+	switch (change) 
+	{
+    	case ItemPositionHasChanged:
+			// If human moves update polyline by calling the proxy
+			
+			// Maybe in the mouserelease event
+			qDebug() << "gola";
+        	break;
+	    default:
+    	    break;
+    };
 }

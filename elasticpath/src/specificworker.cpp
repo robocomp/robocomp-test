@@ -70,7 +70,14 @@ void SpecificWorker::initialize(int period)
     layout->addWidget(&view);
 	this->setLayout(layout);
 	view.fitInView(scene.sceneRect(), Qt::KeepAspectRatio );
-	//this->resize(view.size());
+	QSettings settings("RoboComp", "ElasticPath");
+    settings.beginGroup("MainWindow");
+    	resize(settings.value("size", QSize(400, 400)).toSize());
+    settings.endGroup();
+	settings.beginGroup("QGraphicsView");
+		view.setTransform(settings.value("matrix", QTransform()).value<QTransform>());
+	settings.endGroup();
+
 
     //Load World
     initializeWorld();
@@ -609,4 +616,17 @@ void SpecificWorker::wheelEvent(QWheelEvent *event)
 	}
 	view.scale(factor, factor);
 	view.setTransformationAnchor(anchor);
+
+	QSettings settings("RoboComp", "ElasticPath");
+	settings.beginGroup("QGraphicsView");
+		settings.setValue("matrix", view.transform());
+	settings.endGroup();
+}
+
+void SpecificWorker::resizeEvent(QResizeEvent *event)
+{
+	QSettings settings("RoboComp", "ElasticPath");
+	settings.beginGroup("MainWindow");
+		settings.setValue("size", event->size());
+	settings.endGroup();
 }
