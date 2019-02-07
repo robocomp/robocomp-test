@@ -2,10 +2,14 @@
 #include <QtCore>
 #include <QGraphicsSceneMouseEvent>
 
-Human::Human() : QGraphicsEllipseItem() 
+Human::Human(const QRectF &r) : QGraphicsEllipseItem(r) 
 {
     qDebug() << "creado";
-    setFlag(QGraphicsItem::ItemIsMovable);
+    setFlag(ItemIsMovable);
+    setFlag(ItemSendsGeometryChanges);
+    setFlag(QGraphicsItem::ItemIsFocusable);
+    setCacheMode(DeviceCoordinateCache);
+    setAcceptHoverEvents(true);
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////7
@@ -22,4 +26,5 @@ void Human::mousePressEvent(QGraphicsSceneMouseEvent  *event)
 		// move person angle with mouse y coordinate
 		
 	}
+	QGraphicsItem::mousePressEvent(event);
 }

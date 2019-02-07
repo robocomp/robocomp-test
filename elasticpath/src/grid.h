@@ -230,7 +230,7 @@ class Grid
 				u = previous[u].first;
 				k = previous[u].second;
 			}
-			qDebug() << __FILE__ << __FUNCTION__ << "Path length:" << res.size();  //exit point 
+			//qDebug() << __FILE__ << __FUNCTION__ << "Path length:" << res.size();  //exit point 
 			return res;
 		};
 

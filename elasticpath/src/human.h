@@ -22,17 +22,22 @@
 #include <fstream>
 #include <cppitertools/zip.hpp>
 #include <QGraphicsItem>
+#include <QPainter>
 
 class Human : public QObject, public QGraphicsEllipseItem
 {     
 	public:
-		Human();
+		Human(const QRectF &r);
 	private:
 
     protected:
         void mousePressEvent(QGraphicsSceneMouseEvent  *event) override;
-		QRectF boundingRect() const {};
-		void paint(QPainter*, const QStyleOptionGraphicsItem*, QWidget*){};
+		// QRectF boundingRect() const override {return QRectF( -20, -20, 20, 20);};
+		// void paint(QPainter* painter, const QStyleOptionGraphicsItem*, QWidget*) override
+		// { 
+		// 	painter->setBrush(QColor("Blue"));
+		// 	painter->drawEllipse(QRectF(-100, -100, 600, 600));
+		// };
 		
 };
 
