@@ -29,9 +29,11 @@ class Human : public QObject, public QGraphicsEllipseItem
 	public:
 		Human(const QRectF &r);
 	private:
-
+		QGraphicsPixmapItem* pixmapItem;
+		Qt::MouseButton mouseButton;
     protected:
         void mousePressEvent(QGraphicsSceneMouseEvent  *event) override;
+		void mouseMoveEvent(QGraphicsSceneMouseEvent  *event) override;
 		// QRectF boundingRect() const override {return QRectF( -20, -20, 20, 20);};
 		// void paint(QPainter* painter, const QStyleOptionGraphicsItem*, QWidget*) override
 		// { 
