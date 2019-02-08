@@ -29,6 +29,10 @@
 
 #include <genericworker.h>
 #include <innermodel/innermodel.h>
+#include "serialport.h"
+#include <QtSerialPort/QSerialPort>
+#include <iostream>
+
 
 class SpecificWorker : public GenericWorker
 {
@@ -45,6 +49,22 @@ public slots:
 
 private:
 	InnerModel *innerModel;
+	SerialPort *sport;
+	QSerialPort serial; 
+
+
+	template <typename IntegerType>
+	IntegerType bitsToInt( const unsigned char* bits, uint init, bool little_endian = true )
+	{
+		IntegerType result = 0;
+		if (little_endian)
+			for (int n = sizeof( result ); n >= 0; n--)
+			result = (result << 8) + bits[ init + n ];
+		else
+			for (unsigned n = 0; n < sizeof( result ); n++)
+			result = (result << 8) + bits[ n ];
+		return result;
+	}
 
 };
 

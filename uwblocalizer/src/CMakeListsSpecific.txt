@@ -3,6 +3,7 @@
 SET ( SOURCES
   specificworker.cpp
   specificmonitor.cpp
+  serialport.cpp
 )
 
 # Headers set
@@ -10,6 +11,8 @@ SET ( HEADERS
   specificworker.h
   specificmonitor.h
 )
+
+SET (LIBS ${LIBS} Qt5SerialPort )
 
 set(CMAKE_CXX_STANDARD 17)
 
