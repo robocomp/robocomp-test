@@ -121,7 +121,7 @@ void SpecificWorker::initialize(int period)
 	target->setZValue(1);
 
     //People
-	humanA = new Human(QRectF(-400,-400,800,800));
+	humanA = new Human(QRectF(-400,-400,800,800), socialnavigationgaussian_proxy);
 	scene.addItem(humanA);
 	humanA->setPos(2500, -2000);
     boxes.push_back(humanA);

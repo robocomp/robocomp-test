@@ -1,6 +1,6 @@
 CommonBehavior.Endpoints=tcp -p 10000
 
-
+SocialNavigationGaussianProxy = socialnavigationgaussian:tcp -h localhost -p 20020
 
 World = /home/robocomp/robocomp/components/robocomp-tests/elasticpath/src/autonomy.json
 InnerModelPath = innermodel.xml

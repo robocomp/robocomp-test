@@ -1,4 +1,6 @@
 import "SocialNavigationGaussian.idsl";
+import "GenericBase.idsl";
+
 Component elasticpath
 {
     Communications

@@ -2,10 +2,12 @@
 #include <QtCore>
 #include <QGraphicsSceneMouseEvent>
 
-Human::Human(const QRectF &r) : QGraphicsEllipseItem(r) 
+Human::Human(const QRectF &r, SocialNavigationGaussianPrxPtr proxy) : QGraphicsEllipseItem(r) 
 {
     qDebug() << "creado";
-    setFlag(ItemIsMovable);
+    gaussian_proxy = proxy;
+
+	setFlag(ItemIsMovable);
     setFlag(ItemSendsGeometryChanges);
     setFlag(QGraphicsItem::ItemIsFocusable);
     setCacheMode(DeviceCoordinateCache);
@@ -35,7 +37,6 @@ void Human::mouseReleaseEvent(QGraphicsSceneMouseEvent  *event)
 }
 void Human::mouseMoveEvent(QGraphicsSceneMouseEvent  *event)
 {
-	qDebug()<<"move";
 	if(mouseButton == Qt::RightButton)
 	{
   		float angleDegree = atan2(event->pos().x(),event->pos().y()) * -360/(2*M_PI) + 180;
@@ -46,7 +47,7 @@ void Human::mouseMoveEvent(QGraphicsSceneMouseEvent  *event)
 	QGraphicsItem::mouseMoveEvent(event);
 }
 
-QVariant Human::itemChange(GraphicsItemChange change, const QVariant &value)
+/*QVariant Human::itemChange(GraphicsItemChange change, const QVariant &value)
 {
 	switch (change) 
 	{
@@ -59,4 +60,4 @@ QVariant Human::itemChange(GraphicsItemChange change, const QVariant &value)
 	    default:
     	    break;
     };
-}
+}*/

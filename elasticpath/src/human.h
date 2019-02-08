@@ -25,13 +25,16 @@
 #include <QPainter>
 #include "SocialNavigationGaussian.h"
 
+using namespace RoboCompSocialNavigationGaussian;
+
 class Human : public QObject, public QGraphicsEllipseItem
 {     
 	Q_OBJECT
 	public:
-		Human(const QRectF &r);  //pass de proxy
+		Human(const QRectF &r, SocialNavigationGaussianPrxPtr proxy);  
 
 	private:
+		SocialNavigationGaussianPrxPtr gaussian_proxy;
 		QGraphicsPixmapItem* pixmapItem;
 		Qt::MouseButton mouseButton;
 		QGraphicsEllipseItem *ellipseItem;
@@ -40,7 +43,7 @@ class Human : public QObject, public QGraphicsEllipseItem
         void mouseReleaseEvent(QGraphicsSceneMouseEvent  *event) override;
 		void mousePressEvent(QGraphicsSceneMouseEvent  *event) override;
 		void mouseMoveEvent(QGraphicsSceneMouseEvent  *event) override;
-		QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
+//		QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
 
 	signals:
 		void personChangedSingal(const RoboCompSocialNavigationGaussian::SNGPolylineSeq &polys);
