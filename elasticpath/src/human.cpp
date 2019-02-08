@@ -31,8 +31,24 @@ void Human::mousePressEvent(QGraphicsSceneMouseEvent  *event)
 }
 void Human::mouseReleaseEvent(QGraphicsSceneMouseEvent  *event)
 {
-	//auto points = socialnavigationgaussian_proxy->getPersonalSpace(SNGPersonSeq persons, float v, bool d);
-	// emit personChangedSignal(points);
+	SNGPerson p;
+	p.x = this->pos().x();
+	p.z = this->pos().y();
+	p.angle = this->rotation();
+	SNGPersonSeq persons;
+	persons.push_back(p);
+	try{
+		//intimate_seq
+		auto points = gaussian_proxy->getPersonalSpace(persons, 0.8, false);
+		SNGPolylineSeq intimate_seq;
+		for (auto p:points){
+			intimate_seq.push_back(p);
+		}
+		emit personChangedSingal(intimate_seq);
+	}catch(...)
+	{
+		qDebug()<<"Error reading personal space from SocialGaussian";
+	}
 	QGraphicsItem::mouseReleaseEvent(event);
 }
 void Human::mouseMoveEvent(QGraphicsSceneMouseEvent  *event)
@@ -41,7 +57,6 @@ void Human::mouseMoveEvent(QGraphicsSceneMouseEvent  *event)
 	{
   		float angleDegree = atan2(event->pos().x(),event->pos().y()) * -360/(2*M_PI) + 180;
 		angleDegree = std::clamp(angleDegree, 0.f, 360.f);
-		//qDebug()<<"angle"<<angleDegree;
 		ellipseItem->setRotation(angleDegree);
 	}
 	QGraphicsItem::mouseMoveEvent(event);
