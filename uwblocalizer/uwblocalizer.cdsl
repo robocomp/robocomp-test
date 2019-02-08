@@ -1,0 +1,9 @@
+Component uwblocalizer
+{
+    Communications
+    {
+    };
+    language Cpp11;
+    gui Qt(QWidget);
+};
+
