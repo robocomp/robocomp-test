@@ -121,10 +121,10 @@ void SpecificWorker::initialize(int period)
 	target->setZValue(1);
 
     //People
-	humanA = new Human(QRectF(-400,-400,800,800), socialnavigationgaussian_proxy);
+	humanA = new Human(QRectF(-400,-400,800,800), socialnavigationgaussian_proxy, &scene, QColor("LightBlue"), QPointF(2500, -2000));
 	scene.addItem(humanA);
-	humanA->setPos(2500, -2000);
-    boxes.push_back(humanA);
+	humanB = new Human(QRectF(-400,-400,800,800), socialnavigationgaussian_proxy, &scene, QColor("LightGreen"), QPointF(2500, -2900));
+	scene.addItem(humanB);
 
 	//Axis   
 	auto axisX = scene.addRect(QRectF(0, 0, 200, 20), QPen(Qt::red), QBrush(QColor("red")));
@@ -163,7 +163,7 @@ void SpecificWorker::initialize(int period)
 	robot->setPos(robot_back);
 	qDebug() << "Grid initialize ok";
 
-	timer.start(80);
+	timer.start(100);
 	
 	connect(&cleanTimer, &QTimer::timeout, this, &SpecificWorker::cleanPath);
 	cleanTimer.start(50);
@@ -176,6 +176,10 @@ void SpecificWorker::initialize(int period)
 	// timerRobot.start(100);
 	// connect(&timerRobot, &QTimer::timeout, this, &SpecificWorker::updateRobot);
 	// connect(&timerRobot, &QTimer::timeout, this, &SpecificWorker::controller);
+	
+	// Proxemics
+	connect(humanA, &Human::personChangedSignal, this, &SpecificWorker::personChangedSlot);
+	
 }
 
 //load world model from file
@@ -434,6 +438,10 @@ void SpecificWorker::cleanPoints()
 ////// Render synthetic laser
 void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsItem*> &box)
 {
+	std::vector<QGraphicsItem*> boxes_temp = boxes;
+	boxes_temp.push_back(humanA->getPolygon());
+	boxes_temp.push_back(humanB->getPolygon());
+	
 	for( auto &&l : laserData )
 	{
 		l.dist = MAX_LASER_DIST;
@@ -441,7 +449,7 @@ void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsI
 		for( auto t : iter::range(0.f, 1.f, LASER_DIST_STEP))
 		{
 			auto r = line.pointAt(t);
-			if(std::any_of(std::begin(boxes), std::end(boxes),[r](auto &box){ return box->contains(box->mapFromScene(r));}))
+			if(std::any_of(std::begin(boxes_temp), std::end(boxes_temp),[r](auto &box){ return box->contains(box->mapFromScene(r));}))
 			{
 				l.dist = QVector2D(r-line.pointAt(0)).length();
 				break;
@@ -451,16 +459,19 @@ void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsI
 	if(laser_polygon != nullptr)
 		scene.removeItem(laser_polygon);
 	QPolygonF poly;
-	QBrush brush(QColor("Linen") /*, Qt::Dense7Pattern*/);
 	for(auto &&l : laserData)
 		poly << r->mapToScene(QPointF(l.dist*sin(l.angle), l.dist*cos(l.angle)));
-		
-	laser_polygon = scene.addPolygon(poly, QPen(QColor("Linen")), brush);
+	
+	QColor color("Linen"); color.setAlpha(180);
+	laser_polygon = scene.addPolygon(poly, QPen(color), QBrush(color));
 	laser_polygon->setZValue(-1);
 }
 
 void SpecificWorker::controller()
 {
+	// Check for inminent collision to block and bounce backwards using laser field
+
+
 	// Compute distance to target along path
 	float dist_to_target = 0.f;
 	for(auto &&g : iter::sliding_window(points, 2))
@@ -630,3 +641,72 @@ void SpecificWorker::resizeEvent(QResizeEvent *event)
 		settings.setValue("size", event->size());
 	settings.endGroup();
 }
+
+///////////////////////////////////////////////////////////////////////7
+//////////  Proxemics slot
+//////////////////////////////////////////////////////////////////////////
+
+// Create a list of Humans or a Class so when one of the humans change
+// all the list is evaluated for composite gaussians if proximity conditions are met
+
+void SpecificWorker::personChangedSlot(Human *human)
+{
+	// Go through the list of humans to check for composite gaussians
+	// Using the whole list, create the modified laser field
+	// Modify the Grid
+}
+
+
+// std::vector<SpecificWorker::LData> SpecificWorker::modifyLaser(std::vector<LData> laserData, const RoboCompSocialNavigationGaussian::SNGPolylineSeq &l)
+// {	
+// 	std::vector<LData>  laserCombined; 
+// 	laserCombined = laserData;
+	
+// 	for (auto &&polyline : l)
+// 	{
+// 		float min = std::numeric_limits<float>::max();
+// 		float max = std::numeric_limits<float>::min(); 
+// 		for (auto &&polylinePoint: polyline)
+// 		{
+// 			LocalPointPol lPol;
+// 			QVec pInLaser = innerModel->transform("laser", QVec::vec3(polylinePoint.x*1000, 0, polylinePoint.z*1000), "world");
+
+// 			lPol.angle = atan2(pInLaser.x(), pInLaser.z());
+// 			if( lPol.angle < min ) min = lPol.angle;
+// 			if( lPol.angle > max ) max = lPol.angle;
+// 		}
+// 		// Recorremos todas las muestras del laser
+// 		// auto laserSample = laserCombined[laserCombined.size()/2];
+// 		for (auto && laserSample: laserCombined)
+// 		{
+// 			//Compruebo que la muestra del laser corta a la polilinea. Es decir si esta comprendida entre el maximo y el minimo de antes
+// 			if (laserSample.angle >= min and laserSample.angle <= max and fabs(max-min) < 3.14) 
+// 			{
+// 				QVec lasercart = innerModel->laserTo("laser", "laser", laserSample.dist, laserSample.angle);
+// 				// recta que une el 0,0 con el punto del laser
+// 				QLine2D laserline(QVec::vec2(0,0), QVec::vec2(lasercart.x(), lasercart.z()));		
+// 				auto previousPoint = polyline[polyline.size()-1];
+// 				QVec previousPointInLaser = innerModel->transform("laser", (QVec::vec3(previousPoint.x, 0, previousPoint.z)), "world");	
+// 				// For each polyline's point
+// 				for (auto polylinePoint: polyline)
+// 				{
+// 					QVec currentPointInLaser = innerModel->transform("laser", (QVec::vec3(polylinePoint.x*1000, 0, polylinePoint.z*1000)), "world");
+// 					QVec intersection = laserline.intersectionPoint(QLine2D(QVec::vec2(previousPointInLaser.x(),previousPointInLaser.z()),QVec::vec2(currentPointInLaser.x(),currentPointInLaser.z())));
+// 					// Una vez sacada la interseccion se comprueba que esta dentro del segmento. Para ello se calculan los angulos de los puntos actual y previo
+// 					float pAngle = atan2(previousPointInLaser.x(), previousPointInLaser.z());
+// 					float cAngle = atan2(currentPointInLaser.x(), currentPointInLaser.z());
+// 					const float m = std::min<float>(cAngle, pAngle);
+// 					const float M = std::max<float>(cAngle, pAngle);
+// 					if (laserSample.angle >= m and laserSample.angle <= M and fabs(M-m) < 3.14)
+// 					{
+// 						float distint = sqrt (pow(intersection.x(),2)+pow(intersection.y(),2));
+// 						if (distint<laserSample.dist) laserSample.dist= distint;
+// 					}
+// 					previousPointInLaser = currentPointInLaser;
+// 				}
+// 			}
+// 		}
+// 	}
+// 	return laserCombined;
+// } 
+
