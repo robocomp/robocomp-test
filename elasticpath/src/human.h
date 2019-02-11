@@ -35,7 +35,7 @@ class Human : public QObject, public QGraphicsEllipseItem
 		Human(const QRectF &r, SocialNavigationGaussianPrxPtr proxy, QGraphicsScene *scene_, QColor color_, QPointF pos);  
 		void setPolygon(QGraphicsPolygonItem *poly)				{ polygon_item = poly; }
 		QGraphicsPolygonItem * getPolygon() const				{ return polygon_item;}
-
+		void updatePolygon(QPolygonF poly);
 	private:
 		SocialNavigationGaussianPrxPtr gaussian_proxy;
 		QGraphicsPixmapItem* pixmapItem;

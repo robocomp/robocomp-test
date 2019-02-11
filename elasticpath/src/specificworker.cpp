@@ -179,6 +179,7 @@ void SpecificWorker::initialize(int period)
 	
 	// Proxemics
 	connect(humanA, &Human::personChangedSignal, this, &SpecificWorker::personChangedSlot);
+	connect(humanB, &Human::personChangedSignal, this, &SpecificWorker::personChangedSlot);
 	
 }
 
@@ -654,6 +655,52 @@ void SpecificWorker::personChangedSlot(Human *human)
 	// Go through the list of humans to check for composite gaussians
 	// Using the whole list, create the modified laser field
 	// Modify the Grid
+	RoboCompSocialNavigationGaussian::SNGPerson pA{ humanA->x()/1000.f, humanA->y()/1000.f, float(humanA->rotation()) + M_PI, 0.f, 0 };
+	RoboCompSocialNavigationGaussian::SNGPerson pB{ humanB->x()/1000.f, humanB->y()/1000.f, float(humanB->rotation()) + M_PI, 0.f, 0 };
+	RoboCompSocialNavigationGaussian::SNGPersonSeq persons{ pA, pB };
+	RoboCompSocialNavigationGaussian::SNGPolylineSeq personal_spaces;
+	try
+	{
+		personal_spaces = socialnavigationgaussian_proxy->getPersonalSpace(persons, 0.9, false);
+		if(personal_spaces.size()==0) return;
+		if(personal_spaces[0].size()==0) return;
+	}
+	catch(...)
+	{
+		qDebug() << __FUNCTION__ << "Error reading personal space from SocialGaussian";
+	}
+	//human combined space
+	if (personal_spaces.size() == 1)
+	{
+		QPolygonF poly;
+		for(auto &&p: personal_spaces[0])
+			poly << QPointF(p.x*1000.f,p.z*1000.f);
+		humanA->updatePolygon(poly);
+		humanB->updatePolygon(poly);
+	}
+	//update human individually
+	else{
+		for (auto human: {humanA,humanB})
+		{
+			persons.clear();
+			RoboCompSocialNavigationGaussian::SNGPerson p{ human->x()/1000.f, human->y()/1000.f, float(human->rotation()) + M_PI, 0.f, 0 };
+			persons.push_back(p);
+			try
+			{	
+				personal_spaces = socialnavigationgaussian_proxy->getPersonalSpace(persons, 0.9, false);
+				if(personal_spaces.size()==0) return;
+				if(personal_spaces[0].size()==0) return;
+			}
+			catch(...)
+			{
+				qDebug() << __FUNCTION__ << "Error reading personal space from SocialGaussian";
+			}
+			QPolygonF poly;
+			for(auto &&p: personal_spaces[0])
+				poly << QPointF(p.x*1000.f,p.z*1000.f);
+			human->updatePolygon(poly);
+		}
+	}
 }
 
 

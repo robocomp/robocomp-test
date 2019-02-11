@@ -45,7 +45,8 @@ void Human::mouseMoveEvent(QGraphicsSceneMouseEvent  *event)
 		angleDegree = std::clamp(angleDegree, 0.f, 360.f);
 		ellipseItem->setRotation(angleDegree);
 	}
-	updatePolygon(pos().x(), pos().y(), ellipseItem->rotation());
+//	updatePolygon(pos().x(), pos().y(), ellipseItem->rotation());
+	emit personChangedSignal(this);
 	QGraphicsItem::mouseMoveEvent(event);
 }
 
@@ -69,13 +70,21 @@ void Human::updatePolygon(float x, float y, float ang)
 	 		scene->removeItem(this->getPolygon());
 		this->setPolygon(scene->addPolygon(poly, color, QBrush(color)));
 				
-		emit personChangedSignal(this);
+		
 	}
 	catch(...)
 	{
 		qDebug() << __FUNCTION__ << "Error reading personal space from SocialGaussian";
 	}
 }
+
+void Human::updatePolygon(QPolygonF poly)
+{
+	if( this->getPolygon() != nullptr)
+		scene->removeItem(this->getPolygon());
+	this->setPolygon(scene->addPolygon(poly, color, QBrush(color)));
+}
+
 
 float Human::degreesToRadians(const float angle_)
 {	
