@@ -555,12 +555,12 @@ void SpecificWorker::updateFreeSpaceMap()
 {
 	// Assume human polygons are stored here 
 	// For each former polygon
-		Go through the Keys and set to free
+	//	Go through the Keys and set to free
 	// For each current polygon
-		compute the bounding box	
-		sweep the bounding box in x and z and obtain the grid nodes underneath with 
-			Key pointToGrid(long int x, long int z)  and store in a vector<Key>
-			Change the state to not free
+	//	compute the bounding box	
+	//	sweep the bounding box in x and z and obtain the grid nodes underneath with 
+	//		Key pointToGrid(long int x, long int z)  and store in a vector<Key>
+	//		Change the state to not free
 			
 }
 
