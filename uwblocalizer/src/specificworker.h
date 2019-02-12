@@ -32,7 +32,12 @@
 #include "serialport.h"
 #include <QtSerialPort/QSerialPort>
 #include <iostream>
-
+#include <QGraphicsScene>
+#include <QGraphicsView>
+#include <QGraphicsEllipseItem>
+#include <QGraphicsLineItem>
+#include <QGraphicsRectItem>
+#include <QGraphicsPolygonItem>
 
 class SpecificWorker : public GenericWorker
 {
@@ -46,12 +51,20 @@ public:
 public slots:
 	void compute();
 	void initialize(int period);
+	QPointF readData(QSerialPort &serial);
 
 private:
+	
+	//constants
+	const float LEFT = 0, BOTTOM = 0, WIDTH = 5000, HEIGHT = 10000;
+	const float ROBOT_LENGTH = 400;
+
 	InnerModel *innerModel;
 	SerialPort *sport;
-	QSerialPort serial; 
-
+	QSerialPort serial_left, serial_right; 
+	QGraphicsScene scene;
+	QGraphicsView view;
+	QGraphicsPolygonItem *robot;
 
 	template <typename IntegerType>
 	IntegerType bitsToInt( const unsigned char* bits, uint init, bool little_endian = true )
@@ -65,6 +78,9 @@ private:
 			result = (result << 8) + bits[ n ];
 		return result;
 	}
+
+	protected:
+		void mousePressEvent(QMouseEvent *event) override;
 
 };
 
