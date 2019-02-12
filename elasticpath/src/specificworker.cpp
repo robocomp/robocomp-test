@@ -123,9 +123,11 @@ void SpecificWorker::initialize(int period)
     //People
 	humanA = new Human(QRectF(-400,-400,800,800), socialnavigationgaussian_proxy, &scene, QColor("LightBlue"), QPointF(2500, -2000));
 	scene.addItem(humanA);
+	human_vector.push_back(humanA);
 	humanB = new Human(QRectF(-400,-400,800,800), socialnavigationgaussian_proxy, &scene, QColor("LightGreen"), QPointF(2500, -2900));
 	scene.addItem(humanB);
-
+	human_vector.push_back(humanB);
+	
 	//Axis   
 	auto axisX = scene.addRect(QRectF(0, 0, 200, 20), QPen(Qt::red), QBrush(QColor("red")));
 	boxes.push_back(axisX);
@@ -440,8 +442,9 @@ void SpecificWorker::cleanPoints()
 void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsItem*> &box)
 {
 	std::vector<QGraphicsItem*> boxes_temp = boxes;
-	boxes_temp.push_back(humanA->getPolygon());
-	boxes_temp.push_back(humanB->getPolygon());
+	for(auto &[id, polygon, item]: human_poly)
+		boxes_temp.push_back(item);
+
 	
 	for( auto &&l : laserData )
 	{
@@ -550,20 +553,6 @@ void SpecificWorker::updateRobot()
 	robot->setRotation(qRadiansToDegrees(bState.alpha));
 }
 
-
-void SpecificWorker::updateFreeSpaceMap()
-{
-	// Assume human polygons are stored here 
-	// For each former polygon
-	//	Go through the Keys and set to free
-	// For each current polygon
-	//	compute the bounding box	
-	//	sweep the bounding box in x and z and obtain the grid nodes underneath with 
-	//		Key pointToGrid(long int x, long int z)  and store in a vector<Key>
-	//		Change the state to not free
-			
-}
-
 //////////////////////////////////////////////////////////////////777
 ////// Utilities
 ////////////////////////////////////////////////////////////////////
@@ -664,9 +653,12 @@ void SpecificWorker::personChangedSlot(Human *human)
 	// Go through the list of humans to check for composite gaussians
 	// Using the whole list, create the modified laser field
 	// Modify the Grid
-	RoboCompSocialNavigationGaussian::SNGPerson pA{ humanA->x()/1000.f, humanA->y()/1000.f, float(humanA->rotation()) + M_PI, 0.f, 0 };
-	RoboCompSocialNavigationGaussian::SNGPerson pB{ humanB->x()/1000.f, humanB->y()/1000.f, float(humanB->rotation()) + M_PI, 0.f, 0 };
-	RoboCompSocialNavigationGaussian::SNGPersonSeq persons{ pA, pB };
+	RoboCompSocialNavigationGaussian::SNGPersonSeq persons;
+	for (auto human: human_vector)
+	{
+		RoboCompSocialNavigationGaussian::SNGPerson p{ float(human->x())/1000.f, float(human->y())/1000.f, float(degreesToRadians(human->rotation())) + float(M_PI), 0.f, 0 };
+		persons.push_back(p);
+	}
 	RoboCompSocialNavigationGaussian::SNGPolylineSeq personal_spaces;
 	try
 	{
@@ -678,40 +670,98 @@ void SpecificWorker::personChangedSlot(Human *human)
 	{
 		qDebug() << __FUNCTION__ << "Error reading personal space from SocialGaussian";
 	}
-	//human combined space
-	if (personal_spaces.size() == 1)
+	
+	QMap<QString, QPolygonF> poly_map;
+	for(auto &poly: personal_spaces)
 	{
-		QPolygonF poly;
-		for(auto &&p: personal_spaces[0])
-			poly << QPointF(p.x*1000.f,p.z*1000.f);
-		humanA->updatePolygon(poly);
-		humanB->updatePolygon(poly);
-	}
-	//update human individually
-	else
-	{
-		for (auto human: {humanA,humanB})
+		QString id("");
+		QPolygonF polygon;
+		for(auto &p: poly)
 		{
-			persons.clear();
-			RoboCompSocialNavigationGaussian::SNGPerson p{ human->x()/1000.f, human->y()/1000.f, float(human->rotation()) + M_PI, 0.f, 0 };
-			persons.push_back(p);
-			try
-			{	
-				personal_spaces = socialnavigationgaussian_proxy->getPersonalSpace(persons, 0.9, false);
-				if(personal_spaces.size()==0) return;
-				if(personal_spaces[0].size()==0) return;
-			}
-			catch(...)
-			{
-				qDebug() << __FUNCTION__ << "Error reading personal space from SocialGaussian";
-			}
-			QPolygonF poly;
-			for(auto &&p: personal_spaces[0])
-				poly << QPointF(p.x*1000.f,p.z*1000.f);
-			human->updatePolygon(poly);
+			id += QString::number(p.x)+QString::number(p.z);
+			polygon << QPointF(p.x*1000.f,p.z*1000.f);
 		}
+		poly_map[id] = polygon;
+	}
+//qDebug()<<"mapa"<<poly_map;
+	updateFreeSpaceMap(poly_map);
+}
+
+void SpecificWorker::updateFreeSpaceMap(QMap<QString, QPolygonF> poly_map)
+{
+qDebug()<<"updated";	
+	// Assume human polygons are stored here
+	QMap<QString, PolygonData>::iterator itHuman = human_poly.begin();
+	while (itHuman != human_poly.end())
+	{
+		bool found = false;
+		QMap<QString, QPolygonF>::iterator itPoly;
+		for (itPoly = poly_map.begin(); itPoly != poly_map.end(); itPoly++)
+		{
+			if(itHuman.key() == itPoly.key())
+			{
+				poly_map.erase(itPoly);
+				found = true;
+				break;
+			}
+		}
+		if(not found) //it has to be removed
+		{
+			markGrid(itHuman.value().item, false); //	Go through the Keys and set to free
+			scene.removeItem(itHuman.value().item);
+			itHuman = human_poly.erase(itHuman);
+//qDebug()<<"Polygon removed";
+		}
+		else
+			itHuman++;
+	}
+	// remain poly in poly_vec has to be added
+	PolygonData aux;
+	for (QMap<QString, QPolygonF>::iterator poly = poly_map.begin(); poly != poly_map.end(); poly++)
+	{
+		aux.id = poly.key();
+		aux.polygon = poly.value();
+		aux.item = scene.addPolygon(poly.value(), QColor("LightGreen"), QBrush(QColor("LightGreen")));
+		aux.item->setZValue(1);
+		human_poly[aux.id] = aux;
+//qDebug()<<"Polygon added";
+		markGrid(aux.item, true);
 	}
 }
 
+// For current polygon compute the bounding box	
+//	sweep the bounding box in x and z and obtain the grid nodes underneath with 
+//		Key pointToGrid(long int x, long int z)  and store in a vector<Key>
+//		Change the state to not free
+//true ==> mark as bloked
+//false ==> free
+void SpecificWorker::markGrid(QGraphicsPolygonItem *poly, bool flag)
+{
+	QRectF box = poly->boundingRect();
+	for (int x = box.x(); x < box.x()+box.width(); x+=TILE_SIZE)
+	{
+		for (int y = box.y(); y > box.y()-box.height(); y-=TILE_SIZE)
+		{
+			Grid<TCell>::Key key = grid.pointToGrid(x, y);
+			if (flag)
+			{
+				occupied.push_back(key);
+			}
+			else
+			{
+				occupied.remove(key);
+			}
+		}
+	}
+	qDebug()<<"occupied size: Removing:"<<not flag<<"=>"<<occupied.size();
+}
 
-
+float SpecificWorker::degreesToRadians(const float angle_)
+{	
+	float angle = angle_ * 2*M_PI / 360;
+	if(angle > M_PI)
+   		return angle - M_PI*2;
+	else if(angle < -M_PI)
+   		return angle + M_PI*2;
+	else return angle;
+}

@@ -204,10 +204,6 @@ class Grid
 			qDebug() << __FUNCTION__ << "Path from (" << source.x << "," << source.z << ") not  found. Returning empty path";
 			return std::list<QVec>();
 		};
-
-	private:
-		FMap fmap;
-		Dimensions dim;
 		
 		auto pointToGrid(long int x, long int z) const -> decltype(Key())
 		{
@@ -215,6 +211,10 @@ class Grid
 			int kz = (z-dim.VMIN)/dim.TILE_SIZE;
 			return Key(dim.HMIN + kx*dim.TILE_SIZE, dim.VMIN + kz*dim.TILE_SIZE);
 		};
+		
+	private:
+		FMap fmap;
+		Dimensions dim;
 
 		/**
 		* @brief Recovers the optimal path from the list of previous nodes

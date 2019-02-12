@@ -20,7 +20,8 @@ Human::Human(const QRectF &r, SocialNavigationGaussianPrxPtr proxy, QGraphicsSce
 	pixmapItem->setPos(this->x()-pixmap.width()/2, this->y()-pixmap.height()/2);
 	this->setPos(pos);
 	this->color.setAlpha(80);
-	updatePolygon( this->pos().x(), this->pos().y(), ellipseItem->rotation());
+	this->setZValue(10);
+//	updatePolygon( this->pos().x(), this->pos().y(), ellipseItem->rotation());
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////7
@@ -85,13 +86,3 @@ void Human::updatePolygon(QPolygonF poly)
 	this->setPolygon(scene->addPolygon(poly, color, QBrush(color)));
 }
 
-
-float Human::degreesToRadians(const float angle_)
-{	
-	float angle = angle_ * 2*M_PI / 360;
-	if(angle > M_PI)
-   		return angle - M_PI*2;
-	else if(angle < -M_PI)
-   		return angle + M_PI*2;
-	else return angle;
-}

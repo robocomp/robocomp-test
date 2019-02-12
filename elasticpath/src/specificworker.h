@@ -109,10 +109,23 @@ private:
 	RoboCompGenericBase::TBaseState bState;
     RoboCompCommonBehavior::ParameterList params;
 
+	//human
+	Human *humanA, *humanB;
+	QVector<Human*> human_vector;
+	//human Polygon
+	struct PolygonData
+	{
+		QString id;
+		QPolygonF polygon;
+		QGraphicsPolygonItem* item;
+	};
+	QMap<QString, PolygonData> human_poly;
+	
 	// Grid
 	using TDim = Grid<TCell>::Dimensions;
 	Grid<TCell> grid;
-
+	std::list<Grid<TCell>::Key> occupied;
+	
 	// Methods
     void initializeWorld();
 	void computeForces();
@@ -121,9 +134,9 @@ private:
 	void cleanPoints();
 	void computeVisibility();
 	float exponentialFunction(float value, float xValue, float yValue, float min);
-	void updateFreeSpaceMap();
+	void updateFreeSpaceMap(QMap<QString, QPolygonF> poly_map);
 	void createPathFromGraph(const std::list<QVec> &path);
-
+	void markGrid(QGraphicsPolygonItem* poly, bool occupied);
 
 	// Target
 	struct Target 
@@ -134,12 +147,9 @@ private:
 	};
 	Target current_target;
 
-	//Humans
-	Human *humanA, *humanB;
-
 	// This function takes an angle in the range [-3*pi, 3*pi] and wraps it to the range [-pi, pi].
 	float rewrapAngleRestricted(const float angle);
-  	
+	float degreesToRadians(const float angle_);
 protected:
 	void mousePressEvent(QMouseEvent *event) override;
 	void wheelEvent(QWheelEvent *event) override;
