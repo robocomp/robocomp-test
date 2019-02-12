@@ -2,11 +2,9 @@
 #include <QtCore>
 #include <QGraphicsSceneMouseEvent>
 
-Human::Human(const QRectF &r, SocialNavigationGaussianPrxPtr proxy) : QGraphicsEllipseItem(r) 
+Human::Human(const QRectF &r, SocialNavigationGaussianPrxPtr proxy, QGraphicsScene *scene_, QColor color_, QPointF pos) : 
+	QGraphicsEllipseItem(r) , gaussian_proxy(proxy), scene(scene_), color(color_)
 {
-    qDebug() << "creado";
-    gaussian_proxy = proxy;
-
 	setFlag(ItemIsMovable);
     setFlag(ItemSendsGeometryChanges);
     setFlag(QGraphicsItem::ItemIsFocusable);
@@ -16,8 +14,13 @@ Human::Human(const QRectF &r, SocialNavigationGaussianPrxPtr proxy) : QGraphicsE
     pixmapItem = new QGraphicsPixmapItem( pixmap);
 	ellipseItem = new QGraphicsEllipseItem(r);
 	ellipseItem->setParentItem(this);
+	ellipseItem->setPen(QColor(0,0,0,0));  //transparent
+	ellipseItem->setBrush(QColor(0,0,0,0));  //transparent
 	pixmapItem->setParentItem(ellipseItem);
 	pixmapItem->setPos(this->x()-pixmap.width()/2, this->y()-pixmap.height()/2);
+	this->setPos(pos);
+	this->color.setAlpha(80);
+	updatePolygon( this->pos().x(), this->pos().y(), ellipseItem->rotation());
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////7
@@ -31,24 +34,7 @@ void Human::mousePressEvent(QGraphicsSceneMouseEvent  *event)
 }
 void Human::mouseReleaseEvent(QGraphicsSceneMouseEvent  *event)
 {
-	SNGPerson p;
-	p.x = this->pos().x();
-	p.z = this->pos().y();
-	p.angle = this->rotation();
-	SNGPersonSeq persons;
-	persons.push_back(p);
-	try{
-		//intimate_seq
-		auto points = gaussian_proxy->getPersonalSpace(persons, 0.8, false);
-		SNGPolylineSeq intimate_seq;
-		for (auto p:points){
-			intimate_seq.push_back(p);
-		}
-		emit personChangedSingal(intimate_seq);
-	}catch(...)
-	{
-		qDebug()<<"Error reading personal space from SocialGaussian";
-	}
+	// updatePolygon(pos().x(), pos().y(), ellipseItem->rotation());
 	QGraphicsItem::mouseReleaseEvent(event);
 }
 void Human::mouseMoveEvent(QGraphicsSceneMouseEvent  *event)
@@ -59,20 +45,53 @@ void Human::mouseMoveEvent(QGraphicsSceneMouseEvent  *event)
 		angleDegree = std::clamp(angleDegree, 0.f, 360.f);
 		ellipseItem->setRotation(angleDegree);
 	}
+//	updatePolygon(pos().x(), pos().y(), ellipseItem->rotation());
+	emit personChangedSignal(this);
 	QGraphicsItem::mouseMoveEvent(event);
 }
 
-/*QVariant Human::itemChange(GraphicsItemChange change, const QVariant &value)
+void Human::updatePolygon(float x, float y, float ang)
 {
-	switch (change) 
+	x = x/1000.f; y = y/1000.f;
+	ang = ellipseItem->rotation()  * 2*M_PI / 360;
+	ang = -ang + M_PI;  // para el social
+	RoboCompSocialNavigationGaussian::SNGPerson p{ x, y, ang, 0.f, 0 };
+	RoboCompSocialNavigationGaussian::SNGPersonSeq persons{ p };
+	try
 	{
-    	case ItemPositionHasChanged:
-			// If human moves update polyline by calling the proxy
-			
-			// Maybe in the mouserelease event
-			qDebug() << "gola";
-        	break;
-	    default:
-    	    break;
-    };
-}*/
+		auto personal_spaces = gaussian_proxy->getPersonalSpace(persons, 0.8, false);
+		if(personal_spaces.size()==0) return;
+		if(personal_spaces[0].size()==0) return;
+	
+		QPolygonF poly;
+		for(auto &&p: personal_spaces[0])
+			poly << QPointF(p.x*1000.f,p.z*1000.f);
+		if( this->getPolygon() != nullptr)
+	 		scene->removeItem(this->getPolygon());
+		this->setPolygon(scene->addPolygon(poly, color, QBrush(color)));
+				
+		
+	}
+	catch(...)
+	{
+		qDebug() << __FUNCTION__ << "Error reading personal space from SocialGaussian";
+	}
+}
+
+void Human::updatePolygon(QPolygonF poly)
+{
+	if( this->getPolygon() != nullptr)
+		scene->removeItem(this->getPolygon());
+	this->setPolygon(scene->addPolygon(poly, color, QBrush(color)));
+}
+
+
+float Human::degreesToRadians(const float angle_)
+{	
+	float angle = angle_ * 2*M_PI / 360;
+	if(angle > M_PI)
+   		return angle - M_PI*2;
+	else if(angle < -M_PI)
+   		return angle + M_PI*2;
+	else return angle;
+}

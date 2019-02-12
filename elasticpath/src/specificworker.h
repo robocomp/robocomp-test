@@ -70,6 +70,7 @@ public slots:
 	void cleanPath();
 	void updateRobot();
 	void controller();
+	void personChangedSlot(Human *human);
    
 private:
 
@@ -78,7 +79,7 @@ private:
 	const float ROBOT_LENGTH = 400;
 	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.9;
 	const float MAX_LASER_DIST = 4000;
-	const float LASER_DIST_STEP = 0.01;
+	const float LASER_DIST_STEP = 0.05;
 	const int TILE_SIZE = 200;
 	const float LASER_ANGLE_STEPS = 50;	
 	const float ROBOT_MAX_ADVANCE_SPEED = 600;
@@ -123,6 +124,7 @@ private:
 	void updateFreeSpaceMap();
 	void createPathFromGraph(const std::list<QVec> &path);
 
+
 	// Target
 	struct Target 
 	{ 
@@ -133,7 +135,7 @@ private:
 	Target current_target;
 
 	//Humans
-	Human *humanA;
+	Human *humanA, *humanB;
 
 	// This function takes an angle in the range [-3*pi, 3*pi] and wraps it to the range [-pi, pi].
 	float rewrapAngleRestricted(const float angle);

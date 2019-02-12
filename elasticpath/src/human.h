@@ -24,6 +24,7 @@
 #include <QGraphicsItem>
 #include <QPainter>
 #include "SocialNavigationGaussian.h"
+#include <QGraphicsScene>
 
 using namespace RoboCompSocialNavigationGaussian;
 
@@ -31,22 +32,30 @@ class Human : public QObject, public QGraphicsEllipseItem
 {     
 	Q_OBJECT
 	public:
-		Human(const QRectF &r, SocialNavigationGaussianPrxPtr proxy);  
-
+		Human(const QRectF &r, SocialNavigationGaussianPrxPtr proxy, QGraphicsScene *scene_, QColor color_, QPointF pos);  
+		void setPolygon(QGraphicsPolygonItem *poly)				{ polygon_item = poly; }
+		QGraphicsPolygonItem * getPolygon() const				{ return polygon_item;}
+		void updatePolygon(QPolygonF poly);
 	private:
 		SocialNavigationGaussianPrxPtr gaussian_proxy;
 		QGraphicsPixmapItem* pixmapItem;
 		Qt::MouseButton mouseButton;
 		QGraphicsEllipseItem *ellipseItem;
+		float degreesToRadians(const float angle);
+		void updatePolygon(float x, float y, float ang);
+		QGraphicsPolygonItem *polygon_item = nullptr;
+		QGraphicsScene *scene;
+		QColor color;
+
 
     protected:
         void mouseReleaseEvent(QGraphicsSceneMouseEvent  *event) override;
 		void mousePressEvent(QGraphicsSceneMouseEvent  *event) override;
 		void mouseMoveEvent(QGraphicsSceneMouseEvent  *event) override;
-//		QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
+	//	QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
 
 	signals:
-		void personChangedSingal(const RoboCompSocialNavigationGaussian::SNGPolylineSeq &polys);
+		void personChangedSignal(Human *human);
 		
 };
 

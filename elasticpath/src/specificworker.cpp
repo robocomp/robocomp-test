@@ -121,10 +121,10 @@ void SpecificWorker::initialize(int period)
 	target->setZValue(1);
 
     //People
-	humanA = new Human(QRectF(-400,-400,800,800), socialnavigationgaussian_proxy);
+	humanA = new Human(QRectF(-400,-400,800,800), socialnavigationgaussian_proxy, &scene, QColor("LightBlue"), QPointF(2500, -2000));
 	scene.addItem(humanA);
-	humanA->setPos(2500, -2000);
-    boxes.push_back(humanA);
+	humanB = new Human(QRectF(-400,-400,800,800), socialnavigationgaussian_proxy, &scene, QColor("LightGreen"), QPointF(2500, -2900));
+	scene.addItem(humanB);
 
 	//Axis   
 	auto axisX = scene.addRect(QRectF(0, 0, 200, 20), QPen(Qt::red), QBrush(QColor("red")));
@@ -163,7 +163,7 @@ void SpecificWorker::initialize(int period)
 	robot->setPos(robot_back);
 	qDebug() << "Grid initialize ok";
 
-	timer.start(80);
+	timer.start(100);
 	
 	connect(&cleanTimer, &QTimer::timeout, this, &SpecificWorker::cleanPath);
 	cleanTimer.start(50);
@@ -176,6 +176,11 @@ void SpecificWorker::initialize(int period)
 	// timerRobot.start(100);
 	// connect(&timerRobot, &QTimer::timeout, this, &SpecificWorker::updateRobot);
 	// connect(&timerRobot, &QTimer::timeout, this, &SpecificWorker::controller);
+	
+	// Proxemics
+	connect(humanA, &Human::personChangedSignal, this, &SpecificWorker::personChangedSlot);
+	connect(humanB, &Human::personChangedSignal, this, &SpecificWorker::personChangedSlot);
+	
 }
 
 //load world model from file
@@ -434,6 +439,10 @@ void SpecificWorker::cleanPoints()
 ////// Render synthetic laser
 void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsItem*> &box)
 {
+	std::vector<QGraphicsItem*> boxes_temp = boxes;
+	boxes_temp.push_back(humanA->getPolygon());
+	boxes_temp.push_back(humanB->getPolygon());
+	
 	for( auto &&l : laserData )
 	{
 		l.dist = MAX_LASER_DIST;
@@ -441,7 +450,7 @@ void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsI
 		for( auto t : iter::range(0.f, 1.f, LASER_DIST_STEP))
 		{
 			auto r = line.pointAt(t);
-			if(std::any_of(std::begin(boxes), std::end(boxes),[r](auto &box){ return box->contains(box->mapFromScene(r));}))
+			if(std::any_of(std::begin(boxes_temp), std::end(boxes_temp),[r](auto &box){ return box->contains(box->mapFromScene(r));}))
 			{
 				l.dist = QVector2D(r-line.pointAt(0)).length();
 				break;
@@ -451,16 +460,19 @@ void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsI
 	if(laser_polygon != nullptr)
 		scene.removeItem(laser_polygon);
 	QPolygonF poly;
-	QBrush brush(QColor("Linen") /*, Qt::Dense7Pattern*/);
 	for(auto &&l : laserData)
 		poly << r->mapToScene(QPointF(l.dist*sin(l.angle), l.dist*cos(l.angle)));
-		
-	laser_polygon = scene.addPolygon(poly, QPen(QColor("Linen")), brush);
+	
+	QColor color("Linen"); color.setAlpha(180);
+	laser_polygon = scene.addPolygon(poly, QPen(color), QBrush(color));
 	laser_polygon->setZValue(-1);
 }
 
 void SpecificWorker::controller()
 {
+	// Check for inminent collision to block and bounce backwards using laser field
+
+
 	// Compute distance to target along path
 	float dist_to_target = 0.f;
 	for(auto &&g : iter::sliding_window(points, 2))
@@ -541,6 +553,15 @@ void SpecificWorker::updateRobot()
 
 void SpecificWorker::updateFreeSpaceMap()
 {
+	// Assume human polygons are stored here 
+	// For each former polygon
+	//	Go through the Keys and set to free
+	// For each current polygon
+	//	compute the bounding box	
+	//	sweep the bounding box in x and z and obtain the grid nodes underneath with 
+	//		Key pointToGrid(long int x, long int z)  and store in a vector<Key>
+	//		Change the state to not free
+			
 }
 
 //////////////////////////////////////////////////////////////////777
@@ -630,3 +651,67 @@ void SpecificWorker::resizeEvent(QResizeEvent *event)
 		settings.setValue("size", event->size());
 	settings.endGroup();
 }
+
+///////////////////////////////////////////////////////////////////////7
+//////////  Proxemics slot
+//////////////////////////////////////////////////////////////////////////
+
+// Create a list of Humans or a Class so when one of the humans change
+// all the list is evaluated for composite gaussians if proximity conditions are met
+
+void SpecificWorker::personChangedSlot(Human *human)
+{
+	// Go through the list of humans to check for composite gaussians
+	// Using the whole list, create the modified laser field
+	// Modify the Grid
+	RoboCompSocialNavigationGaussian::SNGPerson pA{ humanA->x()/1000.f, humanA->y()/1000.f, float(humanA->rotation()) + M_PI, 0.f, 0 };
+	RoboCompSocialNavigationGaussian::SNGPerson pB{ humanB->x()/1000.f, humanB->y()/1000.f, float(humanB->rotation()) + M_PI, 0.f, 0 };
+	RoboCompSocialNavigationGaussian::SNGPersonSeq persons{ pA, pB };
+	RoboCompSocialNavigationGaussian::SNGPolylineSeq personal_spaces;
+	try
+	{
+		personal_spaces = socialnavigationgaussian_proxy->getPersonalSpace(persons, 0.9, false);
+		if(personal_spaces.size()==0) return;
+		if(personal_spaces[0].size()==0) return;
+	}
+	catch(...)
+	{
+		qDebug() << __FUNCTION__ << "Error reading personal space from SocialGaussian";
+	}
+	//human combined space
+	if (personal_spaces.size() == 1)
+	{
+		QPolygonF poly;
+		for(auto &&p: personal_spaces[0])
+			poly << QPointF(p.x*1000.f,p.z*1000.f);
+		humanA->updatePolygon(poly);
+		humanB->updatePolygon(poly);
+	}
+	//update human individually
+	else
+	{
+		for (auto human: {humanA,humanB})
+		{
+			persons.clear();
+			RoboCompSocialNavigationGaussian::SNGPerson p{ human->x()/1000.f, human->y()/1000.f, float(human->rotation()) + M_PI, 0.f, 0 };
+			persons.push_back(p);
+			try
+			{	
+				personal_spaces = socialnavigationgaussian_proxy->getPersonalSpace(persons, 0.9, false);
+				if(personal_spaces.size()==0) return;
+				if(personal_spaces[0].size()==0) return;
+			}
+			catch(...)
+			{
+				qDebug() << __FUNCTION__ << "Error reading personal space from SocialGaussian";
+			}
+			QPolygonF poly;
+			for(auto &&p: personal_spaces[0])
+				poly << QPointF(p.x*1000.f,p.z*1000.f);
+			human->updatePolygon(poly);
+		}
+	}
+}
+
+
+
