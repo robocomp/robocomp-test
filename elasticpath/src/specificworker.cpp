@@ -722,7 +722,7 @@ qDebug()<<"updated";
 		aux.id = poly.key();
 		aux.polygon = poly.value();
 		aux.item = scene.addPolygon(poly.value(), QColor("LightGreen"), QBrush(QColor("LightGreen")));
-		aux.item->setZValue(1);
+		aux.item->setZValue(-1);
 		human_poly[aux.id] = aux;
 //qDebug()<<"Polygon added";
 		markGrid(aux.item, true);
@@ -738,22 +738,31 @@ qDebug()<<"updated";
 void SpecificWorker::markGrid(QGraphicsPolygonItem *poly, bool flag)
 {
 	QRectF box = poly->boundingRect();
+// 	if (flag)
+// 		humanARect = scene.addRect(box,QPen(Qt::green, 3));
+// 	else
+// 		scene.removeItem(humanARect);
+// qDebug()<<"Box"<<box;	
 	for (int x = box.x(); x < box.x()+box.width(); x+=TILE_SIZE)
 	{
 		for (int y = box.y(); y > box.y()-box.height(); y-=TILE_SIZE)
 		{
-			Grid<TCell>::Key key = grid.pointToGrid(x, y);
-			if (flag)
+qDebug()<<"Point"<<QPoint(x,y);
+			if(poly->contains(QPoint(x,y)))
 			{
-				occupied.push_back(key);
-			}
-			else
-			{
-				occupied.remove(key);
+				Grid<TCell>::Key key = grid.pointToGrid(x, y);
+				if (flag)
+				{
+					grid.addOccupiedKey(key);
+				}
+				else
+				{
+					grid.removeOccupiedKey(key);
+				}
 			}
 		}
 	}
-	qDebug()<<"occupied size: Removing:"<<not flag<<"=>"<<occupied.size();
+//	qDebug()<<"occupied size: Removing:"<<not flag<<"=>"<<occupied.size();
 }
 
 float SpecificWorker::degreesToRadians(const float angle_)

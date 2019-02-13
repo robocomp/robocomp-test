@@ -120,11 +120,11 @@ private:
 		QGraphicsPolygonItem* item;
 	};
 	QMap<QString, PolygonData> human_poly;
-	
+//todo: remove when not needed
+//QGraphicsRectItem *humanARect;	
 	// Grid
 	using TDim = Grid<TCell>::Dimensions;
 	Grid<TCell> grid;
-	std::list<Grid<TCell>::Key> occupied;
 	
 	// Methods
     void initializeWorld();
