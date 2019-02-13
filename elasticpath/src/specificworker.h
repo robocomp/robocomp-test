@@ -121,7 +121,7 @@ private:
 	};
 	QMap<QString, PolygonData> human_poly;
 //todo: remove when not needed
-//QGraphicsRectItem *humanARect;	
+QMap<QString, QGraphicsRectItem *>occupied;	
 	// Grid
 	using TDim = Grid<TCell>::Dimensions;
 	Grid<TCell> grid;

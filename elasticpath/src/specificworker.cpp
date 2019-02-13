@@ -757,27 +757,29 @@ qDebug()<<"updated";
 //false ==> free
 void SpecificWorker::markGrid(QGraphicsPolygonItem *poly, bool flag)
 {
-	QRectF box = poly->boundingRect();
-// 	if (flag)
-// 		humanARect = scene.addRect(box,QPen(Qt::green, 3));
-// 	else
-// 		scene.removeItem(humanARect);
-// qDebug()<<"Box"<<box;	
+	QRectF box = poly->sceneBoundingRect();
+qDebug()<<"Box"<<box;	
 	for (int x = box.x(); x < box.x()+box.width(); x+=TILE_SIZE)
 	{
-		for (int y = box.y(); y > box.y()-box.height(); y-=TILE_SIZE)
+		for (int y = box.y(); y < box.y()+box.height(); y+=TILE_SIZE)
 		{
-qDebug()<<"Point"<<QPoint(x,y);
+//qDebug()<<"Point"<<QPoint(x,y);
 			if(poly->contains(QPoint(x,y)))
 			{
 				Grid<TCell>::Key key = grid.pointToGrid(x, y);
 				if (flag)
 				{
+		auto rect = scene.addRect(QRectF(x,y,40,40),QPen(Qt::red),  QBrush(Qt::red));
+		rect->setZValue(30);
+		qDebug()<<"add"<<QPoint(x,y);
+		occupied[QString::number(x)+QString::number(y)] = rect;
 					grid.addOccupiedKey(key);
 				}
 				else
 				{
 					grid.removeOccupiedKey(key);
+		scene.removeItem(occupied[QString::number(x)+QString::number(y)]);
+		occupied.remove(QString::number(x)+QString::number(y));
 				}
 			}
 		}
