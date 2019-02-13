@@ -211,11 +211,21 @@ class Grid
 			int kz = (z-dim.VMIN)/dim.TILE_SIZE;
 			return Key(dim.HMIN + kx*dim.TILE_SIZE, dim.VMIN + kz*dim.TILE_SIZE);
 		};
+//TODO: vector must be used with mutex control		
+		std::list<Key> occupied;
+		void removeOccupiedKey(Key k)
+		{
+			occupied.push_back(k);
+		}
+		void addOccupiedKey(Key k)
+		{
+			occupied.remove(k);
+		}
 		
 	private:
 		FMap fmap;
 		Dimensions dim;
-
+		
 		/**
 		* @brief Recovers the optimal path from the list of previous nodes
 		* 
@@ -254,15 +264,24 @@ class Grid
 				try
 				{
 					T &p = fmap.at(Key(lk.x,lk.z));
-					if(p.free)
+					auto iter = std::find(occupied.begin(), occupied.end(), Key(lk.x,lk.z));
+					if(iter != occupied.end())
 					{
-						if(itx != 0 and itz != 0 and (fabs(itx) == fabs(itz)))
-							p.cost = 1.41;		// if neighboor in diagonal, cost is sqrt(2) Should be computed over the initial value
-						//if neigh node is close to a occupied node, increase its cost
-						for(auto &&[dx, dz] : iter::zip(xincs, zincs))
-							try{ if( !(fmap.at(Key(lk.x+dx, lk.z+dz)).free)) p.cost = 10.f; }
-							catch(const std::exception& e){	};
+						p.cost = 10.f;
 						neigh.emplace_back(std::make_pair(lk,p));
+					}
+					else
+					{
+						if(p.free)
+						{
+							if(itx != 0 and itz != 0 and (fabs(itx) == fabs(itz)))
+								p.cost = 1.41;		// if neighboor in diagonal, cost is sqrt(2) Should be computed over the initial value
+							//if neigh node is close to a occupied node, increase its cost
+							for(auto &&[dx, dz] : iter::zip(xincs, zincs))
+								try{ if( !(fmap.at(Key(lk.x+dx, lk.z+dz)).free)) p.cost = 10.f; }
+								catch(const std::exception& e){	};
+							neigh.emplace_back(std::make_pair(lk,p));
+						}
 					}
 				}
 				catch(const std::exception& e)
