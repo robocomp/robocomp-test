@@ -268,7 +268,11 @@ class Grid
 					if(iter != occupied.end())
 					{
 						p.cost = 10.f;
+						for(auto &&[dx, dz] : iter::zip(xincs, zincs))
+							try{ if( !(fmap.at(Key(lk.x+dx, lk.z+dz)).free)) p.cost = 10.f; }
+							catch(const std::exception& e){	};
 						neigh.emplace_back(std::make_pair(lk,p));
+qDebug()<<"occupied"<<lk.x<<lk.z;
 					}
 					else
 					{

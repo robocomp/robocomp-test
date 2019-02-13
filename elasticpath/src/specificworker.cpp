@@ -758,7 +758,7 @@ qDebug()<<"updated";
 void SpecificWorker::markGrid(QGraphicsPolygonItem *poly, bool flag)
 {
 	QRectF box = poly->sceneBoundingRect();
-qDebug()<<"Box"<<box;	
+//qDebug()<<"Box"<<box;	
 	for (int x = box.x(); x < box.x()+box.width(); x+=TILE_SIZE)
 	{
 		for (int y = box.y(); y < box.y()+box.height(); y+=TILE_SIZE)
@@ -771,7 +771,7 @@ qDebug()<<"Box"<<box;
 				{
 		auto rect = scene.addRect(QRectF(x,y,40,40),QPen(Qt::red),  QBrush(Qt::red));
 		rect->setZValue(30);
-		qDebug()<<"add"<<QPoint(x,y);
+//qDebug()<<"add"<<QPoint(x,y);
 		occupied[QString::number(x)+QString::number(y)] = rect;
 					grid.addOccupiedKey(key);
 				}
