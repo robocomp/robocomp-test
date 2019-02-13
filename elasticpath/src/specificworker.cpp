@@ -515,6 +515,26 @@ void SpecificWorker::controller()
 	advVelz = ROBOT_MAX_ADVANCE_SPEED /**	exponentialFunction(1./dist_to_target, 1./700, 0.4, 0.1)*/
 									  * exponentialFunction(rotVel, 0.4, 0.4, 0.f);
 	//qDebug() << rotVel << advVelz;
+									  
+//TODO:	//use differentialrobot_proxy to send speed to real base (Robex)
+	try
+	{
+//		differentialrobot_proxy->setSpeedBase(advVelz, rotVel);
+	}
+	catch(...)
+	{
+		qDebug() << __FUNCTION__ << "Error setting speed to differentialrobot base";
+	}
+//TODO:	//use omnirobot_proxy to send speed to real base (Viriato)
+	try
+	{
+		float advVelx =0;
+//		omnirobot_proxy->setSpeedBase(advVelx, advVelz, rotVel);
+	}
+	catch(...)
+	{
+		qDebug() << __FUNCTION__ << "Error setting speed to omnirobot base";
+	}
 }
 
 

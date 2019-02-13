@@ -32,15 +32,22 @@
 
 #include <CommonBehavior.h>
 
+#include <DifferentialRobot.h>
+#include <GenericBase.h>
+#include <OmniRobot.h>
+#include <GenericBase.h>
 #include <SocialNavigationGaussian.h>
 
 #define CHECK_PERIOD 5000
 #define BASIC_PERIOD 100
 
 using namespace std;
+using namespace RoboCompOmniRobot;
 using namespace RoboCompSocialNavigationGaussian;
+using namespace RoboCompGenericBase;
+using namespace RoboCompDifferentialRobot;
 
-using TuplePrx = std::tuple<RoboCompSocialNavigationGaussian::SocialNavigationGaussianPrxPtr>;
+using TuplePrx = std::tuple<RoboCompSocialNavigationGaussian::SocialNavigationGaussianPrxPtr,RoboCompOmniRobot::OmniRobotPrxPtr,RoboCompDifferentialRobot::DifferentialRobotPrxPtr>;
 
 
 class GenericWorker :
@@ -61,6 +68,8 @@ public:
 	QMutex *mutex;
 
 
+	DifferentialRobotPrxPtr differentialrobot_proxy;
+	OmniRobotPrxPtr omnirobot_proxy;
 	SocialNavigationGaussianPrxPtr socialnavigationgaussian_proxy;
 
 

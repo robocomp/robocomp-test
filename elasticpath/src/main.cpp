@@ -82,6 +82,10 @@
 #include "commonbehaviorI.h"
 
 
+#include <DifferentialRobot.h>
+#include <GenericBase.h>
+#include <OmniRobot.h>
+#include <GenericBase.h>
 #include <SocialNavigationGaussian.h>
 
 
@@ -135,9 +139,43 @@ int ::elasticpath::run(int argc, char* argv[])
 	int status=EXIT_SUCCESS;
 
 	SocialNavigationGaussianPrxPtr socialnavigationgaussian_proxy;
-
+	DifferentialRobotPrxPtr differentialrobot_proxy;
+	OmniRobotPrxPtr omnirobot_proxy;
+	
 	string proxy, tmp;
 	initialize();
+
+
+	try
+	{
+		if (not GenericMonitor::configGetString(communicator(), prefix, "DifferentialRobotProxy", proxy, ""))
+		{
+			cout << "[" << PROGRAM_NAME << "]: Can't read configuration for proxy DifferentialRobotProxy\n";
+		}
+		differentialrobot_proxy = Ice::uncheckedCast<DifferentialRobotPrx>( communicator()->stringToProxy( proxy ) );
+	}
+	catch(const Ice::Exception& ex)
+	{
+		cout << "[" << PROGRAM_NAME << "]: Exception creating proxy DifferentialRobot: " << ex;
+		return EXIT_FAILURE;
+	}
+	rInfo("DifferentialRobotProxy initialized Ok!");
+
+
+	try
+	{
+		if (not GenericMonitor::configGetString(communicator(), prefix, "OmniRobotProxy", proxy, ""))
+		{
+			cout << "[" << PROGRAM_NAME << "]: Can't read configuration for proxy OmniRobotProxy\n";
+		}
+		omnirobot_proxy = Ice::uncheckedCast<OmniRobotPrx>( communicator()->stringToProxy( proxy ) );
+	}
+	catch(const Ice::Exception& ex)
+	{
+		cout << "[" << PROGRAM_NAME << "]: Exception creating proxy OmniRobot: " << ex;
+		return EXIT_FAILURE;
+	}
+	rInfo("OmniRobotProxy initialized Ok!");
 
 
 	try
@@ -156,7 +194,7 @@ int ::elasticpath::run(int argc, char* argv[])
 	rInfo("SocialNavigationGaussianProxy initialized Ok!");
 
 
-	tprx = std::make_tuple(socialnavigationgaussian_proxy);
+	tprx = std::make_tuple(socialnavigationgaussian_proxy, omnirobot_proxy, differentialrobot_proxy);
 	SpecificWorker *worker = new SpecificWorker(tprx);
 	//Monitor thread
 	SpecificMonitor *monitor = new SpecificMonitor(worker,communicator());

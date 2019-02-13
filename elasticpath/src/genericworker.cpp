@@ -28,6 +28,8 @@ QObject()
 #endif
 
 {
+	differentialrobot_proxy = std::get<DifferentialRobotPrxPtr>(tprx);
+	omnirobot_proxy = std::get<OmniRobotPrxPtr>(tprx);
 	socialnavigationgaussian_proxy = std::get<SocialNavigationGaussianPrxPtr>(tprx);
 
 	mutex = new QMutex(QMutex::Recursive);
