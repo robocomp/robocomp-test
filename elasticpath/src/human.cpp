@@ -78,7 +78,10 @@ void Human::updatePolygon(float x, float y, float ang)
 		qDebug() << __FUNCTION__ << "Error reading personal space from SocialGaussian";
 	}
 }
-
+qreal Human::rotation() const
+{
+	return ellipseItem->rotation();
+}
 void Human::updatePolygon(QPolygonF poly)
 {
 	if( this->getPolygon() != nullptr)

@@ -36,6 +36,7 @@ class Human : public QObject, public QGraphicsEllipseItem
 		void setPolygon(QGraphicsPolygonItem *poly)				{ polygon_item = poly; }
 		QGraphicsPolygonItem * getPolygon() const				{ return polygon_item;}
 		void updatePolygon(QPolygonF poly);
+		qreal rotation() const;
 	private:
 		SocialNavigationGaussianPrxPtr gaussian_proxy;
 		QGraphicsPixmapItem* pixmapItem;
@@ -46,13 +47,11 @@ class Human : public QObject, public QGraphicsEllipseItem
 		QGraphicsPolygonItem *polygon_item = nullptr;
 		QGraphicsScene *scene;
 		QColor color;
-
-
+	
     protected:
         void mouseReleaseEvent(QGraphicsSceneMouseEvent  *event) override;
 		void mousePressEvent(QGraphicsSceneMouseEvent  *event) override;
 		void mouseMoveEvent(QGraphicsSceneMouseEvent  *event) override;
-	//	QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
 
 	signals:
 		void personChangedSignal(Human *human);
