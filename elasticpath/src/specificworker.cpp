@@ -445,7 +445,6 @@ void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsI
 	for(auto &[id, polygon, item]: human_poly)
 		boxes_temp.push_back(item);
 
-	
 	for( auto &&l : laserData )
 	{
 		l.dist = MAX_LASER_DIST;
@@ -698,18 +697,18 @@ void SpecificWorker::personChangedSlot(Human *human)
 		QPolygonF polygon;
 		for(auto &p: poly)
 		{
-			id += QString::number(p.x)+QString::number(p.z);
+			id += QString::number(p.x) + QString::number(p.z);
 			polygon << QPointF(p.x*1000.f,p.z*1000.f);
 		}
 		poly_map[id] = polygon;
 	}
-//qDebug()<<"mapa"<<poly_map;
+	//qDebug()<<"mapa"<<poly_map;
 	updateFreeSpaceMap(poly_map);
 }
 
 void SpecificWorker::updateFreeSpaceMap(QMap<QString, QPolygonF> poly_map)
 {
-qDebug()<<"updated";	
+	qDebug()<<"updated";	
 	// Assume human polygons are stored here
 	QMap<QString, PolygonData>::iterator itHuman = human_poly.begin();
 	while (itHuman != human_poly.end())
@@ -730,7 +729,7 @@ qDebug()<<"updated";
 			markGrid(itHuman.value().item, false); //	Go through the Keys and set to free
 			scene.removeItem(itHuman.value().item);
 			itHuman = human_poly.erase(itHuman);
-//qDebug()<<"Polygon removed";
+			//qDebug()<<"Polygon removed";
 		}
 		else
 			itHuman++;
@@ -744,17 +743,17 @@ qDebug()<<"updated";
 		aux.item = scene.addPolygon(poly.value(), QColor("LightGreen"), QBrush(QColor("LightGreen")));
 		aux.item->setZValue(-1);
 		human_poly[aux.id] = aux;
-//qDebug()<<"Polygon added";
+		//qDebug()<<"Polygon added";
 		markGrid(aux.item, true);
 	}
 }
 
 // For current polygon compute the bounding box	
 //	sweep the bounding box in x and z and obtain the grid nodes underneath with 
-//		Key pointToGrid(long int x, long int z)  and store in a vector<Key>
-//		Change the state to not free
-//true ==> mark as bloked
-//false ==> free
+//	Key pointToGrid(long int x, long int z)  and store in a vector<Key>
+//	Change the state to not free
+//	true ==> mark as bloked
+//	false ==> free
 void SpecificWorker::markGrid(QGraphicsPolygonItem *poly, bool flag)
 {
 	QRectF box = poly->sceneBoundingRect();
@@ -769,17 +768,17 @@ void SpecificWorker::markGrid(QGraphicsPolygonItem *poly, bool flag)
 				Grid<TCell>::Key key = grid.pointToGrid(x, y);
 				if (flag)
 				{
-		auto rect = scene.addRect(QRectF(x,y,40,40),QPen(Qt::red),  QBrush(Qt::red));
-		rect->setZValue(30);
-//qDebug()<<"add"<<QPoint(x,y);
-		occupied[QString::number(x)+QString::number(y)] = rect;
+					auto rect = scene.addRect(QRectF(x,y,40,40),QPen(Qt::red),  QBrush(Qt::red));
+					rect->setZValue(30);
+					//qDebug()<<"add"<<QPoint(x,y);
+					occupied[QString::number(x)+QString::number(y)] = rect;
 					grid.addOccupiedKey(key);
 				}
 				else
 				{
 					grid.removeOccupiedKey(key);
-		scene.removeItem(occupied[QString::number(x)+QString::number(y)]);
-		occupied.remove(QString::number(x)+QString::number(y));
+					scene.removeItem(occupied[QString::number(x)+QString::number(y)]);
+					occupied.remove(QString::number(x)+QString::number(y));
 				}
 			}
 		}
