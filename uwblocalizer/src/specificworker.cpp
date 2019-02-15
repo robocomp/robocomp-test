@@ -61,6 +61,17 @@ void SpecificWorker::initialize(int period)
 	//walls
 	scene.addRect(QRectF(LEFT, BOTTOM, WIDTH, HEIGHT), QPen(QColor("Brown"), 30));
 
+	//Axis   
+	auto axisX = scene.addLine(QLineF(0, 0, 500, 0), QPen(Qt::red, 50));
+	axisX->setPos(0,0);
+	boxes.push_back(axisX);
+	auto axisZ = scene.addLine(QLineF(0, 0, 0, 500), QPen(Qt::blue, 50));
+	axisZ->setPos(0,0);
+	boxes.push_back(axisZ);
+
+	 //Load World
+    initializeWorld();
+
 	// Robot 
 	QPolygonF poly2;
 	float size = ROBOT_LENGTH/2.f;
@@ -73,16 +84,16 @@ void SpecificWorker::initialize(int period)
 	robot->setZValue(1);
 
 
-	serial_left.setPortName("/dev/ttyACM0");
-	if(!serial_left.open(QIODevice::ReadWrite))	exit(-1); 
-	serial_left.setBaudRate(QSerialPort::Baud115200);
+	// serial_left.setPortName("/dev/ttyACM0");
+	// if(!serial_left.open(QIODevice::ReadWrite))	exit(-1); 
+	// serial_left.setBaudRate(QSerialPort::Baud115200);
 
-	serial_right.setPortName("/dev/ttyACM1");
-	if(!serial_right.open(QIODevice::ReadWrite))	exit(-1); 
-	serial_right.setBaudRate(QSerialPort::Baud115200);
+	// serial_right.setPortName("/dev/ttyACM1");
+	// if(!serial_right.open(QIODevice::ReadWrite))	exit(-1); 
+	// serial_right.setBaudRate(QSerialPort::Baud115200);
 	
-	this->Period = period;
-	timer.start(Period);
+	// this->Period = period;
+	// timer.start(Period);
 }
 
 void SpecificWorker::compute()
@@ -152,6 +163,45 @@ void SpecificWorker::mousePressEvent(QMouseEvent *event)
 	}
 }
 
+
+//load world model from file
+void SpecificWorker::initializeWorld()
+{
+    QString val;
+    //QFile file(QString::fromStdString(params["World"].value));
+	QFile file("robolab.json");
+    if(not file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        qDebug() << "Error reading world file, check config params:" << "robolab.json";
+        exit(-1);
+    }
+    val = file.readAll();
+    file.close();
+    QJsonDocument doc = QJsonDocument::fromJson(val.toUtf8());
+    QJsonObject jObject = doc.object();
+    QVariantMap mainMap = jObject.toVariantMap();
+    //load tables
+    QVariantMap tables = mainMap[QString("tables")].toMap();
+    for (auto &t: tables)
+    {
+        QVariantList object = t.toList();
+        auto box = scene.addRect(QRectF(-object[2].toFloat()/2, -object[3].toFloat()/2, object[2].toFloat(), object[3].toFloat()), QPen(QColor("SandyBrown")), QBrush(QColor("SandyBrown")));
+        box->setPos(object[4].toFloat(), object[5].toFloat());
+        box->setRotation(object[6].toFloat());
+        boxes.push_back(box);
+    }
+    
+    //load walls
+    // QVariantMap walls = mainMap[QString("walls")].toMap();
+    // for (auto &t: walls)
+    // {
+    //     QVariantList object = t.toList();
+    //     auto box = scene.addRect(QRectF(-object[2].toFloat()/2, -object[3].toFloat()/2, object[2].toFloat(), object[3].toFloat()), QPen(QColor("Brown")), QBrush(QColor("Brown")));
+    //     box->setPos(object[4].toFloat(), object[5].toFloat());
+    //     //box->setRotation(object[6].toFloat()*180/M_PI2);
+    //     boxes.push_back(box);
+    // }
+}
 
 /////////////////////////////////////////////////////////////////////////////////////
 //int x = (b[8] << 24) | (b[7] << 16) | (b[6] << 8) | (b[5]);

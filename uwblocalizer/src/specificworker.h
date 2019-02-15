@@ -56,7 +56,7 @@ public slots:
 private:
 	
 	//constants
-	const float LEFT = 0, BOTTOM = 0, WIDTH = 5000, HEIGHT = 10000;
+	const float LEFT = -790, BOTTOM = 0, WIDTH = 5960, HEIGHT = 9700;
 	const float ROBOT_LENGTH = 400;
 
 	InnerModel *innerModel;
@@ -65,7 +65,9 @@ private:
 	QGraphicsScene scene;
 	QGraphicsView view;
 	QGraphicsPolygonItem *robot;
+	std::vector<QGraphicsItem*> boxes;
 
+  	void initializeWorld();
 	template <typename IntegerType>
 	IntegerType bitsToInt( const unsigned char* bits, uint init, bool little_endian = true )
 	{

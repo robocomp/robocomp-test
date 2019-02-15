@@ -211,6 +211,7 @@ class Grid
 			int kz = (z-dim.VMIN)/dim.TILE_SIZE;
 			return Key(dim.HMIN + kx*dim.TILE_SIZE, dim.VMIN + kz*dim.TILE_SIZE);
 		};
+
 //TODO: vector must be used with mutex control		
 		std::list<Key> occupied;
 		void removeOccupiedKey(Key k)
@@ -265,16 +266,19 @@ class Grid
 				{
 					T &p = fmap.at(Key(lk.x,lk.z));
 					auto iter = std::find(occupied.begin(), occupied.end(), Key(lk.x,lk.z));
-					if(iter != occupied.end())
-					{
-						p.cost = 10.f;
-						for(auto &&[dx, dz] : iter::zip(xincs, zincs))
-							try{ if( !(fmap.at(Key(lk.x+dx, lk.z+dz)).free)) p.cost = 10.f; }
-							catch(const std::exception& e){	};
-						neigh.emplace_back(std::make_pair(lk,p));
-qDebug()<<"occupied"<<lk.x<<lk.z;
-					}
-					else
+					//if(iter != occupied.end())
+					//{
+					//	continue;
+				
+// 			//		{
+// 						p.cost = 10.f;
+// 						for(auto &&[dx, dz] : iter::zip(xincs, zincs))
+// 							try{ if( !(fmap.at(Key(lk.x+dx, lk.z+dz)).free)) p.cost = 10.f; }
+// 							catch(const std::exception& e){	};
+// 						neigh.emplace_back(std::make_pair(lk,p));
+// qDebug()<<"occupied"<<lk.x<<lk.z;
+			//		}
+			//		else
 					{
 						if(p.free)
 						{
