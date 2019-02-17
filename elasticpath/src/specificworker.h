@@ -112,16 +112,20 @@ private:
 	//human
 	Human *humanA, *humanB;
 	QVector<Human*> human_vector;
+
 	//human Polygon
-	struct PolygonData
-	{
-		QString id;
-		QPolygonF polygon;
-		QGraphicsPolygonItem* item;
-	};
-	QMap<QString, PolygonData> human_poly;
+	// struct PolygonData
+	// {
+	// 	QString id;
+	// 	QPolygonF polygon;
+	// 	QGraphicsPolygonItem* item;
+	// };
+	//QMap<QString, PolygonData> human_poly;
+	std::vector<QGraphicsPolygonItem*> human_poly;
+
 //todo: remove when not needed
-QMap<QString, QGraphicsRectItem *>occupied;	
+	//QMap<QString, QGraphicsRectItem *>occupied;	
+
 	// Grid
 	using TDim = Grid<TCell>::Dimensions;
 	Grid<TCell> grid;
@@ -134,9 +138,10 @@ QMap<QString, QGraphicsRectItem *>occupied;
 	void cleanPoints();
 	void computeVisibility();
 	float exponentialFunction(float value, float xValue, float yValue, float min);
-	void updateFreeSpaceMap(QMap<QString, QPolygonF> poly_map);
+	//void updateFreeSpaceMap(QMap<QString, QPolygonF> poly_map);
+	void updateFreeSpaceMap(const std::vector<QPolygonF> &new_poly);
 	void createPathFromGraph(const std::list<QVec> &path);
-	void markGrid(QGraphicsPolygonItem* poly, bool occupied);
+	//void markGrid(QGraphicsPolygonItem* poly, bool occupied);
 
 	// Target
 	struct Target 

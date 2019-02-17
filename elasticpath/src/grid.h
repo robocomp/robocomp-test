@@ -22,6 +22,7 @@
 #include <iostream> 
 #include <fstream>
 #include <cppitertools/zip.hpp>
+#include <cppitertools/range.hpp>
 
 template<class T> auto operator<<(std::ostream& os, const T& t) -> decltype(t.save(os), os) 
 { 
@@ -114,6 +115,7 @@ class Grid
 				for( int j = dim.VMIN ; j < dim.VMIN + dim.HEIGHT ; j += dim.TILE_SIZE)
 					fmap.emplace( Key(i,j), initValue);
 	
+			fmap_aux = fmap;
 			std::cout << "Grid::Initialize. Grid initialized to map size: " << fmap.size() << std::endl;	
 		}
 		
@@ -212,19 +214,35 @@ class Grid
 			return Key(dim.HMIN + kx*dim.TILE_SIZE, dim.VMIN + kz*dim.TILE_SIZE);
 		};
 
-//TODO: vector must be used with mutex control		
-		std::list<Key> occupied;
-		void removeOccupiedKey(Key k)
+		void setFree(const Key &k)
 		{
-			occupied.push_back(k);
+			fmap_aux.at(k).free = true;
+			fmap.at(k).g_item->setBrush(QColor("Green"));
 		}
-		void addOccupiedKey(Key k)
+		void setOccupied(const Key &k)
 		{
-			occupied.remove(k);
+			fmap_aux.at(k).free = false;
+			fmap.at(k).g_item->setBrush(QColor("Red"));
 		}
+
+		void markAreaInGridAs(const QPolygonF &poly, bool free)
+		{
+			const qreal step = dim.TILE_SIZE/5;
+			QRectF box = poly.boundingRect();
+			for( auto &&x: iter::range(box.x(), box.x()+box.width(), step))
+				for( auto &&y: iter::range(box.y(), box.y()+box.height(), step))
+				{	
+					if(poly.containsPoint(QPointF(x,y), Qt::OddEvenFill))
+					{
+						if(free) setFree(pointToGrid(x, y));
+						else 	setOccupied(pointToGrid(x, y));
+					}
+				}
+		}
+
 		
 	private:
-		FMap fmap;
+		FMap fmap, fmap_aux;
 		Dimensions dim;
 		
 		/**
@@ -265,31 +283,17 @@ class Grid
 				try
 				{
 					T &p = fmap.at(Key(lk.x,lk.z));
-					auto iter = std::find(occupied.begin(), occupied.end(), Key(lk.x,lk.z));
-					//if(iter != occupied.end())
-					//{
-					//	continue;
-				
-// 			//		{
-// 						p.cost = 10.f;
-// 						for(auto &&[dx, dz] : iter::zip(xincs, zincs))
-// 							try{ if( !(fmap.at(Key(lk.x+dx, lk.z+dz)).free)) p.cost = 10.f; }
-// 							catch(const std::exception& e){	};
-// 						neigh.emplace_back(std::make_pair(lk,p));
-// qDebug()<<"occupied"<<lk.x<<lk.z;
-			//		}
-			//		else
+					T &p_aux = fmap_aux.at(Key(lk.x,lk.z));
+					if(p.free and p_aux.free)
 					{
-						if(p.free)
-						{
-							if(itx != 0 and itz != 0 and (fabs(itx) == fabs(itz)))
-								p.cost = 1.41;		// if neighboor in diagonal, cost is sqrt(2) Should be computed over the initial value
-							//if neigh node is close to a occupied node, increase its cost
-							for(auto &&[dx, dz] : iter::zip(xincs, zincs))
-								try{ if( !(fmap.at(Key(lk.x+dx, lk.z+dz)).free)) p.cost = 10.f; }
-								catch(const std::exception& e){	};
-							neigh.emplace_back(std::make_pair(lk,p));
-						}
+						// check that incs are not both zero but have the same abs valure, i.e. a diagonal
+						if(itx != 0 and itz != 0 and (fabs(itx) == fabs(itz)))
+							p.cost = 1.41;		// if neighboor in diagonal, cost is sqrt(2) Should be computed over the initial value
+						//if neigh node is close to a occupied node, increase its cost
+						for(auto &&[dx, dz] : iter::zip(xincs, zincs))
+							try{ if( !(fmap.at(Key(lk.x+dx, lk.z+dz)).free)) p.cost = 5.f; }
+							catch(const std::exception& e){	};
+						neigh.emplace_back(std::make_pair(lk,p));
 					}
 				}
 				catch(const std::exception& e)
