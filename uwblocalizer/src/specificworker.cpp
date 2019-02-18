@@ -83,24 +83,30 @@ void SpecificWorker::initialize(int period)
 	robot->setRotation(0);
 	robot->setZValue(1);
 
-
-	// serial_left.setPortName("/dev/ttyACM0");
-	// if(!serial_left.open(QIODevice::ReadWrite))	exit(-1); 
-	// serial_left.setBaudRate(QSerialPort::Baud115200);
-
-	// serial_right.setPortName("/dev/ttyACM1");
-	// if(!serial_right.open(QIODevice::ReadWrite))	exit(-1); 
-	// serial_right.setBaudRate(QSerialPort::Baud115200);
+	tail = scene.addPolygon(QPolygon(), QPen(QColor("Green"),90));
 	
-	// this->Period = period;
-	// timer.start(Period);
+
+	serial_left.setPortName("/dev/ttyACM0");
+	if(!serial_left.open(QIODevice::ReadWrite))	exit(-1); 
+		serial_left.setBaudRate(QSerialPort::Baud115200);
+
+	serial_right.setPortName("/dev/ttyACM1");
+	if(!serial_right.open(QIODevice::ReadWrite))	exit(-1); 
+		serial_right.setBaudRate(QSerialPort::Baud115200);
+	
+	this->Period = period;
+	timer.start(Period);
 }
 
 void SpecificWorker::compute()
 {
 	QPointF posL = readData(serial_left);
 	QPointF posR = readData(serial_right);
+	QLineF h(posL, posR);
 	robot->setPos((posL+posR)/2.f);
+	robot->setRotation(h.angle());
+
+	tail->polygon() << robot->pos();
 }
 
 QPointF SpecificWorker::readData(QSerialPort &serial)

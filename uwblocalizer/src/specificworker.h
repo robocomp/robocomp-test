@@ -64,8 +64,9 @@ private:
 	QSerialPort serial_left, serial_right; 
 	QGraphicsScene scene;
 	QGraphicsView view;
-	QGraphicsPolygonItem *robot;
+	QGraphicsPolygonItem *robot, *tail;
 	std::vector<QGraphicsItem*> boxes;
+	
 
   	void initializeWorld();
 	template <typename IntegerType>
