@@ -29,7 +29,6 @@
 
 #include <genericworker.h>
 #include <innermodel/innermodel.h>
-#include "serialport.h"
 #include <QtSerialPort/QSerialPort>
 #include <iostream>
 #include <QGraphicsScene>
@@ -60,7 +59,6 @@ private:
 	const float ROBOT_LENGTH = 400;
 
 	InnerModel *innerModel;
-	SerialPort *sport;
 	QSerialPort serial_left, serial_right; 
 	QGraphicsScene scene;
 	QGraphicsView view;
