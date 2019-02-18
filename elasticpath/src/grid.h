@@ -217,7 +217,7 @@ class Grid
 		void setFree(const Key &k)
 		{
 			fmap_aux.at(k).free = true;
-			fmap.at(k).g_item->setBrush(QColor("Green"));
+			fmap.at(k).g_item->setBrush(Qt::transparent);
 		}
 		void setOccupied(const Key &k)
 		{
