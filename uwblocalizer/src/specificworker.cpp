@@ -83,9 +83,7 @@ void SpecificWorker::initialize(int period)
 	robot->setRotation(0);
 	robot->setZValue(1);
 
-	tail = scene.addPolygon(QPolygon(), QPen(QColor("Green"),90));
 	
-
 	serial_left.setPortName("/dev/ttyACM0");
 	if(!serial_left.open(QIODevice::ReadWrite))	exit(-1); 
 		serial_left.setBaudRate(QSerialPort::Baud115200);
@@ -100,7 +98,7 @@ void SpecificWorker::initialize(int period)
 
 void SpecificWorker::compute()
 {
-	static QPointF pos_ant;
+	static QPointF pos_ant = robot->pos();
 	QPointF posL = readData(serial_left);
 	QPointF posR = readData(serial_right);
 	QLineF h(posL, posR);
@@ -109,11 +107,9 @@ void SpecificWorker::compute()
 
 	if(QVector2D(robot->pos()-pos_ant).length()>50)
 	{
-		QPolygonF poly = tail->polygon();
-		poly << robot->pos();
-		tail->setPolygon(poly);
+		scene.addLine(QLineF(pos_ant, robot->pos()));
+		pos_ant = robot->pos();
 	}
-	pos_ant = robot->pos();
 }
 
 QPointF SpecificWorker::readData(QSerialPort &serial)
