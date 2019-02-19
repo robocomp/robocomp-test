@@ -100,13 +100,20 @@ void SpecificWorker::initialize(int period)
 
 void SpecificWorker::compute()
 {
+	static QPointF pos_ant;
 	QPointF posL = readData(serial_left);
 	QPointF posR = readData(serial_right);
 	QLineF h(posL, posR);
 	robot->setPos((posL+posR)/2.f);
 	robot->setRotation(h.angle());
 
-	tail->polygon() << robot->pos();
+	if(QVector2D(robot->pos()-pos_ant).length()>50)
+	{
+		QPolygonF poly = tail->polygon();
+		poly << robot->pos();
+		tail->setPolygon(poly);
+	}
+	pos_ant = robot->pos();
 }
 
 QPointF SpecificWorker::readData(QSerialPort &serial)
