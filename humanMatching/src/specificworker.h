@@ -44,12 +44,19 @@ public:
 
 	void HumanPose_obtainHumanPose(const humansDetected &list_of_humans);
 
+    
+    QList<QString> humans;
+    
+    //utils
+    void add_human_innermodel(PersonType person);
+    float euclideanD(float x1, float z1, float x2, float z2);
+    
 public slots:
 	void compute();
 	void initialize(int period);
 
 private:
-	InnerModel *innerModel;
+	std::shared_ptr<InnerModel> innerModel;
 #ifdef USE_QTGUI
 	OsgView *osgView;
 	InnerModelViewer *innerModelViewer;

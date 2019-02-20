@@ -27,12 +27,14 @@ SpecificWorker::SpecificWorker(MapPrx& mprx) : GenericWorker(mprx)
 #ifdef USE_QTGUI
 	innerModelViewer = NULL;
 	osgView = new OsgView(this);
+    this->setMinimumSize(800,800);
+    osgView->setMinimumSize(800,800);
+    osgView->getCamera()->setViewport(new osg::Viewport(0, 0, 800, 800));
 	osgGA::TrackballManipulator *tb = new osgGA::TrackballManipulator;
-	osg::Vec3d eye(osg::Vec3(4000.,4000.,-1000.));
-	osg::Vec3d center(osg::Vec3(0.,0.,-0.));
+	osg::Vec3d eye(osg::Vec3(0., 9000., -17000.));
+	osg::Vec3d center(osg::Vec3(0., 0.,-0.));
 	osg::Vec3d up(osg::Vec3(0.,1.,0.));
-	tb->setHomePosition(eye, center, up, true);
-	tb->setByMatrix(osg::Matrixf::lookAt(eye,center,up));
+	tb->setHomePosition(eye, center, up, false);
 	osgView->setCameraManipulator(tb);
 #endif
 }
@@ -48,24 +50,18 @@ SpecificWorker::~SpecificWorker()
 bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList params)
 {
 //       THE FOLLOWING IS JUST AN EXAMPLE
-//	To use innerModelPath parameter you should uncomment specificmonitor.cpp readConfig method content
-//	try
-//	{
-//		RoboCompCommonBehavior::Parameter par = params.at("InnerModelPath");
-//		std::string innermodel_path = par.value;
-//		innerModel = new InnerModel(innermodel_path);
-//	}
-//	catch(std::exception e) { qFatal("Error reading config params"); }
+	try
+	{
+		RoboCompCommonBehavior::Parameter par = params.at("InnerModelPath");
+		std::string innermodel_path = par.value;
+		innerModel = std::make_shared<InnerModel>(innermodel_path);
+	}
+	catch(std::exception e) { qFatal("Error reading config params"); }
 
 
 #ifdef USE_QTGUI
 	innerModelViewer = new InnerModelViewer (innerModel, "root", osgView->getRootGroup(), true);
 #endif
-
-
-	
-
-
 	return true;
 }
 
@@ -78,29 +74,50 @@ void SpecificWorker::initialize(int period)
 
 void SpecificWorker::compute()
 {
-	//computeCODE
-//	QMutexLocker locker(mutex); 
-// 	try
-// 	{
-// 		camera_proxy->getYImage(0,img, cState, bState);
-// 		memcpy(image_gray.data, &img[0], m_width*m_height*sizeof(uchar));
-// 		searchTags(image_gray);
-// 	}
-// 	catch(const Ice::Exception &e)
-// 	{
-// 		std::cout << "Error reading from Camera" << e << std::endl;
-// 	}
+
 #ifdef USE_QTGUI
-	if (innerModelViewer) innerModelViewer->update();
+    innerModel->update();
+    if (innerModelViewer)
+    { 
+        innerModelViewer->update();
+    }
 	osgView->frame();
 #endif
 }
 
 
+//Receive humanlist publicacion
 void SpecificWorker::HumanPose_obtainHumanPose(const humansDetected &list_of_humans)
 {
-//subscribesToCODE
-
+    std::cout << "humanlist received: "<<list_of_humans.size() << std::endl;
+    add_human_innermodel(list_of_humans[0]);
 }
 
+
+//UTILS
+void SpecificWorker::add_human_innermodel(PersonType person)
+{
+    try
+    {
+        QString name = QString::number(person.id);
+     //	QString meshPath = QString("/home/robocomp/robocomp/components/robocomp-shelly/models/human01.3ds");
+        QString meshPath = QString("//home/robocomp/robocomp/files/osgModels/mobiliario/taza.osg");
+        InnerModelNode* room = innerModel->getNode("room");
+        InnerModelTransform* transform = innerModel->newTransform(name, "static", room, person.pos.x, 0, person.pos.z, 0, person.pos.ry, 0, 0);
+        room->addChild(transform);
+        InnerModelMesh* mesh = innerModel->newMesh(name+"_mesh", transform, meshPath, 120, 0, 0, 0, 1.5708, 0, 3.1416, false);
+        transform->addChild(mesh);
+innerModel->save("save.xml");
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
+    }
+}
+
+
+float SpecificWorker::euclideanD(float x1, float z1, float x2, float z2)
+{
+    return sqrt((x1-x2)*(x1-x2) + (z1-z2)*(z1-z2));
+}
 
