@@ -27,12 +27,16 @@
 #ifndef SPECIFICWORKER_H
 #define SPECIFICWORKER_H
 
+#include <lemon/list_graph.h>
 #include <genericworker.h>
 #include <innermodel/innermodel.h>
 #ifdef USE_QTGUI
 	#include <osgviewer/osgview.h>
 	#include <innermodel/innermodelviewer.h>
 #endif
+
+using namespace lemon;
+using namespace std;
 
 class SpecificWorker : public GenericWorker
 {
