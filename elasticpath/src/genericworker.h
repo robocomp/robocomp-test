@@ -47,7 +47,7 @@ using namespace RoboCompSocialNavigationGaussian;
 using namespace RoboCompGenericBase;
 using namespace RoboCompDifferentialRobot;
 
-using TuplePrx = std::tuple<RoboCompSocialNavigationGaussian::SocialNavigationGaussianPrxPtr,RoboCompOmniRobot::OmniRobotPrxPtr,RoboCompDifferentialRobot::DifferentialRobotPrxPtr>;
+using TuplePrx = std::tuple<RoboCompDifferentialRobot::DifferentialRobotPrxPtr,RoboCompGenericBase::GenericBasePrxPtr,RoboCompOmniRobot::OmniRobotPrxPtr,RoboCompSocialNavigationGaussian::SocialNavigationGaussianPrxPtr>;
 
 
 class GenericWorker :
@@ -69,6 +69,7 @@ public:
 
 
 	DifferentialRobotPrxPtr differentialrobot_proxy;
+	GenericBasePrxPtr genericbase_proxy;
 	OmniRobotPrxPtr omnirobot_proxy;
 	SocialNavigationGaussianPrxPtr socialnavigationgaussian_proxy;
 

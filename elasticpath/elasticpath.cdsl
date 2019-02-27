@@ -6,7 +6,7 @@ Component elasticpath
 {
     Communications
     {
-		  requires SocialNavigationGaussian, DifferentialRobot, OmniRobot;
+		  requires SocialNavigationGaussian, DifferentialRobot, OmniRobot, GenericBase;
     };
     language Cpp11;
     gui Qt(QWidget);

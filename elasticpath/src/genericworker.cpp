@@ -29,6 +29,7 @@ QObject()
 
 {
 	differentialrobot_proxy = std::get<DifferentialRobotPrxPtr>(tprx);
+	genericbase_proxy = std::get<GenericBasePrxPtr>(tprx);
 	omnirobot_proxy = std::get<OmniRobotPrxPtr>(tprx);
 	socialnavigationgaussian_proxy = std::get<SocialNavigationGaussianPrxPtr>(tprx);
 

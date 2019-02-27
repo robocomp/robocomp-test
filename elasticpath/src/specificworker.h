@@ -75,15 +75,16 @@ public slots:
 private:
 
 	//constants
-	const float LEFT = -2500, BOTTOM = -4500, WIDTH = 10000, HEIGHT = 5000;
+	const float LEFT = -790, BOTTOM = 0, WIDTH = 5960, HEIGHT = 9700;
 	const float ROBOT_LENGTH = 400;
 	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.9;
 	const float MAX_LASER_DIST = 4000;
 	const float LASER_DIST_STEP = 0.05;
 	const int TILE_SIZE = 200;
 	const float LASER_ANGLE_STEPS = 50;	
-	const float ROBOT_MAX_ADVANCE_SPEED = 600;
-	
+	const float ROBOT_MAX_ADVANCE_SPEED = 200;
+	const float ROBOT_MAX_ROTATION_SPEED = 0.3;
+    
 	InnerModel *innerModel;
 	QGraphicsScene scene;
 	QGraphicsView view;
@@ -93,7 +94,7 @@ private:
 	QGraphicsPolygonItem *robot;
 	QGraphicsRectItem *target;
 	QGraphicsRectItem *north, *south, *west, *east, *middle;
-	
+	bool active = false;
 	
 	std::vector<QGraphicsItem*> boxes;
 	QGraphicsPolygonItem *laser_polygon = nullptr;

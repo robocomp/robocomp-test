@@ -70,14 +70,14 @@ void SpecificWorker::initialize(int period)
     layout->addWidget(&view);
 	this->setLayout(layout);
 	view.fitInView(scene.sceneRect(), Qt::KeepAspectRatio );
-	QSettings settings("RoboComp", "ElasticPath");
+/*	QSettings settings("RoboComp", "ElasticPath");
     settings.beginGroup("MainWindow");
     	resize(settings.value("size", QSize(400, 400)).toSize());
     settings.endGroup();
 	settings.beginGroup("QGraphicsView");
 		view.setTransform(settings.value("matrix", QTransform()).value<QTransform>());
 	settings.endGroup();
-
+*/
 
     //Load World
     initializeWorld();
@@ -97,8 +97,9 @@ void SpecificWorker::initialize(int period)
 	// target
 	target = scene.addRect(QRectF(-80, -80, 160, 160));
 	target->setFlag(QGraphicsItem::ItemIsMovable);
-	target->setPos(500, -1000);
+	target->setPos(robot->pos());
 	target->setBrush(QColor("LightBlue"));
+    active = false;
 
 	// path
 	std::random_device rd;  //Will be used to obtain a seed for the random number engine
@@ -123,10 +124,10 @@ void SpecificWorker::initialize(int period)
     //People
 	humanA = new Human(QRectF(-400,-400,800,800), socialnavigationgaussian_proxy, &scene, QColor("LightBlue"), QPointF(2500, -2000));
 	scene.addItem(humanA);
-	human_vector.push_back(humanA);
+//	human_vector.push_back(humanA);
 	humanB = new Human(QRectF(-400,-400,800,800), socialnavigationgaussian_proxy, &scene, QColor("LightGreen"), QPointF(2500, -2900));
 	scene.addItem(humanB);
-	human_vector.push_back(humanB);
+//	human_vector.push_back(humanB);
 	
 	//Axis   
 	auto axisX = scene.addRect(QRectF(0, 0, 200, 20), QPen(Qt::red), QBrush(QColor("red")));
@@ -180,8 +181,8 @@ void SpecificWorker::initialize(int period)
 	// connect(&timerRobot, &QTimer::timeout, this, &SpecificWorker::controller);
 	
 	// Proxemics
-	connect(humanA, &Human::personChangedSignal, this, &SpecificWorker::personChangedSlot);
-	connect(humanB, &Human::personChangedSignal, this, &SpecificWorker::personChangedSlot);
+//	connect(humanA, &Human::personChangedSignal, this, &SpecificWorker::personChangedSlot);
+//	connect(humanB, &Human::personChangedSignal, this, &SpecificWorker::personChangedSlot);
 	
 }
 
@@ -207,7 +208,7 @@ void SpecificWorker::initializeWorld()
         QVariantList object = t.toList();
         auto box = scene.addRect(QRectF(-object[2].toFloat()/2, -object[3].toFloat()/2, object[2].toFloat(), object[3].toFloat()), QPen(QColor("SandyBrown")), QBrush(QColor("SandyBrown")));
         box->setPos(object[4].toFloat(), object[5].toFloat());
-        //box->setRotation(object[6].toFloat()*180/M_PI2);
+        box->setRotation(object[6].toFloat());
         boxes.push_back(box);
     }
     //load roundtables
@@ -229,6 +230,18 @@ void SpecificWorker::initializeWorld()
         //box->setRotation(object[6].toFloat()*180/M_PI2);
         boxes.push_back(box);
     }
+    
+    //load points
+    QVariantMap points = mainMap[QString("points")].toMap();
+    for (auto &t: points)
+    {
+         QVariantList object = t.toList();
+         auto box = scene.addRect(QRectF(-object[2].toFloat()/2, -object[3].toFloat()/2, object[2].toFloat(), object[3].toFloat()), QPen(QColor("Brown")), QBrush(QColor("Brown")));
+         box->setPos(object[4].toFloat(), object[5].toFloat());
+    //     //box->setRotation(object[6].toFloat()*180/M_PI2);
+         boxes.push_back(box);
+    }
+    
 }
 
 // SLOTS
@@ -476,7 +489,9 @@ void SpecificWorker::controller()
 {
 	// Check for inminent collision to block and bounce backwards using laser field
 
-
+    if (not active)
+        return;
+        
 	// Compute distance to target along path
 	float dist_to_target = 0.f;
 	for(auto &&g : iter::sliding_window(points, 2))
@@ -485,42 +500,45 @@ void SpecificWorker::controller()
 	// Check for arrival to target
 	if(dist_to_target < ROBOT_LENGTH)
 	{
+        std::cout << "TARGET ACHIEVED" << std::endl;
 		advVelz = 0;
 		rotVel = 0;
-		return;
+        active = false;
 	}
+    else
+    {
+        // Check for blocking
+        auto num_free = std::count_if(std::begin(points), std::end(points), [](auto &&p){ return p->data(0) == true;});
+        //qDebug() << "num free " << num_free;
+        if(num_free < ROBOT_LENGTH / ROAD_STEP_SEPARATION)
+        {
+            qDebug() << __FUNCTION__ << "Blocked!";
+            advVelz = 0;
+            rotVel = 0;
+            std::list<QVec> path = grid.computePath(Grid<TCell>::Key(robot->pos()), Grid<TCell>::Key(target->pos()));
+            if(path.size() > 0) createPathFromGraph(path);
+        }
 
-	// Check for blocking
-	auto num_free = std::count_if(std::begin(points), std::end(points), [](auto &&p){ return p->data(0) == true;});
-	//qDebug() << "num free " << num_free;
-	if(num_free < ROBOT_LENGTH / ROAD_STEP_SEPARATION)
-	{
-		qDebug() << __FUNCTION__ << "Blocked!";
-		advVelz = 0;
-		rotVel = 0;
-		std::list<QVec> path = grid.computePath(Grid<TCell>::Key(robot->pos()), Grid<TCell>::Key(target->pos()));
-		if(path.size() > 0) createPathFromGraph(path);
-	}
-
-	// Compute rotation speed. We use angle between robot's nose and line between first and sucessive points
-	// as an estimation of curvature ahead
-	std::vector<float> angles;
-	auto lim = std::min(6, (int)points.size());
-	QLineF nose(robot->pos(), robot->mapToScene(QPointF( 0, 50)));
-	for(auto &&i: iter::range(1,lim))
-		angles.push_back(rewrapAngleRestricted(qDegreesToRadians(nose.angleTo(QLineF(first->pos(),points[i]->pos())))));
-	auto min_angle = std::min(angles.begin(), angles.end());	
-	rotVel = -0.7 * *min_angle;
-
-	// Compute advance speed
-	advVelz = ROBOT_MAX_ADVANCE_SPEED /**	exponentialFunction(1./dist_to_target, 1./700, 0.4, 0.1)*/
-									  * exponentialFunction(rotVel, 0.4, 0.4, 0.f);
-	//qDebug() << rotVel << advVelz;
+        // Compute rotation speed. We use angle between robot's nose and line between first and sucessive points
+        // as an estimation of curvature ahead
+        std::vector<float> angles;
+        auto lim = std::min(6, (int)points.size());
+        QLineF nose(robot->pos(), robot->mapToScene(QPointF( 0, 50)));
+        for(auto &&i: iter::range(1,lim))
+            angles.push_back(rewrapAngleRestricted(qDegreesToRadians(nose.angleTo(QLineF(first->pos(),points[i]->pos())))));
+        auto min_angle = std::min(angles.begin(), angles.end());	
+        //rotVel = -0.7 * *min_angle;
+        rotVel = 0.7 * *min_angle;
+        // Compute advance speed
+        advVelz = ROBOT_MAX_ADVANCE_SPEED /**	exponentialFunction(1./dist_to_target, 1./700, 0.4, 0.1)*/
+                                        * exponentialFunction(rotVel, 0.7, 0.7, 0.f);
+    }
+    std::cout << "adv: "<< advVelz << " rot: " << rotVel << std::endl;
 									  
 //TODO:	//use differentialrobot_proxy to send speed to real base (Robex)
 	try
 	{
-//		differentialrobot_proxy->setSpeedBase(advVelz, rotVel);
+		differentialrobot_proxy->setSpeedBase(advVelz, rotVel);
 	}
 	catch(...)
 	{
@@ -546,7 +564,8 @@ void SpecificWorker::updateRobot()
 	// if ( (fabs(advVelx)<0.0001 and fabs(advVelz)<0.0001 and fabs(rotVel)<0.0001))
 	// 	return;
 	
-	static QTime reloj = QTime::currentTime();
+//
+/*    static QTime reloj = QTime::currentTime();
 	QVec incs = QVec::vec3(0, advVelz, rotVel) * ((float)reloj.restart() / 1000.f);
 	bState.alpha += incs.z();
 	
@@ -569,9 +588,20 @@ void SpecificWorker::updateRobot()
 	bState.x = r.x();
 	bState.z = r.y();
 	//r.print("r after");
-	//qDebug() << "bState after" << bState.x << bState.z << bState.alpha;
+*/
+    try
+    {
+        genericbase_proxy->getBaseState(bState);
+    }
+    catch(...)
+    {
+        std::cout << "Error getting robot position from genericBase" << std::endl;
+    }
+    
+//    qDebug() << "bState after" << bState.x << bState.z << bState.alpha;
 	robot->setPos(bState.x, bState.z);
 	robot->setRotation(qRadiansToDegrees(bState.alpha));
+    
 }
 
 //////////////////////////////////////////////////////////////////777
@@ -612,6 +642,7 @@ void SpecificWorker::mousePressEvent(QMouseEvent *event)
 		{
 			createPathFromGraph(path);
 			target->setPos(p);
+            active = true;
 		}
 		// for(auto &&p: path)
 		// 	p.print("p");
