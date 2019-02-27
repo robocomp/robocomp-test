@@ -1,6 +1,14 @@
 CommonBehavior.Endpoints=tcp -p 10000
 
+# Endpoints for subscriptions
+IMUPubTopic.Endpoints=tcp -p 20000
+GenericBase.Endpoints=tcp -p 20004
 
+# Proxies for required interfaces
+DifferentialRobotProxy = differentialrobot:tcp -h localhost -p 10004
+
+# This property is used by the clients to connect to IceStorm.
+TopicManager.Proxy=IceStorm/TopicManager:default -p 9999
 
 InnerModelPath = innermodel.xml
 

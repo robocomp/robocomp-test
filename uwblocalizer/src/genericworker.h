@@ -32,13 +32,21 @@
 
 #include <CommonBehavior.h>
 
+#include <DifferentialRobot.h>
+#include <GenericBase.h>
+#include <IMUPub.h>
+#include <IMU.h>
 
 #define CHECK_PERIOD 5000
 #define BASIC_PERIOD 100
 
 using namespace std;
+using namespace RoboCompIMU;
+using namespace RoboCompIMUPub;
+using namespace RoboCompGenericBase;
+using namespace RoboCompDifferentialRobot;
 
-using TuplePrx = std::tuple<>;
+using TuplePrx = std::tuple<RoboCompDifferentialRobot::DifferentialRobotPrxPtr>;
 
 
 class GenericWorker :
@@ -59,7 +67,11 @@ public:
 	QMutex *mutex;
 
 
+	DifferentialRobotPrxPtr differentialrobot_proxy;
 
+	virtual void GenericBase_getBaseState(RoboCompGenericBase::TBaseState &state) = 0;
+	virtual void GenericBase_getBasePose(int &x, int &z, float &alpha) = 0;
+	virtual void IMUPub_publish(RoboCompIMU::DataImu imu) = 0;
 
 protected:
 	QTimer timer;

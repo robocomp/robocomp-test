@@ -28,6 +28,7 @@ QObject()
 #endif
 
 {
+	differentialrobot_proxy = std::get<DifferentialRobotPrxPtr>(tprx);
 
 	mutex = new QMutex(QMutex::Recursive);
 

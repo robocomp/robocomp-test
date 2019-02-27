@@ -86,14 +86,39 @@ void SpecificWorker::initialize(int period)
 	
 	serial_left.setPortName("/dev/ttyACM0");
 	if(!serial_left.open(QIODevice::ReadWrite))	exit(-1); 
-		serial_left.setBaudRate(QSerialPort::Baud115200);
+	serial_left.setBaudRate(QSerialPort::Baud115200);
 
 	serial_right.setPortName("/dev/ttyACM1");
 	if(!serial_right.open(QIODevice::ReadWrite))	exit(-1); 
-		serial_right.setBaudRate(QSerialPort::Baud115200);
+	serial_right.setBaudRate(QSerialPort::Baud115200);
 	
+    //compute initial orientation
+    compute_initial_orientation(50);
+    
 	this->Period = period;
 	timer.start(Period);
+}
+
+void SpecificWorker::compute_initial_orientation(int ntimes)
+{
+    QPointF posL, posR;
+    std::vector<float> values;
+    for (int cont=0;cont < ntimes;cont++)
+    {
+        posL = readData(serial_left);
+        posR = readData(serial_right);
+        values.push_back(QLineF(posR, posL).angle());
+
+    }
+	robot->setPos((posL+posR)/2.f);
+    //Compute median
+    std::sort(values.begin(), values.end());
+    size_t size = values.size();
+    if (size % 2 == 0)
+      initialAngle = ((values[size / 2 - 1] + values[size / 2]) / 2);
+    else 
+      initialAngle = (values[size / 2]);
+	std::cout << "Initial orientation ==> " << initialAngle << std::endl;
 }
 
 void SpecificWorker::compute()
@@ -101,13 +126,14 @@ void SpecificWorker::compute()
 	static QPointF pos_ant = robot->pos();
 	QPointF posL = readData(serial_left);
 	QPointF posR = readData(serial_right);
-	QLineF h(posL, posR);
+//	QLineF h(posL, posR);
+//	robot->setRotation(h.angle());
 	robot->setPos((posL+posR)/2.f);
-	robot->setRotation(h.angle());
+	robot->setRotation(-correctedAngle);
 
 	if(QVector2D(robot->pos()-pos_ant).length()>50)
 	{
-		scene.addLine(QLineF(pos_ant, robot->pos()));
+		scene.addLine(QLineF(pos_ant, robot->pos()), QPen(QColor("Green"), 50));
 		pos_ant = robot->pos();
 	}
 }
@@ -201,15 +227,15 @@ void SpecificWorker::initializeWorld()
     }
     
     //load walls
-    // QVariantMap walls = mainMap[QString("walls")].toMap();
-    // for (auto &t: walls)
-    // {
-    //     QVariantList object = t.toList();
-    //     auto box = scene.addRect(QRectF(-object[2].toFloat()/2, -object[3].toFloat()/2, object[2].toFloat(), object[3].toFloat()), QPen(QColor("Brown")), QBrush(QColor("Brown")));
-    //     box->setPos(object[4].toFloat(), object[5].toFloat());
+    QVariantMap points = mainMap[QString("points")].toMap();
+    for (auto &t: points)
+    {
+         QVariantList object = t.toList();
+         auto box = scene.addRect(QRectF(-object[2].toFloat()/2, -object[3].toFloat()/2, object[2].toFloat(), object[3].toFloat()), QPen(QColor("Brown")), QBrush(QColor("Brown")));
+         box->setPos(object[4].toFloat(), object[5].toFloat());
     //     //box->setRotation(object[6].toFloat()*180/M_PI2);
-    //     boxes.push_back(box);
-    // }
+         boxes.push_back(box);
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -218,3 +244,39 @@ void SpecificWorker::initializeWorld()
 		//int z = (b[16] << 24) | (b[15] << 16) | (b[14] << 8) | (b[13]);
 		//int qf = (b[17] << 24) | (0 << 16) | (0 << 8) | (0);
 		//qDebug() << x << y << z;
+
+// IMU SUBSCRIPTION
+void SpecificWorker::IMUPub_publish(RoboCompIMU::DataImu imu)
+{
+//    std::cout<< "angle "<< imu.rot.Yaw << " corrected angle "<<imu.rot.Yaw + initialAngle <<std::endl;
+//    std::cout << "pose " << robot->pos()<<std::endl;
+	correctedAngle = imu.rot.Yaw + initialAngle;
+//	robot->setRotation(qRadiansToDegrees(imu.rot.Yaw + initialAngle));
+}
+
+//GENERIC BASE IMPLEMENTATION
+void SpecificWorker::GenericBase_getBaseState(RoboCompGenericBase::TBaseState &state)
+{
+    state.x = robot->pos().x();
+    state.z = robot->pos().y();
+    state.alpha = degreesToRadians(-correctedAngle);
+}
+
+void SpecificWorker::GenericBase_getBasePose(int &x, int &z, float &alpha)
+{
+	x = robot->pos().x();
+    z = robot->pos().y();
+    alpha = degreesToRadians(-correctedAngle);
+}
+
+//UTILITIES
+float SpecificWorker::degreesToRadians(const float angle_)
+{	
+	float angle = angle_ * 2*M_PI / 360;
+	if(angle > M_PI)
+   		return angle - M_PI*2;
+	else if(angle < -M_PI)
+   		return angle + M_PI*2;
+	else return angle;
+}
+

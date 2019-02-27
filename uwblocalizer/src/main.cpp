@@ -81,7 +81,13 @@
 #include "specificmonitor.h"
 #include "commonbehaviorI.h"
 
+#include <genericbaseI.h>
+#include <imupubI.h>
 
+#include <DifferentialRobot.h>
+#include <GenericBase.h>
+#include <IMUPub.h>
+#include <IMU.h>
 
 
 // User includes here
@@ -133,12 +139,39 @@ int ::uwblocalizer::run(int argc, char* argv[])
 
 	int status=EXIT_SUCCESS;
 
+	DifferentialRobotPrxPtr differentialrobot_proxy;
 
 	string proxy, tmp;
 	initialize();
 
 
-	tprx = std::tuple<>();
+	try
+	{
+		if (not GenericMonitor::configGetString(communicator(), prefix, "DifferentialRobotProxy", proxy, ""))
+		{
+			cout << "[" << PROGRAM_NAME << "]: Can't read configuration for proxy DifferentialRobotProxy\n";
+		}
+		differentialrobot_proxy = Ice::uncheckedCast<DifferentialRobotPrx>( communicator()->stringToProxy( proxy ) );
+	}
+	catch(const Ice::Exception& ex)
+	{
+		cout << "[" << PROGRAM_NAME << "]: Exception creating proxy DifferentialRobot: " << ex;
+		return EXIT_FAILURE;
+	}
+	rInfo("DifferentialRobotProxy initialized Ok!");
+
+	IceStorm::TopicManagerPrxPtr topicManager;
+	try
+	{
+		topicManager = Ice::checkedCast<IceStorm::TopicManagerPrx>(communicator()->propertyToProxy("TopicManager.Proxy"));
+	}
+	catch (const Ice::Exception &ex)
+	{
+		cout << "[" << PROGRAM_NAME << "]: Exception: STORM not running: " << ex << endl;
+		return EXIT_FAILURE;
+	}
+
+	tprx = std::make_tuple(differentialrobot_proxy);
 	SpecificWorker *worker = new SpecificWorker(tprx);
 	//Monitor thread
 	SpecificMonitor *monitor = new SpecificMonitor(worker,communicator());
@@ -177,6 +210,64 @@ int ::uwblocalizer::run(int argc, char* argv[])
 
 
 
+		try
+		{
+			// Server adapter creation and publication
+			if (not GenericMonitor::configGetString(communicator(), prefix, "GenericBase.Endpoints", tmp, ""))
+			{
+				cout << "[" << PROGRAM_NAME << "]: Can't read configuration for proxy GenericBase";
+			}
+			Ice::ObjectAdapterPtr adapterGenericBase = communicator()->createObjectAdapterWithEndpoints("GenericBase", tmp);
+			auto genericbase = std::make_shared<GenericBaseI>(worker);
+			adapterGenericBase->add(genericbase, Ice::stringToIdentity("genericbase"));
+			adapterGenericBase->activate();
+			cout << "[" << PROGRAM_NAME << "]: GenericBase adapter created in port " << tmp << endl;
+			}
+			catch (const IceStorm::TopicExists&){
+				cout << "[" << PROGRAM_NAME << "]: ERROR creating or activating adapter for GenericBase\n";
+			}
+
+
+
+		// Server adapter creation and publication
+		std::shared_ptr<IceStorm::TopicPrx> imupub_topic;
+		Ice::ObjectPrxPtr imupub;
+		try
+		{
+			if (not GenericMonitor::configGetString(communicator(), prefix, "IMUPubTopic.Endpoints", tmp, ""))
+			{
+				cout << "[" << PROGRAM_NAME << "]: Can't read configuration for proxy IMUPubProxy";
+			}
+			Ice::ObjectAdapterPtr IMUPub_adapter = communicator()->createObjectAdapterWithEndpoints("imupub", tmp);
+			IMUPubPtr imupubI_ =  std::make_shared <IMUPubI>(worker);
+			auto imupub = IMUPub_adapter->addWithUUID(imupubI_)->ice_oneway();
+			if(!imupub_topic)
+			{
+				try {
+					imupub_topic = topicManager->create("IMUPub");
+				}
+				catch (const IceStorm::TopicExists&) {
+					//Another client created the topic
+					try{
+						cout << "[" << PROGRAM_NAME << "]: Probably other client already opened the topic. Trying to connect.\n";
+						imupub_topic = topicManager->retrieve("IMUPub");
+					}
+					catch(const IceStorm::NoSuchTopic&)
+					{
+						cout << "[" << PROGRAM_NAME << "]: Topic doesn't exists and couldn't be created.\n";
+						//Error. Topic does not exist
+					}
+				}
+				IceStorm::QoS qos;
+				imupub_topic->subscribeAndGetPublisher(qos, imupub);
+			}
+			IMUPub_adapter->activate();
+		}
+		catch(const IceStorm::NoSuchTopic&)
+		{
+			cout << "[" << PROGRAM_NAME << "]: Error creating IMUPub topic.\n";
+			//Error. Topic does not exist
+		}
 
 		// Server adapter creation and publication
 		cout << SERVER_FULL_NAME " started" << endl;
@@ -190,6 +281,15 @@ int ::uwblocalizer::run(int argc, char* argv[])
 		// Run QT Application Event Loop
 		a.exec();
 
+		try
+		{
+			std::cout << "Unsubscribing topic: imupub " <<std::endl;
+			imupub_topic->unsubscribe( imupub );
+		}
+		catch(const Ice::Exception& ex)
+		{
+			std::cout << "ERROR Unsubscribing topic: imupub " <<std::endl;
+		}
 
 		status = EXIT_SUCCESS;
 	}

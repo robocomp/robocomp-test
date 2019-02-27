@@ -45,7 +45,9 @@ public:
 	SpecificWorker(TuplePrx tprx);
 	~SpecificWorker();
 	bool setParams(RoboCompCommonBehavior::ParameterList params);
-
+    void IMUPub_publish(RoboCompIMU::DataImu imu);
+    void GenericBase_getBaseState(RoboCompGenericBase::TBaseState &state);
+	void GenericBase_getBasePose(int &x, int &z, float &alpha);
 
 public slots:
 	void compute();
@@ -59,6 +61,7 @@ private:
 	const float ROBOT_LENGTH = 400;
 
 	InnerModel *innerModel;
+    float initialAngle, correctedAngle;
 	QSerialPort serial_left, serial_right; 
 	QGraphicsScene scene;
 	QGraphicsView view;
@@ -79,7 +82,8 @@ private:
 			result = (result << 8) + bits[ n ];
 		return result;
 	}
-
+    void compute_initial_orientation(int ntimes);
+	float degreesToRadians(const float angle_);
 	protected:
 		void mousePressEvent(QMouseEvent *event) override;
 
