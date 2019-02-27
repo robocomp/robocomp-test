@@ -58,8 +58,11 @@ void SpecificWorker::initialize(int period)
 	this->setLayout(layout);
 	view.fitInView(scene.sceneRect(), Qt::KeepAspectRatio );
 
+	 //Load World
+    initializeWorld();
+
 	//walls
-	scene.addRect(QRectF(LEFT, BOTTOM, WIDTH, HEIGHT), QPen(QColor("Brown"), 30));
+//	scene.addRect(QRectF(LEFT, BOTTOM, WIDTH, HEIGHT), QPen(QColor("Brown"), 30));
 
 	//Axis   
 	auto axisX = scene.addLine(QLineF(0, 0, 500, 0), QPen(Qt::red, 50));
@@ -69,8 +72,7 @@ void SpecificWorker::initialize(int period)
 	axisZ->setPos(0,0);
 	boxes.push_back(axisZ);
 
-	 //Load World
-    initializeWorld();
+
 
 	// Robot 
 	QPolygonF poly2;
@@ -225,8 +227,18 @@ void SpecificWorker::initializeWorld()
         box->setRotation(object[6].toFloat());
         boxes.push_back(box);
     }
-    
     //load walls
+	QVariantMap walls = mainMap[QString("walls")].toMap();
+    for (auto &t: walls)
+    {
+        QVariantList object = t.toList();
+        auto box = scene.addRect(QRectF(-object[2].toFloat()/2, -object[3].toFloat()/2, object[2].toFloat(), object[3].toFloat()), QPen(QColor("Brown")), QBrush(QColor("Brown")));
+        box->setPos(object[4].toFloat(), object[5].toFloat());
+        box->setRotation(object[6].toFloat());
+        boxes.push_back(box);
+    }
+
+	//load points
     QVariantMap points = mainMap[QString("points")].toMap();
     for (auto &t: points)
     {
