@@ -2,6 +2,8 @@ CommonBehavior.Endpoints=tcp -p 10000
 
 GenericBaseProxy = genericbase:tcp -h 192.168.0.111 -p 20004
 DifferentialRobotProxy = differentialrobot:tcp -h 192.168.0.111 -p 10004
+#GenericBaseProxy = genericbase:tcp  -p 20004
+#DifferentialRobotProxy = differentialrobot:tcp -p 10004
 SocialNavigationGaussianProxy = socialnavigationgaussian:tcp -h localhost -p 20020
 OmniRobotProxy = omnirobot:tcp -h localhost -p 12238
 
