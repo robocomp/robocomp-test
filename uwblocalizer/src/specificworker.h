@@ -61,13 +61,16 @@ private:
 	const float ROBOT_LENGTH = 400;
 
 	InnerModel *innerModel;
-    float initialAngle, correctedAngle;
+    std::vector<QPointF> qPosL;
+	std::vector<QPointF> qPosR;
+	float initialAngle, correctedAngle;
+	
 	QSerialPort serial_left, serial_right; 
 	QGraphicsScene scene;
 	QGraphicsView view;
 	QGraphicsPolygonItem *robot, *tail;
 	std::vector<QGraphicsItem*> boxes;
-	
+	float yaw_class;
 
   	void initializeWorld();
 	template <typename IntegerType>
@@ -82,7 +85,8 @@ private:
 			result = (result << 8) + bits[ n ];
 		return result;
 	}
-    void compute_initial_orientation(int ntimes);
+    void compute_initial_pose(int ntimes);
+	void compute_pose();
 	float degreesToRadians(const float angle_);
 	protected:
 		void mousePressEvent(QMouseEvent *event) override;

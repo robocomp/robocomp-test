@@ -1,7 +1,7 @@
 CommonBehavior.Endpoints=tcp -p 10000
 
 # Endpoints for subscriptions
-IMUPubTopic.Endpoints=tcp -p 20000
+IMUPubTopic.Endpoints=tcp -p 30000
 GenericBase.Endpoints=tcp -p 20004
 
 # Proxies for required interfaces

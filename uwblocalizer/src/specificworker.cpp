@@ -87,51 +87,106 @@ void SpecificWorker::initialize(int period)
 
 	
 	serial_left.setPortName("/dev/ttyACM0");
-	if(!serial_left.open(QIODevice::ReadWrite))	exit(-1); 
+	if(!serial_left.open(QIODevice::ReadWrite))
+	{
+		std::cout << "Error reading ttyACM0" << std::endl;
+ 		exit(-1); 
+	}
 	serial_left.setBaudRate(QSerialPort::Baud115200);
 
 	serial_right.setPortName("/dev/ttyACM1");
-	if(!serial_right.open(QIODevice::ReadWrite))	exit(-1); 
+	if(!serial_right.open(QIODevice::ReadWrite))
+	{
+		std::cout << "Error reading ttyACM1" << std::endl;
+ 		exit(-1); 
+	}
 	serial_right.setBaudRate(QSerialPort::Baud115200);
 	
     //compute initial orientation
-    compute_initial_orientation(50);
-    
+    compute_initial_pose(10);
+
 	this->Period = period;
 	timer.start(Period);
 }
 
-void SpecificWorker::compute_initial_orientation(int ntimes)
+void SpecificWorker::compute_initial_pose(int ntimes)
 {
+//	QFile file( "data.txt" );
+//	file.open(QIODevice::ReadWrite);
+//	QTextStream stream( &file );
+	
     QPointF posL, posR;
-    std::vector<float> values;
     for (int cont=0;cont < ntimes;cont++)
     {
         posL = readData(serial_left);
+		qPosL.push_back(posL);
         posR = readData(serial_right);
-        values.push_back(QLineF(posR, posL).angle());
-
+		qPosR.push_back(posR);
+        
+//		stream << posL.x() << ","<<posL.y() <<","<<posR.x() << ","<<posR.y() << "," <<correctedAngle <<"\n";
+//		std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
-	robot->setPos((posL+posR)/2.f);
-    //Compute median
-    std::sort(values.begin(), values.end());
-    size_t size = values.size();
+//	file.close();
+//	exit(-1);
+//Compute median
+    std::vector<QPointF> left = qPosL;
+	std::sort(left.begin(), left.end(), [](auto &a,auto &b){return QVector2D(a).length() < QVector2D(b).length();});
+	std::vector<QPointF> right = qPosR;
+	std::sort(right.begin(), right.end(), [](auto &a,auto &b){return QVector2D(a).length() < QVector2D(b).length();});
+	size_t size = left.size();
     if (size % 2 == 0)
-      initialAngle = ((values[size / 2 - 1] + values[size / 2]) / 2);
-    else 
-      initialAngle = (values[size / 2]);
-	std::cout << "Initial orientation ==> " << initialAngle << std::endl;
+	{
+	  posL = ((left[size / 2 - 1] + left[size / 2]) / 2);
+      posR = ((right[size / 2 - 1] + right[size / 2]) / 2);
+	}
+	else{
+      posL = (left[size / 2]);
+	  posR = (right[size / 2]);
+	}
+	robot->setPos((posL+posR)/2.f);
+    initialAngle = QLineF(posR, posL).angle();
+    
+	std::cout << "Initial IMU orientation ==> " << yaw_class << std::endl;  
+	std::cout << "Initial orientation ==> " << initialAngle << std::endl;	  
+	std::cout << "Initial orientation offset ==> " << initialAngle-yaw_class << std::endl;
+    
+
+
 }
 
+
+void SpecificWorker::compute_pose()
+{
+	QPointF posL, posR;
+	//make copy to sort
+	std::vector<QPointF> left = qPosL;
+	std::sort(left.begin(), left.end(), [](auto &a,auto &b){return QVector2D(a).length() < QVector2D(b).length();});
+	std::vector<QPointF> right = qPosR;
+	std::sort(right.begin(), right.end(), [](auto &a,auto &b){return QVector2D(a).length() < QVector2D(b).length();});
+	size_t size = left.size();
+    if (size % 2 == 0)
+	{
+	  posL = ((left[size / 2 - 1] + left[size / 2]) / 2);
+      posR = ((right[size / 2 - 1] + right[size / 2]) / 2);
+	}
+	else{
+      posL = (left[size / 2]);
+	  posR = (right[size / 2]);
+	}
+	robot->setPos((posL+posR)/2.f);
+	robot->setRotation(-correctedAngle);
+}
 void SpecificWorker::compute()
 {
 	static QPointF pos_ant = robot->pos();
 	QPointF posL = readData(serial_left);
 	QPointF posR = readData(serial_right);
-//	QLineF h(posL, posR);
-//	robot->setRotation(h.angle());
-	robot->setPos((posL+posR)/2.f);
-	robot->setRotation(-correctedAngle);
+	qPosL.push_back(posL);
+	qPosL.erase(qPosL.begin());
+	qPosR.push_back(posR);
+	qPosR.erase(qPosR.begin());
+	//robot->setPos((posL+posR)/2.f);
+	compute_pose();
 
 	if(QVector2D(robot->pos()-pos_ant).length()>50)
 	{
@@ -260,7 +315,8 @@ void SpecificWorker::initializeWorld()
 // IMU SUBSCRIPTION
 void SpecificWorker::IMUPub_publish(RoboCompIMU::DataImu imu)
 {
-//    std::cout<< "angle "<< imu.rot.Yaw << " corrected angle "<<imu.rot.Yaw + initialAngle <<std::endl;
+	yaw_class = imu.rot.Yaw;
+    std::cout<< "angle "<< imu.rot.Yaw << " corrected angle "<<imu.rot.Yaw + initialAngle <<std::endl;
 //    std::cout << "pose " << robot->pos()<<std::endl;
 	correctedAngle = imu.rot.Yaw + initialAngle;
 //	robot->setRotation(qRadiansToDegrees(imu.rot.Yaw + initialAngle));
@@ -271,6 +327,9 @@ void SpecificWorker::GenericBase_getBaseState(RoboCompGenericBase::TBaseState &s
 {
     state.x = robot->pos().x();
     state.z = robot->pos().y();
+  //  QPointF pos(qPosL.back() +qPosR.back()/2.f);
+  //  state.correctedX = pos.x();
+//	state.correctedZ = pos.y();
     state.alpha = degreesToRadians(-correctedAngle);
 }
 
