@@ -102,14 +102,16 @@ private:
 	// Laser
 	struct LData { float dist; float angle;};
 	std::vector<LData> laserData;
-	QTimer cleanTimer, timerRobot;
+	QTimer cleanTimer, timerRobot, controllerTimer;
 
 	// Robot sim
 	timeval lastCommand_timeval;
 	float advVelx=0, advVelz=0, rotVel=0;
 	RoboCompGenericBase::TBaseState bState;
     RoboCompCommonBehavior::ParameterList params;
-
+	QGraphicsPolygonItem* localizationPolygon;
+	QGraphicsEllipseItem* spherePolygon;
+	int lostMeasure = 0;
 	//human
 	Human *humanA, *humanB;
 	QVector<Human*> human_vector;
