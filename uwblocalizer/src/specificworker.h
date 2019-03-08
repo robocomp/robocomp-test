@@ -38,6 +38,27 @@
 #include <QGraphicsRectItem>
 #include <QGraphicsPolygonItem>
 
+
+//kalman
+#include "SystemModel.hpp"
+#include "OrientationMeasurementModel.hpp"
+#include "PositionMeasurementModel.hpp"
+#include <kalman/ExtendedKalmanFilter.hpp>
+#include <kalman/UnscentedKalmanFilter.hpp>
+using namespace KalmanExamples;
+typedef float T;
+// Some type shortcuts
+typedef Robot1::State<T> State;
+typedef Robot1::Control<T> Control;
+typedef Robot1::SystemModel<T> SystemModel;
+
+typedef Robot1::PositionMeasurement<T> PositionMeasurement;
+typedef Robot1::OrientationMeasurement<T> OrientationMeasurement;
+typedef Robot1::PositionMeasurementModel<T> PositionModel;
+typedef Robot1::OrientationMeasurementModel<T> OrientationModel;
+#include <random>
+#include <chrono>
+
 class SpecificWorker : public GenericWorker
 {
 Q_OBJECT
@@ -55,14 +76,34 @@ public slots:
 	QPointF readData(QSerialPort &serial);
 
 private:
-	
+	//kalman
+	State x;
+	Control u;
+	SystemModel sys;
+	PositionModel pm;
+	OrientationModel om;
+	Kalman::ExtendedKalmanFilter<State> predictor;
+	Kalman::ExtendedKalmanFilter<State> ekf;
+	Kalman::UnscentedKalmanFilter<State> ukf;
+// Random number generation (for noise simulation)
+    std::default_random_engine generator;
+	std::normal_distribution<float> noise;
+
+	void init_kalman();
+
 	//constants
 	const float LEFT = -790, BOTTOM = 0, WIDTH = 5960, HEIGHT = 9700;
 	const float ROBOT_LENGTH = 400;
 
+	RoboCompGenericBase::TBaseState bState;
 	InnerModel *innerModel;
     std::vector<QPointF> qPosL;
 	std::vector<QPointF> qPosR;
+	float xMedL = 0;
+	float yMedL = 0;
+	float xMedR = 0;
+	float yMedR = 0;
+
 	float initialAngle, correctedAngle;
 	
 	QSerialPort serial_left, serial_right; 
@@ -70,7 +111,7 @@ private:
 	QGraphicsView view;
 	QGraphicsPolygonItem *robot, *tail;
 	std::vector<QGraphicsItem*> boxes;
-	float yaw_class;
+	float yaw_class = 0;
 
   	void initializeWorld();
 	template <typename IntegerType>
@@ -90,7 +131,8 @@ private:
 	float degreesToRadians(const float angle_);
 	protected:
 		void mousePressEvent(QMouseEvent *event) override;
-
+		void wheelEvent(QWheelEvent *event) override;
+		void resizeEvent(QResizeEvent *event) override;
 };
 
 #endif

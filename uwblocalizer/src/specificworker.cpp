@@ -58,6 +58,8 @@ void SpecificWorker::initialize(int period)
 	this->setLayout(layout);
 	view.fitInView(scene.sceneRect(), Qt::KeepAspectRatio );
 
+
+
 	 //Load World
     initializeWorld();
 
@@ -83,56 +85,65 @@ void SpecificWorker::initialize(int period)
 	robot = scene.addPolygon(poly2, QPen(QColor("DarkRed")), brush);
 	robot->setPos(WIDTH/2, HEIGHT/2);
 	robot->setRotation(0);
-	robot->setZValue(1);
+	robot->setZValue(-10);
 
 	
-	serial_left.setPortName("/dev/ttyACM0");
+/*	serial_left.setPortName("/dev/ttyACM0");
 	if(!serial_left.open(QIODevice::ReadWrite))
 	{
 		std::cout << "Error reading ttyACM0" << std::endl;
  		exit(-1); 
 	}
 	serial_left.setBaudRate(QSerialPort::Baud115200);
-
-	serial_right.setPortName("/dev/ttyACM1");
+*/
+/*	serial_right.setPortName("/dev/ttyACM1");
 	if(!serial_right.open(QIODevice::ReadWrite))
 	{
 		std::cout << "Error reading ttyACM1" << std::endl;
  		exit(-1); 
 	}
 	serial_right.setBaudRate(QSerialPort::Baud115200);
-	
-    //compute initial orientation
-    compute_initial_pose(10);
-
+*/	
+    //compute initial pose
+   // compute_initial_pose(50);
+init_kalman();
 	this->Period = period;
 	timer.start(Period);
 }
 
 void SpecificWorker::compute_initial_pose(int ntimes)
 {
-//	QFile file( "data.txt" );
-//	file.open(QIODevice::ReadWrite);
-//	QTextStream stream( &file );
-	
-    QPointF posL, posR;
+	QPointF posL, posR;
     for (int cont=0;cont < ntimes;cont++)
     {
-        posL = readData(serial_left);
 		qPosL.push_back(posL);
+		xMedL += posL.x();
+		yMedL += posL.y();
         posR = readData(serial_right);
+		xMedR += posR.x();
+		yMedR += posR.y();
 		qPosR.push_back(posR);
-        
-//		stream << posL.x() << ","<<posL.y() <<","<<posR.x() << ","<<posR.y() << "," <<correctedAngle <<"\n";
-//		std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    }
-//	file.close();
-//	exit(-1);
-//Compute median
-    std::vector<QPointF> left = qPosL;
-	std::sort(left.begin(), left.end(), [](auto &a,auto &b){return QVector2D(a).length() < QVector2D(b).length();});
+std::cout<<posL.x() << " "<< posL.y()<<" " <<posR.x() << " "<< posR.y()<<std::endl;
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
+	// media
+	xMedL /= ntimes;
+	yMedL /= ntimes;
+	xMedR /= ntimes;
+	yMedR /= ntimes;
+	// Dist media
+	float distL = sqrt(xMedL*xMedL + yMedL*yMedL);
+	float distR = sqrt(xMedR*xMedR + yMedR*yMedR);
+	// vector sort
+	std::vector<QPointF> left = qPosL;
+	std::sort(left.begin(), left.end(), [distL](auto &a,auto &b){return (QVector2D(a).length()-distL) < (QVector2D(b).length()-distL);});
 	std::vector<QPointF> right = qPosR;
-	std::sort(right.begin(), right.end(), [](auto &a,auto &b){return QVector2D(a).length() < QVector2D(b).length();});
+	std::sort(right.begin(), right.end(), [distR](auto &a,auto &b){return (QVector2D(a).length()-distR) < (QVector2D(b).length()-distR);});
+for (int i=0;i<ntimes;i++)
+{
+	continue;
+}	
+	// median
 	size_t size = left.size();
     if (size % 2 == 0)
 	{
@@ -143,15 +154,19 @@ void SpecificWorker::compute_initial_pose(int ntimes)
       posL = (left[size / 2]);
 	  posR = (right[size / 2]);
 	}
-	robot->setPos((posL+posR)/2.f);
-    initialAngle = QLineF(posR, posL).angle();
-    
+qDebug()<< "center point"<<posL<<posR;	
+	initialAngle = QLineF(posR, posL).angle();
+	if (yaw_class == -999999)
+	{
+		std::cout << "Error waiting imu value exiting" << std::endl;
+		exit(0);
+	}
 	std::cout << "Initial IMU orientation ==> " << yaw_class << std::endl;  
 	std::cout << "Initial orientation ==> " << initialAngle << std::endl;	  
 	std::cout << "Initial orientation offset ==> " << initialAngle-yaw_class << std::endl;
-    
+	initialAngle -= yaw_class;
 
-
+	robot->setPos((posL+posR)/2.f);
 }
 
 
@@ -176,23 +191,121 @@ void SpecificWorker::compute_pose()
 	robot->setPos((posL+posR)/2.f);
 	robot->setRotation(-correctedAngle);
 }
+
+void SpecificWorker::init_kalman()
+{
+//	QPointF posL = readData(serial_left);
+	QPointF posL(2500,5000);
+	//  Initial position
+	x.x() = posL.x();
+	x.y() = posL.y();
+	x.theta() = yaw_class;
+	//Covarianza
+	//sys
+	Kalman::Covariance<State> sC(3,3);
+	sC.setZero();
+	sC(0,0) = 0.55;
+	sC(1,1) = 0.55;
+	sC(2,2) = 1;
+	sC(0,0) = 0.1;
+	sC(1,1) = 0.1;
+	sC(2,2) = 0.1;
+	sys.setCovariance(sC);
+	//positionModel
+	Kalman::Covariance<PositionMeasurement> pC(2,2);
+	pC.setZero();
+	//pC(0,0) = 100;
+	//pC(1,1) = 100;
+	pC(0,0) = 1;
+	pC(1,1) = 1;
+	pm.setCovariance(pC);
+	//orientationModel
+	Kalman::Covariance<OrientationMeasurement> oC(1,1);
+	//oC(0,0) = 0.1;
+	oC(0,0) = 0.1;
+	om.setCovariance(oC);
+
+	// Init filters with true system state
+	ukf = Kalman::UnscentedKalmanFilter<State>(1);
+    predictor.init(x);
+	ekf.init(x);
+//	ukf.init(x);
+	robot->setPos(posL);
+
+	generator.seed( std::chrono::system_clock::now().time_since_epoch().count() );
+	noise = std::normal_distribution<float>(0, 1);
+
+}
+
 void SpecificWorker::compute()
 {
+	static QTime reloj = QTime::currentTime();
 	static QPointF pos_ant = robot->pos();
-	QPointF posL = readData(serial_left);
-	QPointF posR = readData(serial_right);
+	static QPointF pos_antEKF = robot->pos();
+	static QPointF pos_antPre = robot->pos();
+	static QPointF pos_antUKF = robot->pos();
+	static QPointF bState_ant = QPointF(0,0);
+//	QPointF posL = readData(serial_left);
+/*	QPointF posR = readData(serial_right);
 	qPosL.push_back(posL);
 	qPosL.erase(qPosL.begin());
 	qPosR.push_back(posR);
 	qPosR.erase(qPosR.begin());
-	//robot->setPos((posL+posR)/2.f);
-	compute_pose();
+*/
+
+	try{
+		differentialrobot_proxy->getBaseState(bState);
+	}catch(...)
+	{
+		std::cout<< "Error reading bState from differentialRobot" <<std::endl;
+	}
+	//kalman
+	float time = ((float)reloj.restart() / 1000.f);
+	u.v() = 200*time;//bState.advVx * time;
+	u.dtheta() = 0.05*time;//-bState.rotV * time;
+
+	State x2;
+/*	x2.x() = posL.x();
+	x2.y() = posL.y();
+	x2.theta() += 0.1*time;
+*/
+	auto x_pred = predictor.predict(sys, u);
+
+	x2.x() =  x_pred.x() + 50 *noise(generator);
+	x2.y() =  x_pred.y() + 50 *noise(generator);
+	x2.theta() = x_pred.theta() + 0.1 *noise(generator);;
+
+    auto x_ekf = ekf.predict(sys, u);
+//	auto x_ukf = ukf.predict(sys, u);
+	OrientationMeasurement orientation = om.h(x2);
+	x_ekf = ekf.update(om, orientation);
+//	x_ukf = ukf.update(om, orientation);
+	PositionMeasurement position = pm.h(x2);
+	x_ekf = ekf.update(pm, position);
+//	x_ukf = ukf.update(pm, position);
+
 
 	if(QVector2D(robot->pos()-pos_ant).length()>50)
 	{
 		scene.addLine(QLineF(pos_ant, robot->pos()), QPen(QColor("Green"), 50));
 		pos_ant = robot->pos();
+		
+		scene.addLine(QLineF(pos_antEKF, QPointF(x_ekf.x(),x_ekf.y())), QPen(QColor("Blue"), 50));
+		pos_antEKF = QPointF(x_ekf.x(),x_ekf.y());
+		
+//		scene.addLine(QLineF(pos_antUKF, QPointF(x_ukf.x(),x_ukf.y())), QPen(QColor("LightRed"), 50));
+//		pos_antUKF = QPointF(x_ukf.x(),x_ukf.y());
+
+		scene.addLine(QLineF(pos_antPre, QPointF(x_pred.x(),x_pred.y())), QPen(QColor("Orange"), 50));
+		pos_antPre = QPointF(x_pred.x(),x_pred.y());
+		
+	//	scene.addLine(QLineF(bState_ant, QPointF(bState.x, bState.z)), QPen(QColor("Blue"), 50));
+		bState_ant = QPointF(bState.x, bState.z);
+
 	}
+	robot->setPos(QPointF(x2.x(), x2.y()));
+	robot->setRotation(qRadiansToDegrees(x2.theta()));
+	
 }
 
 QPointF SpecificWorker::readData(QSerialPort &serial)
@@ -316,9 +429,9 @@ void SpecificWorker::initializeWorld()
 void SpecificWorker::IMUPub_publish(RoboCompIMU::DataImu imu)
 {
 	yaw_class = imu.rot.Yaw;
-    std::cout<< "angle "<< imu.rot.Yaw << " corrected angle "<<imu.rot.Yaw + initialAngle <<std::endl;
+//    std::cout<< "angle "<< imu.rot.Yaw << " corrected angle "<<imu.rot.Yaw + initialAngle <<std::endl;
 //    std::cout << "pose " << robot->pos()<<std::endl;
-	correctedAngle = imu.rot.Yaw + initialAngle;
+	correctedAngle = imu.rot.Yaw;// + initialAngle;
 //	robot->setRotation(qRadiansToDegrees(imu.rot.Yaw + initialAngle));
 }
 
@@ -331,6 +444,7 @@ void SpecificWorker::GenericBase_getBaseState(RoboCompGenericBase::TBaseState &s
   //  state.correctedX = pos.x();
 //	state.correctedZ = pos.y();
     state.alpha = degreesToRadians(-correctedAngle);
+	state.alpha = 0;
 }
 
 void SpecificWorker::GenericBase_getBasePose(int &x, int &z, float &alpha)
@@ -351,3 +465,41 @@ float SpecificWorker::degreesToRadians(const float angle_)
 	else return angle;
 }
 
+
+
+// RESIZE
+// zoom
+void SpecificWorker::wheelEvent(QWheelEvent *event)
+{
+	const QGraphicsView::ViewportAnchor anchor = view.transformationAnchor();
+	view.setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
+	int angle = event->angleDelta().y();
+	qreal factor;
+	if (angle > 0) 
+	{
+		factor = 1.1;
+		QRectF r = scene.sceneRect();
+		this->scene.setSceneRect(r);
+	}
+	else
+	{
+		factor = 0.9;
+		QRectF r = scene.sceneRect();
+		this->scene.setSceneRect(r);
+	}
+	view.scale(factor, factor);
+	view.setTransformationAnchor(anchor);
+
+	QSettings settings("RoboComp", "UWBLocalizer");
+	settings.beginGroup("QGraphicsView");
+		settings.setValue("matrix", view.transform());
+	settings.endGroup();
+}
+
+void SpecificWorker::resizeEvent(QResizeEvent *event)
+{
+	QSettings settings("RoboComp", "UWBLocalizer");
+	settings.beginGroup("MainWindow");
+		settings.setValue("size", event->size());
+	settings.endGroup();
+}
