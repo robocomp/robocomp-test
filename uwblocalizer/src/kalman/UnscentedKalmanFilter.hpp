@@ -132,7 +132,7 @@ namespace Kalman {
             if(!computeSigmaPoints())
             {
                 // TODO: handle numerical error
-                assert(false);
+                //assert(false);
             }
             
             // Compute predicted state
@@ -186,6 +186,7 @@ namespace Kalman {
         {
             // Get square root of covariance
             CovarianceSquareRoot<State> llt;
+            
             llt.compute(P);
             if(llt.info() != Eigen::Success)
             {

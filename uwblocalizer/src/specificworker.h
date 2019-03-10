@@ -74,6 +74,7 @@ public slots:
 	void compute();
 	void initialize(int period);
 	QPointF readData(QSerialPort &serial);
+	void filteredSensor();
 
 private:
 	//kalman
@@ -85,15 +86,20 @@ private:
 	Kalman::ExtendedKalmanFilter<State> predictor;
 	Kalman::ExtendedKalmanFilter<State> ekf;
 	Kalman::UnscentedKalmanFilter<State> ukf;
-// Random number generation (for noise simulation)
+
+	// Random number generation (for noise simulation)
     std::default_random_engine generator;
 	std::normal_distribution<float> noise;
-
+	//std::uniform_int_distribution<> noise;
+	
 	void init_kalman();
+	State x_ekf;
 
 	//constants
 	const float LEFT = -790, BOTTOM = 0, WIDTH = 5960, HEIGHT = 9700;
 	const float ROBOT_LENGTH = 400;
+
+	std::vector<State> sensor_data;
 
 	RoboCompGenericBase::TBaseState bState;
 	InnerModel *innerModel;
@@ -103,15 +109,17 @@ private:
 	float yMedL = 0;
 	float xMedR = 0;
 	float yMedR = 0;
-
 	float initialAngle, correctedAngle;
-	
+
 	QSerialPort serial_left, serial_right; 
 	QGraphicsScene scene;
 	QGraphicsView view;
-	QGraphicsPolygonItem *robot, *tail;
+	QGraphicsPolygonItem *robot, *tail, *robot_stable;
 	std::vector<QGraphicsItem*> boxes;
 	float yaw_class = 0;
+	QGraphicsEllipseItem *p_circle;
+
+	QTimer sensor_timer;
 
   	void initializeWorld();
 	template <typename IntegerType>
@@ -129,10 +137,11 @@ private:
     void compute_initial_pose(int ntimes);
 	void compute_pose();
 	float degreesToRadians(const float angle_);
-	protected:
-		void mousePressEvent(QMouseEvent *event) override;
-		void wheelEvent(QWheelEvent *event) override;
-		void resizeEvent(QResizeEvent *event) override;
+
+protected:
+	void mousePressEvent(QMouseEvent *event) override;
+	void wheelEvent(QWheelEvent *event) override;
+	void resizeEvent(QResizeEvent *event) override;
 };
 
 #endif

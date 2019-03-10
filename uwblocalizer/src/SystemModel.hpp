@@ -36,6 +36,8 @@ public:
     T& x()      { return (*this)[ X ]; }
     T& y()      { return (*this)[ Y ]; }
     T& theta()  { return (*this)[ THETA ]; }
+
+    T xymod()   { return sqrt((*this)[ X ]*(*this)[ X ] + (*this)[ Y ]*(*this)[ Y ]);}
 };
 
 /**
