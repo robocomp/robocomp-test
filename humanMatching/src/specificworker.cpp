@@ -85,9 +85,11 @@ void SpecificWorker::compute()
 {
 
 #ifdef USE_QTGUI
+    guard gl(mutex);
     innerModel->update();
     if (innerModelViewer)
     { 
+        
         innerModelViewer->update();
     }
 	osgView->frame();
@@ -98,8 +100,26 @@ void SpecificWorker::compute()
 //Receive humanlist publicacion
 void SpecificWorker::HumanPose_obtainHumanPose(const humansDetected &list_of_humans)
 {
+    guard gl(mutex);
     std::cout << "humanlist received: "<<list_of_humans.size() << std::endl;
-    add_human_innermodel(list_of_humans[0]);
+    for(auto &human: list_of_humans)
+    {
+        if(humans.contains(QString::number(human.id)))
+            qDebug()<<"human is already added to innerModel, change its position instead";
+        else
+            add_human_innermodel(human);
+    }
+    qDebug()<<"humans"<<humans.keys();
+    //just for testing pourpose ==> empty list remove all humans
+    if(list_of_humans.size() == 0)
+    {
+        for (auto &person: humans.values())
+        {
+            qDebug()<<"trying to remove"<<QString::number(person.id);
+            remove_human_innermodel(person);
+        }
+    }
+    qDebug()<<"************************";
 }
 
 
@@ -109,14 +129,33 @@ void SpecificWorker::add_human_innermodel(PersonType person)
     try
     {
         QString name = QString::number(person.id);
-     //	QString meshPath = QString("/home/robocomp/robocomp/components/robocomp-shelly/models/human01.3ds");
-        QString meshPath = QString("//home/robocomp/robocomp/files/osgModels/mobiliario/taza.osg");
+     	QString meshPath = QString("/home/robocomp/robocomp/components/robocomp-shelly/files/mesh/human01.3ds");
         InnerModelNode* room = innerModel->getNode("room");
         InnerModelTransform* transform = innerModel->newTransform(name, "static", room, person.pos.x, 0, person.pos.z, 0, person.pos.ry, 0, 0);
-        room->addChild(transform);
-        InnerModelMesh* mesh = innerModel->newMesh(name+"_mesh", transform, meshPath, 120, 0, 0, 0, 1.5708, 0, 3.1416, false);
+        room->addChild(transform);    
+        InnerModelMesh* mesh = innerModel->newMesh(name+"_mesh", transform, meshPath, 12, 0, 0, 0, 1.5708, 0, 3.1416, false);
         transform->addChild(mesh);
-innerModel->save("save.xml");
+        innerModelViewer->recursiveConstructor(transform);
+        humans[name] = person;
+        qDebug()<<"Added human:"<<name;
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
+    }
+}
+
+void SpecificWorker::remove_human_innermodel(PersonType person)
+{
+    try
+    {
+        QString name = QString::number(person.id);
+        InnerModelNode* node = innerModel->getNode(name);
+        QStringList l;
+        innerModelViewer->recursiveRemove(node);
+        innerModel->removeSubTree(node, &l);
+        humans.remove(name);
+        qDebug()<<"Remove human: "<<name;
     }
     catch(const std::exception& e)
     {

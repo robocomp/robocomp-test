@@ -49,10 +49,11 @@ public:
 	void HumanPose_obtainHumanPose(const humansDetected &list_of_humans);
 
     
-    QList<QString> humans;
+    QHash<QString,PersonType> humans;
     
     //utils
     void add_human_innermodel(PersonType person);
+	void remove_human_innermodel(PersonType person);
     float euclideanD(float x1, float z1, float x2, float z2);
     
 public slots:
@@ -61,6 +62,8 @@ public slots:
 
 private:
 	std::shared_ptr<InnerModel> innerModel;
+	typedef std::lock_guard<std::recursive_mutex> guard;
+	mutable std::recursive_mutex mutex;
 #ifdef USE_QTGUI
 	OsgView *osgView;
 	InnerModelViewer *innerModelViewer;
