@@ -68,9 +68,9 @@ public:
     {
         if (iTypeData.size() == 3)
 		{
-			oTypeData.x = iTypeData[0];
-			oTypeData.y = iTypeData[1];
-			oTypeData.z = iTypeData[2];
+			oTypeData.x = 1000. * iTypeData[0];
+			oTypeData.y = 1000. * iTypeData[1];
+			oTypeData.z = 1000. * iTypeData[2];
 			oTypeData.rz = 0.;
 			oTypeData.ry = 0.;
 			oTypeData.rz = 0.;

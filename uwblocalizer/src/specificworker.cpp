@@ -260,9 +260,10 @@ void SpecificWorker::compute()
 	static QTime reloj = QTime::currentTime();
 	
 	posL = readData(serial_left);
-	for(auto &&d: posL)
-        	qDebug() << d;
-	qDebug() << "---------------";
+	//for(auto &&d: posL)
+        //	qDebug() << d;
+	//qDebug() << "---------------";
+	std::cout << "\r UWB coordinates: x " << posL[0] << " y " << posL[1] << " z " << posL[2] ;
 	dbuffer.put(readData(serial_left), 0);
     
 	//posR = readData(serial_right);
