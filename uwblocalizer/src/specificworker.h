@@ -33,12 +33,12 @@
 #include <iostream>
 #include <doublebuffer/DoubleBuffer.h>
 
-#include <QGraphicsScene>
-#include <QGraphicsView>
-#include <QGraphicsEllipseItem>
-#include <QGraphicsLineItem>
-#include <QGraphicsRectItem>
-#include <QGraphicsPolygonItem>
+// #include <QGraphicsScene>
+// #include <QGraphicsView>
+// #include <QGraphicsEllipseItem>
+// #include <QGraphicsLineItem>
+// #include <QGraphicsRectItem>
+// #include <QGraphicsPolygonItem>
 
 
 //kalman
@@ -61,7 +61,6 @@ typedef Robot1::OrientationMeasurementModel<T> OrientationModel;
 #include <random>
 #include <chrono>
 
-
 class MyConverter : public Converter<std::vector<int>, FullPose>
 {
 public:
@@ -69,9 +68,9 @@ public:
     {
         if (iTypeData.size() == 3)
 		{
-			oTypeData.x = iTypeData[0];
-			oTypeData.y = iTypeData[1];
-			oTypeData.z = iTypeData[2];
+			oTypeData.x = 1000. * iTypeData[0];
+			oTypeData.y = 1000. * iTypeData[1];
+			oTypeData.z = 1000. * iTypeData[2];
 			oTypeData.rz = 0.;
 			oTypeData.ry = 0.;
 			oTypeData.rz = 0.;
@@ -82,6 +81,10 @@ public:
     bool OtoI(const RoboCompFullPoseEstimation::FullPose &oTypeData, std::vector<int> &iTypeData)
     {
         return false;
+    }
+    bool clear(RoboCompFullPoseEstimation::FullPose &oTypeData)
+    {
+	return true;
     }
 };
 
@@ -104,6 +107,7 @@ public slots:
 
 private:
 	std::vector<int>  posL{0,0,0}, posR{0,0,0};
+	MyConverter myconverter;
 	DoubleBuffer<std::vector<int>, RoboCompFullPoseEstimation::FullPose, MyConverter> dbuffer;
 
 	//kalman
@@ -141,16 +145,17 @@ private:
 	float initialAngle, correctedAngle;
 
 	QSerialPort serial_left, serial_right; 
-	QGraphicsScene scene;
-	QGraphicsView view;
-	QGraphicsPolygonItem *robot, *tail, *robot_stable;
-	std::vector<QGraphicsItem*> boxes;
-	float yaw_class = 0;
-	QGraphicsEllipseItem *p_circle;
-
-	QTimer sensor_timer;
+// 	QGraphicsScene scene;
+// 	QGraphicsView view;
+// 	QGraphicsPolygonItem *robot, *tail, *robot_stable;
+// 	std::vector<QGraphicsItem*> boxes;
+// 	float yaw_class = 0;
+// 	QGraphicsEllipseItem *p_circle;
+// 
+// 	QTimer sensor_timer;
 
   	void initializeWorld();
+    
 	template <typename IntegerType>
 	IntegerType bitsToInt( const unsigned char* bits, uint init, bool little_endian = true )
 	{
@@ -163,13 +168,14 @@ private:
 			result = (result << 8) + bits[ n ];
 		return result;
 	}
-    void compute_initial_pose(int ntimes);
-	void compute_pose();
+    //void compute_initial_pose(int ntimes);
+	//void compute_pose();
 	float degreesToRadians(const float angle_);
+    
 protected:
-		void mousePressEvent(QMouseEvent *event) override;
-		void wheelEvent(QWheelEvent *event) override;
-		void resizeEvent(QResizeEvent *event) override;
+// 		void mousePressEvent(QMouseEvent *event) override;
+// 		void wheelEvent(QWheelEvent *event) override;
+// 		void resizeEvent(QResizeEvent *event) override;
 };
 
 #endif

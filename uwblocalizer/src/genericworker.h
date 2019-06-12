@@ -23,40 +23,30 @@
 #include <stdint.h>
 #include <qlog/qlog.h>
 
-#if Qt5_FOUND
-	#include <QtWidgets>
-#else
-	#include <QtGui>
-#endif
-#include <ui_mainUI.h>
 
 #include <CommonBehavior.h>
 
-#include <GenericBase.h>
-#include <IMU.h>
-#include <FullPoseEstimation.h>
 #include <DifferentialRobot.h>
+#include <GenericBase.h>
+#include <FullPoseEstimation.h>
 #include <IMUPub.h>
+#include <IMU.h>
 
 #define CHECK_PERIOD 5000
 #define BASIC_PERIOD 100
 
 using namespace std;
-using namespace RoboCompGenericBase;
 using namespace RoboCompIMU;
-using namespace RoboCompFullPoseEstimation;
-using namespace RoboCompDifferentialRobot;
 using namespace RoboCompIMUPub;
+using namespace RoboCompGenericBase;
+using namespace RoboCompDifferentialRobot;
+using namespace RoboCompFullPoseEstimation;
 
 using TuplePrx = std::tuple<RoboCompDifferentialRobot::DifferentialRobotPrxPtr>;
 
 
 class GenericWorker :
-#ifdef USE_QTGUI
-	public QWidget, public Ui_guiDlg
-#else
-	public QObject
- #endif
+public QObject
 {
 Q_OBJECT
 public:

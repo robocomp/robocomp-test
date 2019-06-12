@@ -37,10 +37,9 @@ FIND_PACKAGE( Ice REQUIRED COMPONENTS Ice++11 IceStorm++11)
 
 #ROBOCOMP
 ROBOCOMP_INITIALIZE( $ENV{ROBOCOMP}/ )
-ROBOCOMP_WRAP_ICE( CommonBehavior GenericBase IMU FullPoseEstimation GenericBase DifferentialRobot IMUPub)
+ROBOCOMP_WRAP_ICE( CommonBehavior DifferentialRobot  GenericBase  FullPoseEstimation  IMUPub  IMU )
 SET (EXECUTABLE_OUTPUT_PATH ${RC_COMPONENT_DEVEL_PATH}/bin)
 
-QT_WRAP_UI( UI_HEADERS mainUI.ui )
 
 # Specify construction and link process
 ADD_EXECUTABLE( uwblocalizer ${SOURCES} ${MOC_SOURCES} ${RC_SOURCES} ${UI_HEADERS} )
