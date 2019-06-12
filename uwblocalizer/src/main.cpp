@@ -85,7 +85,10 @@
 #include <genericbaseI.h>
 #include <imupubI.h>
 
+#include <DifferentialRobot.h>
 #include <GenericBase.h>
+#include <FullPoseEstimation.h>
+#include <IMUPub.h>
 #include <IMU.h>
 
 
@@ -117,11 +120,7 @@ void ::uwblocalizer::initialize()
 
 int ::uwblocalizer::run(int argc, char* argv[])
 {
-#ifdef USE_QTGUI
-	QApplication a(argc, argv);  // GUI application
-#else
 	QCoreApplication a(argc, argv);  // NON-GUI application
-#endif
 
 
 	sigset_t sigs;
