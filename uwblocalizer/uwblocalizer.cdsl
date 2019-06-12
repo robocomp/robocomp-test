@@ -1,12 +1,15 @@
 import "IMUPub.idsl";
 import "DifferentialRobot.idsl";
+import "FullPoseEstimation.idsl";
+
 Component uwblocalizer
 {
     Communications
     {
 	    requires DifferentialRobot;
 	    subscribesTo IMUPub;
-        implements GenericBase;
+        implements GenericBase, FullPoseEstimation;
+
     };
     language Cpp11;
     gui Qt(QWidget);

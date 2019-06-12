@@ -32,19 +32,21 @@
 
 #include <CommonBehavior.h>
 
-#include <DifferentialRobot.h>
 #include <GenericBase.h>
-#include <IMUPub.h>
 #include <IMU.h>
+#include <FullPoseEstimation.h>
+#include <DifferentialRobot.h>
+#include <IMUPub.h>
 
 #define CHECK_PERIOD 5000
 #define BASIC_PERIOD 100
 
 using namespace std;
-using namespace RoboCompIMU;
-using namespace RoboCompIMUPub;
 using namespace RoboCompGenericBase;
+using namespace RoboCompIMU;
+using namespace RoboCompFullPoseEstimation;
 using namespace RoboCompDifferentialRobot;
+using namespace RoboCompIMUPub;
 
 using TuplePrx = std::tuple<RoboCompDifferentialRobot::DifferentialRobotPrxPtr>;
 
@@ -62,12 +64,14 @@ public:
 	virtual ~GenericWorker();
 	virtual void killYourSelf();
 	virtual void setPeriod(int p);
+
 	virtual bool setParams(RoboCompCommonBehavior::ParameterList params) = 0;
 	QMutex *mutex;
 
 
 	DifferentialRobotPrxPtr differentialrobot_proxy;
 
+	virtual FullPose FullPoseEstimation_getFullPose() = 0;
 	virtual void GenericBase_getBaseState(RoboCompGenericBase::TBaseState &state) = 0;
 	virtual void GenericBase_getBasePose(int &x, int &z, float &alpha) = 0;
 	virtual void IMUPub_publish(RoboCompIMU::DataImu imu) = 0;

@@ -58,8 +58,6 @@ void SpecificWorker::initialize(int period)
 	this->setLayout(layout);
 	view.fitInView(scene.sceneRect(), Qt::KeepAspectRatio );
 
-
-
 	 //Load World
     initializeWorld();
 
@@ -74,8 +72,6 @@ void SpecificWorker::initialize(int period)
 	axisZ->setPos(0,0);
 	boxes.push_back(axisZ);
 
-
-
 	// Robot 
 	QPolygonF poly2;
 	float size = ROBOT_LENGTH/2.f;
@@ -88,26 +84,27 @@ void SpecificWorker::initialize(int period)
 	robot->setZValue(-10);
 
 	
-/*	serial_left.setPortName("/dev/ttyACM0");
+	serial_left.setPortName("/dev/ttyACM0");
 	if(!serial_left.open(QIODevice::ReadWrite))
 	{
 		std::cout << "Error reading ttyACM0" << std::endl;
  		exit(-1); 
 	}
 	serial_left.setBaudRate(QSerialPort::Baud115200);
-*/
-/*	serial_right.setPortName("/dev/ttyACM1");
+
+	serial_right.setPortName("/dev/ttyACM1");
 	if(!serial_right.open(QIODevice::ReadWrite))
 	{
 		std::cout << "Error reading ttyACM1" << std::endl;
  		exit(-1); 
 	}
 	serial_right.setBaudRate(QSerialPort::Baud115200);
-*/	
+	
     //compute initial pose
-   // compute_initial_pose(50);
-init_kalman();
-	this->Period = period;
+   //compute_initial_pose(50);
+	
+	//init_kalman();
+	this->Period = 100;
 	timer.start(Period);
 }
 
@@ -119,11 +116,11 @@ void SpecificWorker::compute_initial_pose(int ntimes)
 		qPosL.push_back(posL);
 		xMedL += posL.x();
 		yMedL += posL.y();
-        posR = readData(serial_right);
+        //posR = readData(serial_right);
 		xMedR += posR.x();
 		yMedR += posR.y();
 		qPosR.push_back(posR);
-std::cout<<posL.x() << " "<< posL.y()<<" " <<posR.x() << " "<< posR.y()<<std::endl;
+		std::cout<<posL.x() << " "<< posL.y()<<" " <<posR.x() << " "<< posR.y()<<std::endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 	// media
@@ -139,10 +136,11 @@ std::cout<<posL.x() << " "<< posL.y()<<" " <<posR.x() << " "<< posR.y()<<std::en
 	std::sort(left.begin(), left.end(), [distL](auto &a,auto &b){return (QVector2D(a).length()-distL) < (QVector2D(b).length()-distL);});
 	std::vector<QPointF> right = qPosR;
 	std::sort(right.begin(), right.end(), [distR](auto &a,auto &b){return (QVector2D(a).length()-distR) < (QVector2D(b).length()-distR);});
-for (int i=0;i<ntimes;i++)
-{
-	continue;
-}	
+	for (int i=0;i<ntimes;i++)
+	{
+		continue;
+	}	
+
 	// median
 	size_t size = left.size();
     if (size % 2 == 0)
@@ -154,7 +152,8 @@ for (int i=0;i<ntimes;i++)
       posL = (left[size / 2]);
 	  posR = (right[size / 2]);
 	}
-qDebug()<< "center point"<<posL<<posR;	
+	
+	qDebug()<< "center point"<<posL<<posR;	
 	initialAngle = QLineF(posR, posL).angle();
 	if (yaw_class == -999999)
 	{
@@ -234,88 +233,94 @@ void SpecificWorker::init_kalman()
 
 	generator.seed( std::chrono::system_clock::now().time_since_epoch().count() );
 	noise = std::normal_distribution<float>(0, 1);
-
 }
 
 void SpecificWorker::compute()
 {
 	static QTime reloj = QTime::currentTime();
-	static QPointF pos_ant = robot->pos();
-	static QPointF pos_antEKF = robot->pos();
-	static QPointF pos_antPre = robot->pos();
-	static QPointF pos_antUKF = robot->pos();
-	static QPointF bState_ant = QPointF(0,0);
-//	QPointF posL = readData(serial_left);
-/*	QPointF posR = readData(serial_right);
-	qPosL.push_back(posL);
-	qPosL.erase(qPosL.begin());
-	qPosR.push_back(posR);
-	qPosR.erase(qPosR.begin());
-*/
+	// static QPointF pos_ant = robot->pos();
+	// static QPointF pos_antEKF = robot->pos();
+	// static QPointF pos_antPre = robot->pos();
+	// static QPointF pos_antUKF = robot->pos();
+	// static QPointF bState_ant = QPointF(0,0);
 
-	try{
-		differentialrobot_proxy->getBaseState(bState);
-	}catch(...)
-	{
-		std::cout<< "Error reading bState from differentialRobot" <<std::endl;
-	}
-	//kalman
-	float time = ((float)reloj.restart() / 1000.f);
-	u.v() = 200*time;//bState.advVx * time;
-	u.dtheta() = 0.05*time;//-bState.rotV * time;
+	//posL = readData(serial_left);
+	dbuffer.put(readData(serial_left), 0);
+    
+	//posR = readData(serial_right);
 
-	State x2;
-/*	x2.x() = posL.x();
-	x2.y() = posL.y();
-	x2.theta() += 0.1*time;
-*/
-	auto x_pred = predictor.predict(sys, u);
+//	qPosL.push_back(posL);
+//	qPosL.erase(qPosL.begin());
+//	qPosR.push_back(posR);
+//	qPosR.erase(qPosR.begin());
 
-	x2.x() =  x_pred.x() + 50 *noise(generator);
-	x2.y() =  x_pred.y() + 50 *noise(generator);
-	x2.theta() = x_pred.theta() + 0.1 *noise(generator);;
+	// try
+	// {
+	// 	differentialrobot_proxy->getBaseState(bState);
+	// }
+	// catch(...)
+	// {
+	// 	std::cout<< "Error reading bState from differentialRobot" <<std::endl;
+	// }
 
-    auto x_ekf = ekf.predict(sys, u);
-//	auto x_ukf = ukf.predict(sys, u);
-	OrientationMeasurement orientation = om.h(x2);
-	x_ekf = ekf.update(om, orientation);
-//	x_ukf = ukf.update(om, orientation);
-	PositionMeasurement position = pm.h(x2);
-	x_ekf = ekf.update(pm, position);
-//	x_ukf = ukf.update(pm, position);
+// 	//kalman
+	
+// 	float time = ((float)reloj.restart() / 1000.f);
+// 	u.v() = 200*time;//bState.advVx * time;
+// 	u.dtheta() = 0.05*time;//-bState.rotV * time;
+
+// 	State x2;
+// /*	x2.x() = posL.x();
+// 	x2.y() = posL.y();
+// 	x2.theta() += 0.1*time;
+// */
+// 	auto x_pred = predictor.predict(sys, u);
+
+// 	x2.x() =  x_pred.x() + 50 *noise(generator);
+// 	x2.y() =  x_pred.y() + 50 *noise(generator);
+// 	x2.theta() = x_pred.theta() + 0.1 *noise(generator);;
+
+//     auto x_ekf = ekf.predict(sys, u);
+// //	auto x_ukf = ukf.predict(sys, u);
+// 	OrientationMeasurement orientation = om.h(x2);
+// 	x_ekf = ekf.update(om, orientation);
+// //	x_ukf = ukf.update(om, orientation);
+// 	PositionMeasurement position = pm.h(x2);
+// 	x_ekf = ekf.update(pm, position);
+// //	x_ukf = ukf.update(pm, position);
 
 
-	if(QVector2D(robot->pos()-pos_ant).length()>50)
-	{
-		scene.addLine(QLineF(pos_ant, robot->pos()), QPen(QColor("Green"), 50));
-		pos_ant = robot->pos();
+	// if(QVector2D(robot->pos()-pos_ant).length()>50)
+	// {
+	// 	scene.addLine(QLineF(pos_ant, robot->pos()), QPen(QColor("Green"), 50));
+	// 	pos_ant = robot->pos();
 		
-		scene.addLine(QLineF(pos_antEKF, QPointF(x_ekf.x(),x_ekf.y())), QPen(QColor("Blue"), 50));
-		pos_antEKF = QPointF(x_ekf.x(),x_ekf.y());
+//		scene.addLine(QLineF(pos_antEKF, QPointF(x_ekf.x(),x_ekf.y())), QPen(QColor("Blue"), 50));
+//		pos_antEKF = QPointF(x_ekf.x(),x_ekf.y());
 		
 //		scene.addLine(QLineF(pos_antUKF, QPointF(x_ukf.x(),x_ukf.y())), QPen(QColor("LightRed"), 50));
 //		pos_antUKF = QPointF(x_ukf.x(),x_ukf.y());
 
-		scene.addLine(QLineF(pos_antPre, QPointF(x_pred.x(),x_pred.y())), QPen(QColor("Orange"), 50));
-		pos_antPre = QPointF(x_pred.x(),x_pred.y());
+//		scene.addLine(QLineF(pos_antPre, QPointF(x_pred.x(),x_pred.y())), QPen(QColor("Orange"), 50));
+//		pos_antPre = QPointF(x_pred.x(),x_pred.y());
 		
 	//	scene.addLine(QLineF(bState_ant, QPointF(bState.x, bState.z)), QPen(QColor("Blue"), 50));
-		bState_ant = QPointF(bState.x, bState.z);
+	//	bState_ant = QPointF(bState.x, bState.z);
 
-	}
-	robot->setPos(QPointF(x2.x(), x2.y()));
-	robot->setRotation(qRadiansToDegrees(x2.theta()));
+//	}
+	//robot->setPos(QPointF(x2.x(), x2.y()));
+	//robot->setRotation(qRadiansToDegrees(x2.theta()));
 	
 }
 
-QPointF SpecificWorker::readData(QSerialPort &serial)
+std::vector<int> SpecificWorker::readData(QSerialPort &serial)
 {
 	QByteArray responseData;
 	responseData.append((char)2);
     responseData.append((char)0);
 
-	for(int i=0; i<1; i++)
-	{
+	// for(int i=0; i<1; i++)
+	// {
 		serial.write(responseData);
   		if (serial.waitForBytesWritten(200)) {}
           //qDebug() << "escrito ok";
@@ -340,7 +345,7 @@ QPointF SpecificWorker::readData(QSerialPort &serial)
 		if(!(b[0] == 64 and b[1] == 1 and b[2] == 0 and b[3] == 65))
 		{	
 			qDebug() << "Bad sequence, aborting";
-			break;
+			qFatal("Bas sequence");
 		}
 
 		int x = bitsToInt<std::int32_t>((unsigned char*)b,5,true);
@@ -351,8 +356,19 @@ QPointF SpecificWorker::readData(QSerialPort &serial)
 		delete b;
 		serial.flush();
 		//usleep(100000);
-		return(QPointF(x,y));
-	}
+		return std::vector<int>{x,y,z};
+//	}
+}
+
+///////////////////////////////////////////////////////////////////////////////////////7
+///// FullPose Interface
+////////////////////////////////////////////////////////////////////////////////////////
+
+FullPose SpecificWorker::FullPoseEstimation_getFullPose()
+{
+	FullPose fp;
+	dbuffer.get(fp);
+	return fp;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////7

@@ -31,6 +31,8 @@
 #include <innermodel/innermodel.h>
 #include <QtSerialPort/QSerialPort>
 #include <iostream>
+#include <doublebuffer/DoubleBuffer.h>
+
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QGraphicsEllipseItem>
@@ -59,6 +61,30 @@ typedef Robot1::OrientationMeasurementModel<T> OrientationModel;
 #include <random>
 #include <chrono>
 
+
+class MyConverter : public Converter<std::vector<int>, FullPose>
+{
+public:
+    bool ItoO(const std::vector<int> &iTypeData, RoboCompFullPoseEstimation::FullPose &oTypeData)
+    {
+        if (iTypeData.size() == 3)
+		{
+			oTypeData.x = iTypeData[0];
+			oTypeData.y = iTypeData[1];
+			oTypeData.z = iTypeData[2];
+			oTypeData.rz = 0.;
+			oTypeData.ry = 0.;
+			oTypeData.rz = 0.;
+            return true;
+        }
+        return false;
+    }
+    bool OtoI(const RoboCompFullPoseEstimation::FullPose &oTypeData, std::vector<int> &iTypeData)
+    {
+        return false;
+    }
+};
+
 class SpecificWorker : public GenericWorker
 {
 Q_OBJECT
@@ -69,13 +95,17 @@ public:
     void IMUPub_publish(RoboCompIMU::DataImu imu);
     void GenericBase_getBaseState(RoboCompGenericBase::TBaseState &state);
 	void GenericBase_getBasePose(int &x, int &z, float &alpha);
+	FullPose FullPoseEstimation_getFullPose();
 
 public slots:
 	void compute();
 	void initialize(int period);
-	QPointF readData(QSerialPort &serial);
+	std::vector<int> readData(QSerialPort &serial);
 
 private:
+	std::vector<int>  posL{0,0,0}, posR{0,0,0};
+	DoubleBuffer<std::vector<int>, RoboCompFullPoseEstimation::FullPose, MyConverter> dbuffer;
+
 	//kalman
 	State x;
 	Control u;
@@ -129,7 +159,7 @@ private:
     void compute_initial_pose(int ntimes);
 	void compute_pose();
 	float degreesToRadians(const float angle_);
-	protected:
+protected:
 		void mousePressEvent(QMouseEvent *event) override;
 		void wheelEvent(QWheelEvent *event) override;
 		void resizeEvent(QResizeEvent *event) override;
