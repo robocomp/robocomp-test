@@ -48,7 +48,7 @@ void SpecificWorker::initialize(int period)
 	std::cout << __FUNCTION__ << "Initialize worker" << std::endl;
 
 	// scene inizialitation
-	resize(QDesktopWidget().availableGeometry(this).size() * 0.4);
+	resize(QDesktopWidget().availableGeometry(this).size() * 0.6);
 	scene.setSceneRect(LEFT, BOTTOM, WIDTH, HEIGHT);
 	view.scale( 1, -1 );
 	view.setScene(&scene);
@@ -62,7 +62,7 @@ void SpecificWorker::initialize(int period)
     initializeWorld();
 
 	//walls
-//	scene.addRect(QRectF(LEFT, BOTTOM, WIDTH, HEIGHT), QPen(QColor("Brown"), 30));
+	//	scene.addRect(QRectF(LEFT, BOTTOM, WIDTH, HEIGHT), QPen(QColor("Brown"), 30));
 
 	//Axis   
 	auto axisX = scene.addLine(QLineF(0, 0, 500, 0), QPen(Qt::red, 50));
@@ -83,6 +83,14 @@ void SpecificWorker::initialize(int period)
 	robot->setRotation(0);
 	robot->setZValue(-10);
 
+	// Robot estable
+	poly2.clear();
+	poly2 << QPoint(-size, -size) << QPoint(-size, size) << QPoint(-size/3, size*1.6) << QPoint(size/3, size*1.6) << QPoint(size, size) << QPoint(size, -size);
+	brush.setColor(QColor("DarkGreen")); brush.setStyle(Qt::SolidPattern);
+	robot_stable = scene.addPolygon(poly2, QPen(QColor("DarkGreen")), brush);
+	robot_stable->setPos(WIDTH/2, HEIGHT/2);
+	robot_stable->setRotation(0);
+	robot_stable->setZValue(-10);
 	
 	serial_left.setPortName("/dev/ttyACM0");
 	if(!serial_left.open(QIODevice::ReadWrite))
@@ -92,13 +100,13 @@ void SpecificWorker::initialize(int period)
 	}
 	serial_left.setBaudRate(QSerialPort::Baud115200);
 
-	serial_right.setPortName("/dev/ttyACM1");
-	if(!serial_right.open(QIODevice::ReadWrite))
-	{
-		std::cout << "Error reading ttyACM1" << std::endl;
- 		exit(-1); 
-	}
-	serial_right.setBaudRate(QSerialPort::Baud115200);
+	// serial_right.setPortName("/dev/ttyACM1");
+	// if(!serial_right.open(QIODevice::ReadWrite))
+	// {
+	// 	std::cout << "Error reading ttyACM1" << std::endl;
+ 	// 	exit(-1); 
+	// }
+	// serial_right.setBaudRate(QSerialPort::Baud115200);
 	
     //compute initial pose
    //compute_initial_pose(50);
@@ -106,6 +114,9 @@ void SpecificWorker::initialize(int period)
 	//init_kalman();
 	this->Period = 100;
 	timer.start(Period);
+	// GPS sensor
+	//connect(&sensor_timer, &QTimer::timeout, this, &SpecificWorker::filteredSensor);
+	//sensor_timer.start(1000);
 }
 
 void SpecificWorker::compute_initial_pose(int ntimes)
@@ -123,14 +134,17 @@ void SpecificWorker::compute_initial_pose(int ntimes)
 		std::cout<<posL.x() << " "<< posL.y()<<" " <<posR.x() << " "<< posR.y()<<std::endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
+
 	// media
 	xMedL /= ntimes;
 	yMedL /= ntimes;
 	xMedR /= ntimes;
 	yMedR /= ntimes;
+	
 	// Dist media
 	float distL = sqrt(xMedL*xMedL + yMedL*yMedL);
 	float distR = sqrt(xMedR*xMedR + yMedR*yMedR);
+	
 	// vector sort
 	std::vector<QPointF> left = qPosL;
 	std::sort(left.begin(), left.end(), [distL](auto &a,auto &b){return (QVector2D(a).length()-distL) < (QVector2D(b).length()-distL);});
@@ -166,8 +180,8 @@ void SpecificWorker::compute_initial_pose(int ntimes)
 	initialAngle -= yaw_class;
 
 	robot->setPos((posL+posR)/2.f);
-}
 
+}
 
 void SpecificWorker::compute_pose()
 {
@@ -199,25 +213,29 @@ void SpecificWorker::init_kalman()
 	x.x() = posL.x();
 	x.y() = posL.y();
 	x.theta() = yaw_class;
-	//Covarianza
-	//sys
+	
+	//Covarianza sys
 	Kalman::Covariance<State> sC(3,3);
 	sC.setZero();
-	sC(0,0) = 0.55;
-	sC(1,1) = 0.55;
-	sC(2,2) = 1;
-	sC(0,0) = 0.1;
-	sC(1,1) = 0.1;
-	sC(2,2) = 0.1;
+	// sC(0,0) = 0.55;
+	// sC(1,1) = 0.55;
+	// sC(2,2) = 0.1;
+
+	sC(0,0) = 0.00001;
+	sC(1,1) = 0.00001;
+	sC(2,2) = 0.00001;
+
 	sys.setCovariance(sC);
+	
 	//positionModel
 	Kalman::Covariance<PositionMeasurement> pC(2,2);
 	pC.setZero();
-	//pC(0,0) = 100;
-	//pC(1,1) = 100;
-	pC(0,0) = 1;
-	pC(1,1) = 1;
+	
+	pC(0,0) = 2;
+	pC(1,1) = 2;
+
 	pm.setCovariance(pC);
+	
 	//orientationModel
 	Kalman::Covariance<OrientationMeasurement> oC(1,1);
 	//oC(0,0) = 0.1;
@@ -225,10 +243,9 @@ void SpecificWorker::init_kalman()
 	om.setCovariance(oC);
 
 	// Init filters with true system state
-	ukf = Kalman::UnscentedKalmanFilter<State>(1);
+	//ukf = Kalman::UnscentedKalmanFilter<State>(1);
     predictor.init(x);
 	ekf.init(x);
-//	ukf.init(x);
 	robot->setPos(posL);
 
 	generator.seed( std::chrono::system_clock::now().time_since_epoch().count() );
@@ -298,8 +315,8 @@ void SpecificWorker::compute()
 //		scene.addLine(QLineF(pos_antEKF, QPointF(x_ekf.x(),x_ekf.y())), QPen(QColor("Blue"), 50));
 //		pos_antEKF = QPointF(x_ekf.x(),x_ekf.y());
 		
-//		scene.addLine(QLineF(pos_antUKF, QPointF(x_ukf.x(),x_ukf.y())), QPen(QColor("LightRed"), 50));
-//		pos_antUKF = QPointF(x_ukf.x(),x_ukf.y());
+		//		scene.addLine(QLineF(pos_antUKF, QPointF(x_ukf.x(),x_ukf.y())), QPen(QColor("LightRed"), 50));
+		//		pos_antUKF = QPointF(x_ukf.x(),x_ukf.y());
 
 //		scene.addLine(QLineF(pos_antPre, QPointF(x_pred.x(),x_pred.y())), QPen(QColor("Orange"), 50));
 //		pos_antPre = QPointF(x_pred.x(),x_pred.y());
@@ -311,7 +328,41 @@ void SpecificWorker::compute()
 	//robot->setPos(QPointF(x2.x(), x2.y()));
 	//robot->setRotation(qRadiansToDegrees(x2.theta()));
 	
+	// // second robot
+	// robot_stable->setPos(QPointF(x_ekf.x(), x_ekf.y()));
+	// robot_stable->setRotation(qRadiansToDegrees(x_ekf.theta()));
+	
+	// // Draw P
+	// p_circle->setRect(0,0,100*P(0,0),100*P(1,1));
+	// p_circle->setPos(QPointF(x_ekf.x(), x_ekf.y()));
+	// p_circle->setRotation(qRadiansToDegrees(x_ekf.theta()));
+
 }
+
+// /// Every second the timer calls this method
+// void SpecificWorker::filteredSensor()
+// {
+// 	qDebug() << "gola";
+// 	//filter accumulated data
+// 	State mean;
+// 	std::vector<State> data = sensor_data;
+// 	mean = std::accumulate(data.begin(), data.end(), mean, [](auto &m, auto &d){ return m + d;}) / data.size();
+// 	std::transform(data.begin(), data.end(), data.begin(), 
+// 		[mean](auto &a){ a.x() = a.x()-mean.x(); a.y() = a.y()-mean.y(); return a;});
+// 	std::nth_element(data.begin(), data.begin() + data.size() / 2, data.end(), 
+// 		[](auto &a, auto &b){return a.xymod() < b.xymod();});
+// 	State s = sensor_data.at(sensor_data.size()/2);
+// 	std::cout << s << std::endl;
+	
+// 	//update the filter with the result
+	
+// 	OrientationMeasurement orientation = om.h(s);
+// 	this->x_ekf = ekf.update(om, orientation);
+// 	PositionMeasurement position = pm.h(s);
+// 	x_ekf = ekf.update(pm, position);
+
+// 	sensor_data.clear();
+// }
 
 std::vector<int> SpecificWorker::readData(QSerialPort &serial)
 {
@@ -480,8 +531,6 @@ float SpecificWorker::degreesToRadians(const float angle_)
    		return angle + M_PI*2;
 	else return angle;
 }
-
-
 
 // RESIZE
 // zoom
