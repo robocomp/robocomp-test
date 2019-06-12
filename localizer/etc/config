@@ -1,0 +1,14 @@
+CommonBehavior.Endpoints=tcp -p 10000
+
+
+# Proxies for required interfaces
+FullPoseEstimationProxy = fullposeestimation:tcp -h 192.168.0.118 -p 10696
+FullPoseEstimation1Proxy = fullposeestimation:tcp -h 192.168.0.118 -p 10555
+
+
+
+InnerModelPath = innermodel.xml
+
+Ice.Warn.Connections=0
+Ice.Trace.Network=0
+Ice.Trace.Protocol=0
