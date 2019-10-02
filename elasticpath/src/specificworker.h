@@ -75,7 +75,9 @@ public slots:
 private:
 
 	//constants
-	const float LEFT = -790, BOTTOM = 0, WIDTH = 5960, HEIGHT = 9700;
+	//const float LEFT = -790, BOTTOM = 0, WIDTH = 5960, HEIGHT = 9700;
+	const float LEFT = -2000, BOTTOM = -4000, WIDTH = 9000, HEIGHT = 8000;
+	
 	const float ROBOT_LENGTH = 400;
 	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.9;
 	const float MAX_LASER_DIST = 4000;

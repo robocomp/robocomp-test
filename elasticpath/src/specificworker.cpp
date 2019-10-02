@@ -54,7 +54,7 @@ bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList _params)
 		// InnerModelTransform *rawOdometryNode = innerModel->newTransform("robot_raw_odometry", "static", rawOdometryParentNode,  0, 0, 0, 0, 0, 0, 0);
         params = _params;
 	}
-	catch(std::exception e) { qFatal("Error reading config params"); }
+	catch(const std::exception &e) { qFatal("Error reading config params"); }
 	return true;
 }
 
@@ -81,6 +81,7 @@ void SpecificWorker::initialize(int period)
 
     //Load World
     initializeWorld();
+
 	
 	// Robot 
 	QPolygonF poly2;
@@ -494,9 +495,8 @@ void SpecificWorker::controller()
 	// Check for inminent collision to block and bounce backwards using laser field
 
     if (not active)
-	{
-        return;
-	}   
+	{  return; }
+	
 	// Compute distance to target along path
 	float dist_to_target = 0.f;
 	for(auto &&g : iter::sliding_window(points, 2))
@@ -517,10 +517,11 @@ void SpecificWorker::controller()
         //qDebug() << "num free " << num_free;
         if(num_free < ROBOT_LENGTH / ROAD_STEP_SEPARATION)
         {
-            qDebug() << __FUNCTION__ << "Blocked!";
+            //qDebug() << __FUNCTION__ << "Blocked!";
             advVelz = 0;
             rotVel = 0;
             std::list<QVec> path = grid.computePath(Grid<TCell>::Key(robot->pos()), Grid<TCell>::Key(target->pos()));
+
             if(path.size() > 0) createPathFromGraph(path);
         }
 
@@ -534,126 +535,40 @@ void SpecificWorker::controller()
         auto min_angle = std::min(angles.begin(), angles.end());	
         //rotVel = -0.7 * *min_angle;
         
-        rotVel = 0.4 * *min_angle;
+        rotVel = 0.7 * *min_angle;
 		if (fabs(rotVel) > ROBOT_MAX_ROTATION_SPEED)
 		{
 			rotVel = rotVel/fabs(rotVel) * ROBOT_MAX_ROTATION_SPEED;
 		}
 
         // Compute advance speed
-        advVelz = ROBOT_MAX_ADVANCE_SPEED /**	exponentialFunction(1./dist_to_target, 1./700, 0.4, 0.1)*/
-                                        * exponentialFunction(rotVel, 0.7, 0.7, 0.f);
-    }
-    std::cout << "adv: "<< advVelz << " rot: " << rotVel << std::endl;
-									  
-//TODO:	//use differentialrobot_proxy to send speed to real base (Robex)
-	try
-	{
-//		differentialrobot_proxy->setSpeedBase(advVelz, rotVel);
-	}
-	catch(...)
-	{
-		qDebug() << __FUNCTION__ << "Error setting speed to differentialrobot base";
-	}
-//TODO:	//use omnirobot_proxy to send speed to real base (Viriato)
-	try
-	{
-//		float advVelx =0;
-//		omnirobot_proxy->setSpeedBase(advVelx, advVelz, rotVel);
-	}
-	catch(...)
-	{
-		qDebug() << __FUNCTION__ << "Error setting speed to omnirobot base";
+		//exponentialFunction(float value, float xValue, float yValue, float min)
+  		//advVelz = ROBOT_MAX_ADVANCE_SPEED * exponentialFunction(rotVel, 0.3, 0.5, 0) * exponentialFunction(dist_to_target, 200, 0.2, 0);
+   		advVelz = dist_to_target;
+		if(advVelz > ROBOT_MAX_ADVANCE_SPEED)
+			advVelz = ROBOT_MAX_ADVANCE_SPEED;
+		std::cout << "adv: "<< advVelz << " rot: " << rotVel << std::endl;
 	}
 }
 
 
 ///Periodic update of robot's state based on its adv and rot speeds.
 void SpecificWorker::updateRobot()
-{
-	static QTime reloj = QTime::currentTime();
-	// Read pose from robot
-	RoboCompGenericBase::TBaseState sensorbState, robotState;
-	try
-    {
-        genericbase_proxy->getBaseState(sensorbState);
-		differentialrobot_proxy->getBaseState(robotState);
-advVelz = robotState.advVx;		
-rotVel = robotState.rotV;
-qDebug()<<"real speed" << advVelz << rotVel;
-    }
-    catch(...)
-    {
-        std::cout << "Error getting robot position from genericBase" << std::endl;
-    }
+{ 
 	if (not active)
-	{
-		bState = sensorbState;
-		qDebug()<< "time"<<reloj.restart()/ 1000.f;
-	}
-	else
-	{
-		QVec Pr = QVec::vec3(bState.x, bState.z, bState.alpha); //anterior position
-		QVec Ps = QVec::vec3(sensorbState.x, sensorbState.z, sensorbState.alpha);
-		
-		// stimate position using speed sent to robot
-		QVec incs = QVec::vec3(0, advVelz, -rotVel) * ((float)reloj.restart() / 1000.f);
-		float alpha = bState.alpha + incs.z();
-		
-		QMat m(3,3); 
-		m(0,0) = cos(alpha); m(0,1) = -sin(alpha); m(0,2) = bState.x;
-		m(1,0) = sin(alpha); m(1,1) = cos(alpha);  m(1,2) = bState.z;
-		m(2,0) = 0;          m(2,1) = 0;           m(2,2) = 1;
-		
-		auto Pe = m * QVec::vec3(incs.x(), incs.y(), 1);
-std::cout << "**********" <<std::endl;
-Pr.print("real");
-Pe.print("estimada");
-Ps.print("sensor");
-
-		QPolygonF triangle;
-		float dX = 200;
-		float dY = 1000;
-		QLineF line = QLineF(QPointF(Pe.x(),Pe.y()), QPointF(Pr.x(),Pr.y())).normalVector();
-//qDebug()<<"line"<<line;
-		line.setLength(dX);
-//qDebug()<<"line left"<<line.x2()<<line.y2();
-		triangle << QPointF(Pr.x(),Pr.y());
-		triangle << QPointF(line.x2(),line.y2());
-		line.setLength(-dX);
-//qDebug()<<"line rightt"<<line.x2()<<line.y2();	
-		triangle << QPointF(line.x2(), line.y2());
-//qDebug()<<"Polygon"<<triangle;	
-		scene.removeItem(localizationPolygon);
-		localizationPolygon = scene.addPolygon(triangle, QColor("Yellow"), QBrush(QColor("Yellow")));
-		localizationPolygon->setZValue(10);	 	
-		
-		scene.removeItem(spherePolygon);
-		float size = 50 + lostMeasure*10;
-		spherePolygon = scene.addEllipse(Pe.x()-size/2, Pe.y()-size/2, size, size, QColor("Orange"), QBrush(QColor("Orange")));
-		
-		//Check if sensor position is inside polygon
-		if (spherePolygon->contains(QPointF(Ps.x(), Ps.y())))
-		{
-			std::cout << "sensor position is valid" << std::endl;
-			spherePolygon->setBrush(QBrush(QColor("Blue")));
-			bState = sensorbState;
-			lostMeasure = 0;
-		}
-		else
-		{
-			std::cout << "sensor position is outside estimate limits" << std::endl;
-			spherePolygon->setBrush(QBrush(QColor("Orange")));
-			bState.x = Pe.x();
-			bState.z = Pe.y();
-			bState.alpha = alpha;
-			lostMeasure += 1;
-		}
-	}
-	// update robot graphical robot position
-	robot->setPos(bState.x, bState.z);
-	robot->setRotation(qRadiansToDegrees(bState.alpha));
-    
+	{  return; }
+	
+	static QTime reloj = QTime::currentTime();
+	
+	// update robot graphical robot position by integrating robot speed
+	double alpha_inc = reloj.restart() * rotVel / 1000.;
+	double alpha = robot->rotation() - qRadiansToDegrees(alpha_inc);
+	robot->setRotation(alpha);
+	auto pos = robot->pos();
+	auto posz_inc = reloj.restart() * advVelz / 1000.;
+	auto posx_inc = reloj.restart() * advVelx / 1000.;
+	robot->setPos(QPointF(pos.x() + posx_inc, pos.y() + posz_inc)); 
+	std:cout << alpha << " " << advVelx << " " << advVelz << std::endl;
 }
 
 //////////////////////////////////////////////////////////////////777
@@ -668,6 +583,7 @@ float SpecificWorker::rewrapAngleRestricted(const float angle)
 	else return angle;
 }
 
+// compute max de gauss(value) where gauss(x)=y  y min
 float SpecificWorker::exponentialFunction(float value, float xValue, float yValue, float min)
 {
 	if( yValue <= 0) return 1.f;
@@ -812,3 +728,95 @@ float SpecificWorker::degreesToRadians(const float angle_)
    		return angle + M_PI*2;
 	else return angle;
 }
+
+
+
+
+//////////////////////////77
+
+//void SpecificWorker::updateRobot()
+//{
+	//static QTime reloj = QTime::currentTime();
+	// Read pose from robot
+	/* RoboCompGenericBase::TBaseState sensorbState, robotState;
+	try
+    {
+        genericbase_proxy->getBaseState(sensorbState);
+		differentialrobot_proxy->getBaseState(robotState);
+		advVelz = robotState.advVx;		
+		rotVel = robotState.rotV;
+		qDebug()<<"real speed" << advVelz << rotVel;
+    }
+    catch(...)
+    {
+        std::cout << "Error getting robot position from genericBase" << std::endl;
+    }
+	if (not active)
+	{
+		bState = sensorbState;
+		qDebug()<< "time"<<reloj.restart()/ 1000.f;
+	}
+	else
+	{
+		QVec Pr = QVec::vec3(bState.x, bState.z, bState.alpha); //anterior position
+		QVec Ps = QVec::vec3(sensorbState.x, sensorbState.z, sensorbState.alpha);
+		
+		// estimate position using speed sent to robot
+		QVec incs = QVec::vec3(0, advVelz, -rotVel) * ((float)reloj.restart() / 1000.f);
+		float alpha = bState.alpha + incs.z();
+		
+		QMat m(3,3); 
+		m(0,0) = cos(alpha); m(0,1) = -sin(alpha); m(0,2) = bState.x;
+		m(1,0) = sin(alpha); m(1,1) = cos(alpha);  m(1,2) = bState.z;
+		m(2,0) = 0;          m(2,1) = 0;           m(2,2) = 1;
+		
+		auto Pe = m * QVec::vec3(incs.x(), incs.y(), 1);
+		std::cout << "**********" <<std::endl;
+		Pr.print("real");
+		Pe.print("estimada");
+		Ps.print("sensor");
+
+		QPolygonF triangle;
+		float dX = 200;
+		float dY = 1000;
+		QLineF line = QLineF(QPointF(Pe.x(),Pe.y()), QPointF(Pr.x(),Pr.y())).normalVector();
+//qDebug()<<"line"<<line;
+		line.setLength(dX);
+//qDebug()<<"line left"<<line.x2()<<line.y2();
+		triangle << QPointF(Pr.x(),Pr.y());
+		triangle << QPointF(line.x2(),line.y2());
+		line.setLength(-dX);
+//qDebug()<<"line rightt"<<line.x2()<<line.y2();	
+		triangle << QPointF(line.x2(), line.y2());
+//qDebug()<<"Polygon"<<triangle;	
+		scene.removeItem(localizationPolygon);
+		localizationPolygon = scene.addPolygon(triangle, QColor("Yellow"), QBrush(QColor("Yellow")));
+		localizationPolygon->setZValue(10);	 	
+		
+		scene.removeItem(spherePolygon);
+		float size = 50 + lostMeasure*10;
+		spherePolygon = scene.addEllipse(Pe.x()-size/2, Pe.y()-size/2, size, size, QColor("Orange"), QBrush(QColor("Orange")));
+		
+		//Check if sensor position is inside polygon
+		if (spherePolygon->contains(QPointF(Ps.x(), Ps.y())))
+		{
+			std::cout << "sensor position is valid" << std::endl;
+			spherePolygon->setBrush(QBrush(QColor("Blue")));
+			bState = sensorbState;
+			lostMeasure = 0;
+		}
+		else
+		{
+			std::cout << "sensor position is outside estimate limits" << std::endl;
+			spherePolygon->setBrush(QBrush(QColor("Orange")));
+			bState.x = Pe.x();
+			bState.z = Pe.y();
+			bState.alpha = alpha;
+			lostMeasure += 1;
+		}
+	} */
+	// update robot graphical robot position
+	//robot->setPos(bState.x, bState.z);
+	//robot->setRotation(qRadiansToDegrees(bState.alpha));
+    
+//}
