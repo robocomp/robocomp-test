@@ -29,6 +29,26 @@
 
 #include <genericworker.h>
 #include <innermodel/innermodel.h>
+#include "doublebuffer.h"
+#include <opencv2/opencv.hpp>
+
+template <typename I, typename O> class ConverterTImage : Converter<I,O>
+{
+    public:
+        bool ItoO(I &iTypeData, O &oTypeData) 
+            { 
+                oTypeData.image.resize(iTypeData.image.size());
+				std::swap(iTypeData,oTypeData);
+                return true;
+            };
+       bool OtoI(const O & oTypeData, I &iTypeData)
+	   		{  
+			   	return true;	
+			}			
+       bool clear(O & oTypeData){ oTypeData.image.clear();  return true;};
+};
+
+using TImg = RoboCompCameraSimple::TImage;
 
 class SpecificWorker : public GenericWorker
 {
@@ -42,15 +62,21 @@ public:
 public slots:
 	void compute();
 	void initialize(int period);
-//Specification slot methods State Machine
+	void read();
+	
+	//Specification slot methods State Machine
 	void sm_compute();
 	void sm_initialize();
 	void sm_finalize();
 
 //--------------------
+
 private:
 	std::shared_ptr<InnerModel> innerModel;
-
+	//DoubleBuffer<TImg, TImg, ConverterTImage<TImg, TImg>> db;
+	DoubleBuffer<TImg, TImg> db;
+	QTimer readtimer;
+	
 };
 
 #endif

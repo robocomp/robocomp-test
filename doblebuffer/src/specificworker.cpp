@@ -47,44 +47,53 @@ bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList params)
 //	}
 //	catch(std::exception e) { qFatal("Error reading config params"); }
 
-
-
 	defaultMachine.start();
-	
-
-
 	return true;
 }
 
 void SpecificWorker::initialize(int period)
 {
+	cv::namedWindow("simplecamera",1);
 	std::cout << "Initialize worker" << std::endl;
 	this->Period = period;
-	timer.start(Period);
+	timer.start(period);
 	emit this->initializetocompute();
+	connect(&readtimer, &QTimer::timeout, this, &SpecificWorker::read);
+	readtimer.start(20);
 
 }
 
 void SpecificWorker::compute()
 {
-//computeCODE
-//QMutexLocker locker(mutex);
-//	try
-//	{
-//		camera_proxy->getYImage(0,img, cState, bState);
-//		memcpy(image_gray.data, &img[0], m_width*m_height*sizeof(uchar));
-//		searchTags(image_gray);
-//	}
-//	catch(const Ice::Exception &e)
-//	{
-//		std::cout << "Error reading from Camera" << e << std::endl;
-//	}
+	try
+	{	
+		//qDebug() << "compute";
+		RoboCompCameraSimple::TImage img;
+		camerasimple_proxy->getImage(img);
+		db.put(img);
+		
+	}
+	catch(const Ice::Exception &e)
+	{
+		std::cout << "Error reading from Camera" << e << std::endl;
+	}
+}
+
+void SpecificWorker::read()
+{
+	auto shit = db.get();
+	if(shit.image.size()>0)
+	{
+		cv::Mat img(cv::Size(shit.height, shit.width), CV_8UC3, &shit.image[0]);
+		cv::imshow("simple", img);
+    	cv::waitKey(10);
+	}
 }
 
 
 void SpecificWorker::sm_compute()
 {
-	std::cout<<"Entered state compute"<<std::endl;
+	//std::cout<<"Entered state compute"<<std::endl;
 	compute();
 }
 
