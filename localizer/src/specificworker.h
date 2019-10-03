@@ -22,8 +22,6 @@
        @author authorname
 */
 
-
-
 #ifndef SPECIFICWORKER_H
 #define SPECIFICWORKER_H
 
@@ -45,7 +43,7 @@ class SpecificWorker : public GenericWorker
 		SpecificWorker(TuplePrx tprx);
 		~SpecificWorker();
 		bool setParams(RoboCompCommonBehavior::ParameterList params);
-
+		void IMUPub_publish(RoboCompIMU::DataImu imu);
 
 	public slots:
 		void compute();
@@ -56,6 +54,7 @@ class SpecificWorker : public GenericWorker
 		const float LEFT = -790, BOTTOM = 0, WIDTH = 5960, HEIGHT = 9700;
 		const float ROBOT_LENGTH = 400;
 		float initX, initZ;
+		float initialAngle = -9999, angleOffset = -9999;
 
 		std::shared_ptr<InnerModel> innerModel;
 		QGraphicsScene scene;

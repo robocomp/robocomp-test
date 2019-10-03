@@ -1,0 +1,13 @@
+import "CameraSimple.idsl";
+
+Component doblebuffer
+{
+    Communications
+    {
+        requires CameraSimple;
+    };
+	language Cpp11;
+	statemachine "statemachine.smdsl";
+
+};
+

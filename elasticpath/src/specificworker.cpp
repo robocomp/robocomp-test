@@ -568,7 +568,7 @@ void SpecificWorker::updateRobot()
 	auto posz_inc = reloj.restart() * advVelz / 1000.;
 	auto posx_inc = reloj.restart() * advVelx / 1000.;
 	robot->setPos(QPointF(pos.x() + posx_inc, pos.y() + posz_inc)); 
-	std:cout << alpha << " " << advVelx << " " << advVelz << std::endl;
+	std::cout << alpha << " " << advVelx << " " << advVelz << std::endl;
 }
 
 //////////////////////////////////////////////////////////////////777

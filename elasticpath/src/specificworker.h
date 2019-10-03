@@ -39,6 +39,7 @@
 #include "grid.h"
 #include "human.h"
 
+#include <doublebuffer/DoubleBuffer.h>
 
 // Map
 struct TCell
@@ -160,6 +161,10 @@ private:
 	// This function takes an angle in the range [-3*pi, 3*pi] and wraps it to the range [-pi, pi].
 	float rewrapAngleRestricted(const float angle);
 	float degreesToRadians(const float angle_);
+
+	//Borrar
+	DoubleBuffer<std::vector<int>,std::vector<int>> db;
+
 protected:
 	void mousePressEvent(QMouseEvent *event) override;
 	void wheelEvent(QWheelEvent *event) override;

@@ -1,11 +1,12 @@
 CommonBehavior.Endpoints=tcp -p 10000
 
+IMUPubTopic.Endpoints=tcp -p 13000
 
 # Proxies for required interfaces
 FullPoseEstimationProxy = fullposeestimation:tcp -h 192.168.0.118 -p 10696
 FullPoseEstimation1Proxy = fullposeestimation:tcp -h 192.168.0.118 -p 10555
 
-
+TopicManager.Proxy=IceStorm/TopicManager:default -h 192.168.0.118 -p 9999
 
 InnerModelPath = innermodel.xml
 

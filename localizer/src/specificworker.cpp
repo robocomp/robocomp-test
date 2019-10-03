@@ -27,7 +27,6 @@
 */
 SpecificWorker::SpecificWorker(TuplePrx tprx) : GenericWorker(tprx)
 {
-
 }
 
 /**
@@ -93,7 +92,6 @@ void SpecificWorker::initialize(int period)
 	try
 	{
 		auto poseUWB = fullposeestimation1_proxy->getFullPose();
-		qDebug() << "UWB:" << poseUWB.x << poseUWB.y << poseUWB.z;
 		robot->setPos(poseUWB.x, poseUWB.y);
 		initX = poseUWB.x;
 		initZ = poseUWB.y;  //CHANGE IN ORIGIN
@@ -111,16 +109,27 @@ void SpecificWorker::initialize(int period)
 
 void SpecificWorker::compute()
 {
-
+	// if(initialAngle != -9999 and angleOffset == -9999)
+	// {
+	// 	robot->setRotation(qRadiansToDegrees(initialAngle));
+	// 	angleOffset = qRadiansToDegrees(initialAngle);
+	// 	std::cout << "IMU angle reading " << angleOffset << std::endl;
+	// }
+	
  	try
  	{
-		 auto pose_real_sense = fullposeestimation_proxy->getFullPose();
-		 //qDebug() << "realsense:" << pose_real_sense.x << pose_real_sense.y << pose_real_sense.z << pose_real_sense.ry;
-
-		robot->setPos(initX + pose_real_sense.x, initZ + pose_real_sense.z);
+		auto pose_real_sense = fullposeestimation_proxy->getFullPose();
+		auto poseUWB = fullposeestimation1_proxy->getFullPose();
+		qDebug() << "realsense:" << pose_real_sense.x << pose_real_sense.y << pose_real_sense.z << pose_real_sense.ry;
+		qDebug() << "uwb:" << poseUWB.x << poseUWB.y << poseUWB.z;
+		
+		robot->setPos(initX + pose_real_sense.x, initZ - pose_real_sense.z);
+		//float angle = angleOffset - qRadiansToDegrees(pose_real_sense.ry);
 		robot->setRotation(qRadiansToDegrees(pose_real_sense.ry));
-		qDebug() << "robot:" << robot->pos();
 
+		//robot->setRotation(angleOffset);
+		qDebug() << "robot:" << robot->pos();
+		qDebug() << "---------------";
  	}
 	catch(const Ice::Exception &e)
 	{
@@ -175,6 +184,16 @@ void SpecificWorker::initializeWorld()
     //     //box->setRotation(object[6].toFloat()*180/M_PI2);
          boxes.push_back(box);
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////7
+//// IMU Subscribe
+////////////////////////////////////////////////////////////////////////////////////////
+
+void SpecificWorker::IMUPub_publish(RoboCompIMU::DataImu imu)
+{
+	std::cout<< "IMU angle "<< imu.rot.Yaw << " corrected angle " << degreesToRadians(255.187) - imu.rot.Yaw  << std::endl;
+	//initialAngle = degreesToRadians(255.187) - imu.rot.Yaw;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////7

@@ -1,10 +1,12 @@
 import "FullPoseEstimation.idsl";
+import "IMUPub.idsl";
 
 Component Localizer
 {
     Communications
     {
         requires FullPoseEstimation, FullPoseEstimation;
+        subscribesTo IMUPub;
     };
 	language Cpp11;
 	gui Qt(QWidget);

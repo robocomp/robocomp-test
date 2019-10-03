@@ -81,7 +81,9 @@
 #include "specificmonitor.h"
 #include "commonbehaviorI.h"
 
+#include <imupubI.h>
 
+#include <IMU.h>
 
 
 // User includes here
@@ -171,6 +173,16 @@ int ::Localizer::run(int argc, char* argv[])
 	}
 	rInfo("FullPoseEstimationProxy1 initialized Ok!");
 
+	IceStorm::TopicManagerPrxPtr topicManager;
+	try
+	{
+		topicManager = Ice::checkedCast<IceStorm::TopicManagerPrx>(communicator()->propertyToProxy("TopicManager.Proxy"));
+	}
+	catch (const Ice::Exception &ex)
+	{
+		cout << "[" << PROGRAM_NAME << "]: Exception: STORM not running: " << ex << endl;
+		return EXIT_FAILURE;
+	}
 
 	tprx = std::make_tuple(fullposeestimation_proxy,fullposeestimation1_proxy);
 	SpecificWorker *worker = new SpecificWorker(tprx);
@@ -213,6 +225,46 @@ int ::Localizer::run(int argc, char* argv[])
 
 
 		// Server adapter creation and publication
+		std::shared_ptr<IceStorm::TopicPrx> imupub_topic;
+		Ice::ObjectPrxPtr imupub;
+		try
+		{
+			if (not GenericMonitor::configGetString(communicator(), prefix, "IMUPubTopic.Endpoints", tmp, ""))
+			{
+				cout << "[" << PROGRAM_NAME << "]: Can't read configuration for proxy IMUPubProxy";
+			}
+			Ice::ObjectAdapterPtr IMUPub_adapter = communicator()->createObjectAdapterWithEndpoints("imupub", tmp);
+			IMUPubPtr imupubI_ =  std::make_shared <IMUPubI>(worker);
+			auto imupub = IMUPub_adapter->addWithUUID(imupubI_)->ice_oneway();
+			if(!imupub_topic)
+			{
+				try {
+					imupub_topic = topicManager->create("IMUPub");
+				}
+				catch (const IceStorm::TopicExists&) {
+					//Another client created the topic
+					try{
+						cout << "[" << PROGRAM_NAME << "]: Probably other client already opened the topic. Trying to connect.\n";
+						imupub_topic = topicManager->retrieve("IMUPub");
+					}
+					catch(const IceStorm::NoSuchTopic&)
+					{
+						cout << "[" << PROGRAM_NAME << "]: Topic doesn't exists and couldn't be created.\n";
+						//Error. Topic does not exist
+					}
+				}
+				IceStorm::QoS qos;
+				imupub_topic->subscribeAndGetPublisher(qos, imupub);
+			}
+			IMUPub_adapter->activate();
+		}
+		catch(const IceStorm::NoSuchTopic&)
+		{
+			cout << "[" << PROGRAM_NAME << "]: Error creating IMUPub topic.\n";
+			//Error. Topic does not exist
+		}
+
+		// Server adapter creation and publication
 		cout << SERVER_FULL_NAME " started" << endl;
 
 		// User defined QtGui elements ( main window, dialogs, etc )
@@ -224,6 +276,15 @@ int ::Localizer::run(int argc, char* argv[])
 		// Run QT Application Event Loop
 		a.exec();
 
+		try
+		{
+			std::cout << "Unsubscribing topic: imupub " <<std::endl;
+			imupub_topic->unsubscribe( imupub );
+		}
+		catch(const Ice::Exception& ex)
+		{
+			std::cout << "ERROR Unsubscribing topic: imupub " <<std::endl;
+		}
 
 		status = EXIT_SUCCESS;
 	}
