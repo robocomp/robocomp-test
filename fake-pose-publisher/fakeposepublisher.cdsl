@@ -1,0 +1,12 @@
+import "CameraSimpleTopic.idsl";
+
+Component fakeposepublisher
+{
+    Communications
+    {
+        publishes CameraSimpleTopic;
+    };
+	language Cpp11;
+	statemachine "statemachine.smdsl";
+};
+
