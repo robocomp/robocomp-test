@@ -22,9 +22,7 @@
 * \brief Default constructor
 */
 SpecificWorker::SpecificWorker(TuplePrx tprx) : GenericWorker(tprx)
-{
-
-}
+{}
 
 /**
 * \brief Default destructor

@@ -21,7 +21,7 @@ template <typename I, typename O> class Converter
 template <typename I, typename O> class ConverterDefault : Converter<I,O>
 {
     public:
-        bool ItoO( I & iTypeData, O &oTypeData) 
+        bool ItoO( I & iTypeData, O &oTypeData) noexcept(std::is_nothrow_move_constructible<T>::value && std::is_nothrow_move_assignable<T>::value)
         { 
             if(sizeof(iTypeData) == sizeof(oTypeData)) 
             {   std::swap(iTypeData, oTypeData); 
