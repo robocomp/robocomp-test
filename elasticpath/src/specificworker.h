@@ -39,7 +39,7 @@
 #include "grid.h"
 #include "human.h"
 
-#include <doublebuffer/DoubleBuffer.h>
+#include "doublebuffer.h"
 
 // Map
 struct TCell
@@ -85,15 +85,15 @@ private:
 	const float LASER_DIST_STEP = 0.05;
 	const int TILE_SIZE = 200;
 	const float LASER_ANGLE_STEPS = 50;	
-	const float ROBOT_MAX_ADVANCE_SPEED = 200;
-	const float ROBOT_MAX_ROTATION_SPEED = 0.3;
+	const float ROBOT_MAX_ADVANCE_SPEED = 500;
+	const float ROBOT_MAX_ROTATION_SPEED = 0.9;
     
 	InnerModel *innerModel;
 	QGraphicsScene scene;
 	QGraphicsView view;
 	std::vector<QGraphicsEllipseItem*> points;
 
-	QGraphicsEllipseItem *first, *last, *second;
+	QGraphicsEllipseItem *first, *last, *second, *robot_nose;
 	QGraphicsPolygonItem *robot;
 	QGraphicsRectItem *target;
 	QGraphicsRectItem *north, *south, *west, *east, *middle;
@@ -115,6 +115,7 @@ private:
 	QGraphicsPolygonItem* localizationPolygon;
 	QGraphicsEllipseItem* spherePolygon;
 	int lostMeasure = 0;
+
 	//human
 	Human *humanA, *humanB;
 	QVector<Human*> human_vector;
@@ -138,11 +139,11 @@ private:
 	
 	// Methods
     void initializeWorld();
-	void computeForces();
+	void computeForces(const std::vector<QGraphicsEllipseItem*> &path, const std::vector<LData> &lData);
 	void computeLaser(QGraphicsItem *r, const std::vector<QGraphicsItem*> &box);
 	void addPoints();
 	void cleanPoints();
-	void computeVisibility();
+	void computeVisibility(const std::vector<QGraphicsEllipseItem*> &path, const QGraphicsPolygonItem *laser);
 	float exponentialFunction(float value, float xValue, float yValue, float min);
 	//void updateFreeSpaceMap(QMap<QString, QPolygonF> poly_map);
 	void updateFreeSpaceMap(const std::vector<QPolygonF> &new_poly);
@@ -162,8 +163,9 @@ private:
 	float rewrapAngleRestricted(const float angle);
 	float degreesToRadians(const float angle_);
 
-	//Borrar
-	DoubleBuffer<std::vector<int>,std::vector<int>> db;
+	//Integrating time
+	QTime reloj = QTime::currentTime();
+
 
 protected:
 	void mousePressEvent(QMouseEvent *event) override;

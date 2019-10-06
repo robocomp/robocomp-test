@@ -167,7 +167,8 @@ class Grid
 			std::vector<double> min_distance(fmap.size(), DBL_MAX);
 			auto id = std::get<T&>(getCell(source)).id;
 			min_distance[id] = 0;
-			std::vector<std::pair<std::uint32_t, Key>> previous(fmap.size(), std::make_pair(-1, Key()));			
+			std::vector<std::pair<std::uint32_t, Key>> previous(fmap.size(), std::make_pair(-1, Key()));
+			// compare two vertices			
 			auto comp = [this](std::pair<std::uint32_t, Key> x, std::pair<std::uint32_t, Key> y)
 				{ if(x.first < y.first) 
 					return true;
@@ -198,8 +199,8 @@ class Grid
 						active_vertices.erase( { min_distance[ed.second.id], ed.first } );
 						min_distance[ed.second.id] = min_distance[fmap[where].id] + ed.second.cost;
 						previous[ed.second.id] = std::make_pair(fmap[where].id, where);
-						//active_vertices.insert( { min_distance[ed.second.id], ed.first } );    // Djikstra
-						active_vertices.insert( { min_distance[ed.second.id] + heuristicL2(ed.first, target), ed.first } );
+						active_vertices.insert( { min_distance[ed.second.id], ed.first } );    // Djikstra
+						//active_vertices.insert( { min_distance[ed.second.id] + heuristicL2(ed.first, target), ed.first } ); //A*
 					}
 				}
 			}
@@ -227,10 +228,10 @@ class Grid
 
 		void markAreaInGridAs(const QPolygonF &poly, bool free)
 		{
-			const qreal step = dim.TILE_SIZE/5;
+			const qreal step = dim.TILE_SIZE/4;
 			QRectF box = poly.boundingRect();
-			for( auto &&x: iter::range(box.x(), box.x()+box.width(), step))
-				for( auto &&y: iter::range(box.y(), box.y()+box.height(), step))
+			for( auto &&x: iter::range(box.x()-step/2, box.x()+box.width()+step/2, step))
+				for( auto &&y: iter::range(box.y()-step/2, box.y()+box.height()+step/2, step))
 				{	
 					if(poly.containsPoint(QPointF(x,y), Qt::OddEvenFill))
 					{
@@ -238,35 +239,6 @@ class Grid
 						else 	setOccupied(pointToGrid(x, y));
 					}
 				}
-		}
-
-		
-	private:
-		FMap fmap, fmap_aux;
-		Dimensions dim;
-		
-		/**
-		* @brief Recovers the optimal path from the list of previous nodes
-		* 
-		*/
-		std::list<QVec> orderPath(const std::vector<std::pair<std::uint32_t,Key>> &previous, const Key &source, const Key &target)
-		{
-			std::list<QVec> res;
-			Key k = target;
-			std::uint32_t u = fmap.at(k).id;
-			while(previous[u].first != (std::uint32_t)-1)
-			{
-				res.push_front(QVec::vec3(k.x, 0, k.z));
-				u = previous[u].first;
-				k = previous[u].second;
-			}
-			//qDebug() << __FILE__ << __FUNCTION__ << "Path length:" << res.size();  //exit point 
-			return res;
-		};
-
-		inline double heuristicL2(const Key &a, const Key &b) const
-		{
-			return sqrt((a.x-b.x)*(a.x-b.x) + (a.z-b.z)*(a.z-b.z));
 		}
 
 		std::vector<std::pair<Key, T>> neighboors(const Key &k) 
@@ -302,6 +274,34 @@ class Grid
 				}
 			}
 			return neigh;
+		}
+		
+	private:
+		FMap fmap, fmap_aux;
+		Dimensions dim;
+		
+		/**
+		* @brief Recovers the optimal path from the list of previous nodes
+		* 
+		*/
+		std::list<QVec> orderPath(const std::vector<std::pair<std::uint32_t,Key>> &previous, const Key &source, const Key &target)
+		{
+			std::list<QVec> res;
+			Key k = target;
+			std::uint32_t u = fmap.at(k).id;
+			while(previous[u].first != (std::uint32_t)-1)
+			{
+				res.push_front(QVec::vec3(k.x, 0, k.z));
+				u = previous[u].first;
+				k = previous[u].second;
+			}
+			//qDebug() << __FILE__ << __FUNCTION__ << "Path length:" << res.size();  //exit point 
+			return res;
+		};
+
+		inline double heuristicL2(const Key &a, const Key &b) const
+		{
+			return sqrt((a.x-b.x)*(a.x-b.x) + (a.z-b.z)*(a.z-b.z));
 		}
 };
 

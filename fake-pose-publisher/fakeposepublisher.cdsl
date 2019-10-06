@@ -4,9 +4,9 @@ Component fakeposepublisher
 {
     Communications
     {
-        publishes CameraSimpleTopic;
+        subscribesTo CameraSimple;
     };
 	language Cpp11;
-	statemachine "statemachine.smdsl";
+
 };
 
