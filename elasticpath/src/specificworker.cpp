@@ -385,14 +385,14 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 			mag  = -(200.f/1000)*mag + 200.f;
 			f_force = mag * force.normalized();	
 			if(mag < 1000)	
-				lforces.push_back(scene.addLine(QLineF( p->pos(), 1.2*(p->pos()+f_force.toPointF())), 
+				lforces.push_back(scene.addLine(QLineF( p->pos(), 1.1*(p->pos()+f_force.toPointF())), 
 							QPen(QBrush(QColor("LightGreen")),10)));
 			eforces.push_back(f_force);
 		}
 	}
 
 	//Apply forces to current position
-	const float KE = 0.3;
+	const float KE = 0.6;
 	const float KI = 1.5;	
 	//const float KL = 0.06;	
 	for(auto &&[point, iforce, eforce, base_line] : iter::zip(lpath, iforces, eforces, base_lines))
