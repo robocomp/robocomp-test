@@ -67,7 +67,7 @@ public:
         std::lock_guard<std::mutex> lock(bufferMutex);
         if(queue.empty() == false)
         {
-            O oData = queue.front();
+            const O oData = queue.front();
             queue.pop();
             qDebug() << "read " << queue.size();
             return oData;

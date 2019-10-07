@@ -373,7 +373,7 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 						return std::make_tuple(dist, QVector2D(p->pos()) - tip);
 					}	
 					else
-						return std::make_tuple(MAX_LASER_DIST, QVector2D(0,0));	
+						return std::make_tuple(MAX_LASER_DIST, QVector2D(p->pos()));	
 				});
 			// compute min distance
 			auto min = std::min_element(std::begin(distances), std::end(distances), [](auto &a, auto &b){return std::get<float>(a) < std::get<float>(b);});
@@ -386,7 +386,7 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 			f_force = mag * force.normalized();	
 			if(mag < 1000)	
 				lforces.push_back(scene.addLine(QLineF( p->pos(), 1.1*(p->pos()+f_force.toPointF())), 
-							QPen(QBrush(QColor("LightGreen")),10)));
+							QPen(QBrush(QColor("DarkGreen")),15)));
 			eforces.push_back(f_force);
 		}
 	}
@@ -441,7 +441,7 @@ void SpecificWorker::addPoints()
 	int l=0;
 	for(auto &&p : points_to_insert)
 	{
-		auto r = scene.addEllipse(QRectF(-BALL_MIN,-BALL_MIN,BALL_SIZE,BALL_SIZE), QPen(QColor("Green")), QBrush(QColor("Green")));
+		auto r = scene.addEllipse(QRectF(-BALL_MIN,-BALL_MIN,BALL_SIZE,BALL_SIZE), QPen(QColor("LightGreen")), QBrush(QColor("LightGreen")));
 		r->setPos(std::get<QPointF>(p));
 		points.insert(points.begin() + std::get<int>(p) + l++, r);
 	}

@@ -39,7 +39,6 @@
 #include "grid.h"
 #include "human.h"
 
-#include "doublebuffer.h"
 
 // Map
 struct TCell
@@ -81,7 +80,7 @@ private:
 	const float ROBOT_LENGTH = 400;
 	const float BALL_MIN = ROBOT_LENGTH/2;
 	const float BALL_SIZE = ROBOT_LENGTH;
-	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.9;
+	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 1.1;
 	const float MAX_LASER_DIST = 4000;
 	const float LASER_DIST_STEP = 0.05;
 	const int TILE_SIZE = 200;
