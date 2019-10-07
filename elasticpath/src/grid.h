@@ -174,9 +174,9 @@ class Grid
 					return true;
 				  else if(x.first == y.first)
 				  	return std::get<T&>(getCell(x.second)).id <= std::get<T&>(getCell(y.second)).id;
-				  else return false;
+				  else return false;	
 				};
-			
+				
 			std::set< std::pair<double, Key>, decltype(comp)> active_vertices(comp);
 			active_vertices.insert({0,source});
 			

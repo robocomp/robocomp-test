@@ -295,7 +295,7 @@ void SpecificWorker::computeVisibility(const std::vector<QGraphicsEllipseItem*> 
 	const auto &poly = laser->polygon();
 	for(auto &&p: path)
 	{
-		if( poly.containsPoint(p->pos(), Qt::OddEvenFill))
+		if( poly.containsPoint(p->pos(), Qt::OddEvenFill) or robot->polygon().containsPoint(p->pos(), Qt::OddEvenFill))
 		{
 			p->setData(0, true);
 			p->setBrush(QColor("LightGreen"));
@@ -365,9 +365,10 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 			// apply to all laser points a functor to compute the distances to point in path (p)
 			std::transform(std::begin(lData), std::end(lData), std::back_inserter(distances), [p, this](auto &l)
 				{ 
+					// laser ray tip 
 					auto t = QPointF(l.dist*sin(l.angle), l.dist*cos(l.angle));
 					QVector2D tip(robot->mapToScene(t));
-					if(QVector2D(t).length() < MAX_LASER_DIST-1)
+					if(QVector2D(t).length() < MAX_LASER_DIST)
 					{
 						float dist = std::min((QVector2D(p->pos()) - tip).length()-200, 0.f);
 						return std::make_tuple(dist, QVector2D(p->pos()) - tip);
@@ -457,7 +458,10 @@ void SpecificWorker::cleanPoints()
 		const auto &p1 = group[0];
 		const auto &p2 = group[1];
 		if(p2 == last)
+		{
+			points_to_remove.push_back(p1);
 			break;
+		}
 		float dist = QVector2D(p1->pos()-p2->pos()).length();
 		if (dist < 0.5 * ROAD_STEP_SEPARATION)  
 			points_to_remove.push_back(p2);
@@ -610,7 +614,7 @@ void SpecificWorker::mousePressEvent(QMouseEvent *event)
 	{
 		auto p = view.mapToScene(event->x(), event->y());	
 		qDebug() << __FUNCTION__ << "target " << p;
-		std::list<QVec> path = grid.computePath(Grid<TCell>::Key(robot->pos()), Grid<TCell>::Key(p));
+		std::list<QVec> path = grid.computePath(Grid<TCell>::Key(robot_nose->mapToScene(QPointF(0,0))), Grid<TCell>::Key(p));
 		if(path.size() > 0) 
 		{
 			createPathFromGraph(path);
