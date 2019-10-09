@@ -255,16 +255,16 @@ void SpecificWorker::compute()
 {
 	computeLaser(laser_pose, boxes);  // goes
 	computeVisibility(points, laser_polygon);
-	computeForces(points, laserData);
-	cleanPath();
-	controller();
+	//computeForces(points, laserData);
+	//cleanPath();
+	//controller();
 	updateRobot();				// goes
 	reloj.restart();
 }
 
 void SpecificWorker::cleanPath()
 {
-	//computeForces(points, laserData);
+	computeForces(points, laserData);
 	addPoints();
 	cleanPoints();
 }
@@ -296,6 +296,13 @@ void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
 	last = points.back();
 	last->setPos(target->pos());
 	target->setZValue(1);
+
+	// for(auto &&p: points)
+	//   	std::cout << "(" << p->pos().x() << " " << p->pos().y() << " " << p->data(0).toBool() << ")";
+	//  std::cout << std::endl;
+	for(auto &&p: path)
+	  	std::cout << "(" << p << ")";
+	std::cout << std::endl;
 }
 
 void SpecificWorker::computeVisibility(const std::vector<QGraphicsEllipseItem*> &path, const QGraphicsPolygonItem *laser)
@@ -304,7 +311,7 @@ void SpecificWorker::computeVisibility(const std::vector<QGraphicsEllipseItem*> 
 	for(auto &&p: path)
 	{
 		if( poly.containsPoint(p->pos(), Qt::OddEvenFill) 
-			or robot->polygon().containsPoint(robot->mapFromScene(p->pos()), Qt::OddEvenFill))
+						or robot->polygon().containsPoint(robot->mapFromScene(p->pos()), Qt::OddEvenFill))
 		{
 			p->setData(0, true);
 			p->setBrush(QColor("LightGreen"));
@@ -315,6 +322,10 @@ void SpecificWorker::computeVisibility(const std::vector<QGraphicsEllipseItem*> 
 			p->setBrush(QColor("DarkGreen"));
 		}
 	}
+	// for(auto &&p: path)
+	//  	std::cout << "(" << p->pos().x() << " " << p->pos().y() << " " << p->data(0).toBool() << ")";
+	// std::cout << std::endl;
+	
 }
 
 void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &path, const std::vector<LData> &lData)
@@ -533,7 +544,7 @@ void SpecificWorker::controller()
 	
 	qDebug() << dist_to_target;
 	// Check for arrival to target
-	if(dist_to_target < 50)
+	if(dist_to_target < 370)
 	{
         std::cout << "TARGET ACHIEVED" << std::endl;
 		advVelz = 0;
@@ -544,8 +555,8 @@ void SpecificWorker::controller()
 
 	// Check for blocking
 	auto num_free = std::count_if(std::begin(points), std::end(points), [](auto &&p){ return p->data(0) == true;});
-	//qDebug() << "num free " << num_free;
-	if(num_free < ROBOT_LENGTH / ROAD_STEP_SEPARATION)
+	qDebug() << "num free " << num_free;
+	if(num_free < 2)
 	{
 		qDebug() << __FUNCTION__ << "Blocked!";
 		advVelz = 0;
@@ -566,10 +577,18 @@ void SpecificWorker::controller()
 		angles.push_back(rewrapAngleRestricted(qDegreesToRadians(nose.angleTo(QLineF(first->pos(),points[i]->pos())))));
 	auto min_angle = std::min(angles.begin(), angles.end());	
 	
-	rotVel = 1.2 * *min_angle;
-	if (fabs(rotVel) > ROBOT_MAX_ROTATION_SPEED)
-		rotVel = rotVel/fabs(rotVel) * ROBOT_MAX_ROTATION_SPEED;
-
+	if( min_angle != angles.end())
+	{
+		rotVel = 1.2 * *min_angle;
+		if (fabs(rotVel) > ROBOT_MAX_ROTATION_SPEED)
+			rotVel = rotVel/fabs(rotVel) * ROBOT_MAX_ROTATION_SPEED;
+	}
+	else
+	{
+		rotVel = 0;
+		qDebug() << __FUNCTION__  << "rotvel = 0";
+	}
+	
 	// Compute advance speed
 	std::min( advVelz = ROBOT_MAX_ADVANCE_SPEED * exponentialFunction(rotVel, 0.3, 0.4, 0) , dist_to_target);
 	//std::cout <<  "In controller: active " << active << " adv: "<< advVelz << " rot: " << rotVel << std::endl;

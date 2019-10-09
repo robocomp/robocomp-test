@@ -81,12 +81,12 @@ private:
 	const float ROBOT_LENGTH = 400;
 	const float BALL_MIN = ROBOT_LENGTH/2;
 	const float BALL_SIZE = ROBOT_LENGTH;
-	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 1.1;
+	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 1;
 	const float MAX_LASER_DIST = 4000;
 	const float LASER_DIST_STEP = 0.05;
 	const int TILE_SIZE = 200;
 	const float LASER_ANGLE_STEPS = 50;	
-	const float ROBOT_MAX_ADVANCE_SPEED = 1000;
+	const float ROBOT_MAX_ADVANCE_SPEED = 200;
 	const float ROBOT_MAX_ROTATION_SPEED = 0.9;
     
 	InnerModel *innerModel;
