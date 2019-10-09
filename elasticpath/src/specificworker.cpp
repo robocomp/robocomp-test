@@ -187,6 +187,9 @@ void SpecificWorker::initialize(int period)
 	// Proxemics
 	//	connect(humanA, &Human::personChangedSignal, this, &SpecificWorker::personChangedSlot);
 	//	connect(humanB, &Human::personChangedSignal, this, &SpecificWorker::personChangedSlot);
+
+	showMaximized();
+
 }
 
 //load world model from file
@@ -275,13 +278,18 @@ void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
 	for(auto &&p: points)
 		scene.removeItem(p);
 	points.clear();
+	qDebug() << __FUNCTION__ << "hola";
 	for(auto &&p: path)
 	{
-		auto ellipse = scene.addEllipse(QRectF(-BALL_MIN,-BALL_MIN, BALL_SIZE, BALL_SIZE), QPen(QColor("LightGreen")), QBrush(QColor("LightGreen")));
-		ellipse->setFlag(QGraphicsItem::ItemIsMovable);
-		ellipse->setPos(p.x(), p.z());
-		points.push_back(ellipse);
+		if((p-QVec::vec2(robot->pos().x(), robot->pos().y())).norm2() > ROBOT_LENGTH * 2)
+		{ 
+			auto ellipse = scene.addEllipse(QRectF(-BALL_MIN,-BALL_MIN, BALL_SIZE, BALL_SIZE), QPen(QColor("LightGreen")), QBrush(QColor("LightGreen")));
+			ellipse->setFlag(QGraphicsItem::ItemIsMovable);
+			ellipse->setPos(p.x(), p.z());
+			points.push_back(ellipse);
+		}
 	}
+	if( points.empty()) return; 
 	first = points.front();
 	first->setPos(robot_nose->mapToScene(QPointF(0,0))); 
 	first->setBrush(QColor("MediumGreen"));
@@ -295,7 +303,8 @@ void SpecificWorker::computeVisibility(const std::vector<QGraphicsEllipseItem*> 
 	const auto &poly = laser->polygon();
 	for(auto &&p: path)
 	{
-		if( poly.containsPoint(p->pos(), Qt::OddEvenFill) or robot->polygon().containsPoint(p->pos(), Qt::OddEvenFill))
+		if( poly.containsPoint(p->pos(), Qt::OddEvenFill) 
+			or robot->polygon().containsPoint(robot->mapFromScene(p->pos()), Qt::OddEvenFill))
 		{
 			p->setData(0, true);
 			p->setBrush(QColor("LightGreen"));
@@ -393,8 +402,8 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 	}
 
 	//Apply forces to current position
-	const float KE = 0.6;
-	const float KI = 1.5;	
+	const float KE = 0.8;
+	const float KI = 1.4;	
 	//const float KL = 0.06;	
 	for(auto &&[point, iforce, eforce, base_line] : iter::zip(lpath, iforces, eforces, base_lines))
 	{
@@ -459,12 +468,15 @@ void SpecificWorker::cleanPoints()
 		const auto &p2 = group[1];
 		if(p2 == last)
 		{
-			points_to_remove.push_back(p1);
+			//points_to_remove.push_back(p1);
 			break;
 		}
 		float dist = QVector2D(p1->pos()-p2->pos()).length();
-		if (dist < 0.5 * ROAD_STEP_SEPARATION)  
+		if( dist < 0.5 * ROAD_STEP_SEPARATION)
 			points_to_remove.push_back(p2);
+ 
+		//if( robot->polygon().containsPoint(robot->mapFromScene(p1->pos()), Qt::OddEvenFill))  
+		//	points_to_remove.push_back(p1);
 	}
 	for(auto p: points_to_remove)
 	{
@@ -519,8 +531,9 @@ void SpecificWorker::controller()
 	for(auto &&g : iter::sliding_window(points, 2))
 		dist_to_target += QVector2D(g[1]->pos() - g[0]->pos()).length();
 	
+	qDebug() << dist_to_target;
 	// Check for arrival to target
-	if(dist_to_target < 10)
+	if(dist_to_target < 50)
 	{
         std::cout << "TARGET ACHIEVED" << std::endl;
 		advVelz = 0;
