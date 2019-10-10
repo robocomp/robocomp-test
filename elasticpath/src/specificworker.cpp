@@ -20,6 +20,9 @@
 #include <cppitertools/range.hpp>
 #include <cppitertools/sliding_window.hpp>
 #include <cppitertools/zip.hpp>
+#include <cppitertools/filter.hpp>
+#include <cppitertools/enumerate.hpp>
+#include <cppitertools/slice.hpp>
 #include <random>
 #include <QGridLayout>
 #include <QDesktopWidget>
@@ -252,7 +255,7 @@ void SpecificWorker::compute()
 {
 	computeLaser(laser_pose, boxes);  // goes
 	computeVisibility(points, laser_polygon);
-	computeForces(points, laserData);
+	//computeForces(points, laserData);
 	cleanPath();
 	controller();
 	updateRobot();				// goes
@@ -261,7 +264,7 @@ void SpecificWorker::compute()
 
 void SpecificWorker::cleanPath()
 {
-	//computeForces(points, laserData);
+	computeForces(points, laserData);
 	addPoints();
 	cleanPoints();
 }
@@ -272,6 +275,7 @@ void SpecificWorker::cleanPath()
 
 void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
 {
+	if(path.empty()) return;
 	for(auto &&p: points)
 		scene.removeItem(p);
 	points.clear();
@@ -285,9 +289,26 @@ void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
 	first = points.front();
 	first->setPos(robot_nose->mapToScene(QPointF(0,0))); 
 	first->setBrush(QColor("MediumGreen"));
+	////////////////////////// add real target
 	last = points.back();
 	last->setPos(target->pos());
 	target->setZValue(1);
+
+	//remove intial points in the path that are too close to the robot excluding robot and target
+	std::vector<QGraphicsEllipseItem*> points_to_remove;
+	for( auto &&p: iter::slice(points,1,(int)points.size()-1, 1))
+	{
+		if(robot->polygon().containsPoint(robot->mapFromScene(p->pos()), Qt::OddEvenFill))
+		{
+			std::vector<QGraphicsEllipseItem*> points_to_remove;
+			points_to_remove.push_back(p);
+		}
+	}
+	for(auto p: points_to_remove)
+	{
+		scene.removeItem(p);
+		points.erase(std::remove_if(points.begin(), points.end(), [p](auto &r){ return p==r;}), points.end());
+	}
 }
 
 void SpecificWorker::computeVisibility(const std::vector<QGraphicsEllipseItem*> &path, const QGraphicsPolygonItem *laser)
@@ -295,7 +316,7 @@ void SpecificWorker::computeVisibility(const std::vector<QGraphicsEllipseItem*> 
 	const auto &poly = laser->polygon();
 	for(auto &&p: path)
 	{
-		if( poly.containsPoint(p->pos(), Qt::OddEvenFill) or robot->polygon().containsPoint(p->pos(), Qt::OddEvenFill))
+		if( poly.containsPoint(p->pos(), Qt::OddEvenFill) or robot->polygon().containsPoint(robot->mapFromScene(p->pos()), Qt::OddEvenFill))
 		{
 			p->setData(0, true);
 			p->setBrush(QColor("LightGreen"));
@@ -393,7 +414,7 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 	}
 
 	//Apply forces to current position
-	const float KE = 0.6;
+	const float KE = 0.8;
 	const float KI = 1.5;	
 	//const float KL = 0.06;	
 	for(auto &&[point, iforce, eforce, base_line] : iter::zip(lpath, iforces, eforces, base_lines))
@@ -458,10 +479,7 @@ void SpecificWorker::cleanPoints()
 		const auto &p1 = group[0];
 		const auto &p2 = group[1];
 		if(p2 == last)
-		{
-			points_to_remove.push_back(p1);
 			break;
-		}
 		float dist = QVector2D(p1->pos()-p2->pos()).length();
 		if (dist < 0.5 * ROAD_STEP_SEPARATION)  
 			points_to_remove.push_back(p2);
@@ -518,16 +536,21 @@ void SpecificWorker::controller()
 	float dist_to_target = 0.f;
 	for(auto &&g : iter::sliding_window(points, 2))
 		dist_to_target += QVector2D(g[1]->pos() - g[0]->pos()).length();
+
+	// Compute euclidean distance to target 
+	float euc_dist_to_target = QVector2D(target->pos() - robot->pos()).length();
 	
 	// Check for arrival to target
-	if(dist_to_target < 10)
-	{
-        std::cout << "TARGET ACHIEVED" << std::endl;
-		advVelz = 0;
-		rotVel = 0;
-        active = false;
-		return;
-	}
+	qDebug() << dist_to_target << euc_dist_to_target;
+	if( fabs(dist_to_target - euc_dist_to_target) < 2* ROBOT_LENGTH )
+		if(euc_dist_to_target < 100)
+		{
+			std::cout << "TARGET ACHIEVED" << std::endl;
+			advVelz = 0;
+			rotVel = 0;
+			active = false;
+			return;
+		}
 
 	// Check for blocking
 	auto num_free = std::count_if(std::begin(points), std::end(points), [](auto &&p){ return p->data(0) == true;});
