@@ -38,7 +38,6 @@ SpecificWorker::SpecificWorker(MapPrx& mprx) : GenericWorker(mprx)
 	active = false;
 	worldModel = AGMModel::SPtr(new AGMModel());
 	worldModel->name = "worldModel";
-	innerModel = new InnerModel();
 }
 
 /**
@@ -190,8 +189,7 @@ void SpecificWorker::AGMExecutiveTopic_structuralChange(const RoboCompAGMWorldMo
 	QMutexLocker lockIM(mutex);
  	AGMModelConverter::fromIceToInternal(w, worldModel);
  
-	delete innerModel;
-	innerModel = AGMInner::extractInnerModel(worldModel);
+	innerModel = std::make_shared<InnerModel>(AGMInner::extractInnerModel(worldModel));
 	regenerateInnerModelViewer();
 }
 
@@ -217,7 +215,7 @@ void SpecificWorker::AGMExecutiveTopic_edgeUpdated(const RoboCompAGMWorldModel::
 //subscribesToCODE
 	QMutexLocker locker(mutex);
 	AGMModelConverter::includeIceModificationInInternalModel(modification, worldModel);
-	AGMInner::updateImNodeFromEdge(worldModel, modification, innerModel);
+	AGMInner::updateImNodeFromEdge(worldModel, modification, innerModel.get());
 
 }
 
