@@ -87,29 +87,88 @@ void SpecificWorker::initialize(int period)
 	this->Period = period;
 	timer.start(Period);
 
+	 srand (time(NULL));
 }
 
 void SpecificWorker::compute()
 {
-//computeCODE
-//QMutexLocker locker(mutex);
-//	try
-//	{
-//		camera_proxy->getYImage(0,img, cState, bState);
-//		memcpy(image_gray.data, &img[0], m_width*m_height*sizeof(uchar));
-//		searchTags(image_gray);
-//	}
-//	catch(const Ice::Exception &e)
-//	{
-//		std::cout << "Error reading from Camera" << e << std::endl;
-//	}
+	//publish worldchange randomly
+	int number = rand() % 100;
+	if (number == 50)
+	{
+		std::cout << "Set RAMDOM position" << std::endl;
+		changeRobotPosition(rand() % 4000, rand() % 4000, 0.f);
+	}
+
+
 #ifdef USE_QTGUI
+	std::cout<<"compute"<<std::endl;
 	if (innerModelViewer) innerModelViewer->update();
 	osgView->frame();
 #endif
 }
 
 
+
+//update robot position in model
+bool SpecificWorker::changeRobotPosition(int x, int z, float alpha)
+{
+	// Get robot's symbol and its identifier
+	int32_t robotId=-1;
+	robotId = worldModel->getIdentifierByType("robot");
+	if (robotId < 0)
+	{
+		printf("Robot symbol not found, Waiting for the executive...\n");
+		usleep(1000000);
+		return false;
+	}
+	AGMModelSymbol::SPtr robot = worldModel->getSymbol(robotId);
+	// Get current roomId
+	int roomId=-1;
+	for (auto edge = robot->edgesBegin(worldModel); edge != robot->edgesEnd(worldModel); edge++)
+	{
+		const std::pair<int32_t, int32_t> symbolPair = edge->getSymbolPair();
+
+		if (edge->getLabel() == "RT")
+		{
+			const string secondType = worldModel->getSymbol(symbolPair.first)->symbolType;
+			if (symbolPair.second == robotId and secondType == "room")
+			{
+				roomId = symbolPair.first;
+				break;
+			}
+		}
+	}
+	if (roomId < 0)
+	{
+		printf("roomId not found, Waiting for Insert innerModel...\n");
+		usleep(1000000);
+		return false;
+	}
+	try
+	{
+		AGMModelEdge edge  = worldModel->getEdgeByIdentifiers(roomId, robotId, "RT");
+		try
+		{
+			//Publish update edge
+			printf("\nUpdate model...\n");
+			edge->setAttribute("tx", float2str(x));
+			edge->setAttribute("tz", float2str(z));
+			edge->setAttribute("ry", float2str(alpha));
+			AGMMisc::publishEdgeUpdate(edge, agmexecutive_proxy);
+		}
+		catch (...)
+		{
+			printf("Can't update odometry in RT, edge exists but we encountered other problem!!\n");
+			return false;
+		}
+	}
+	catch (...)
+	{
+		printf("Can't update odometry in RT, edge does not exist? !!!\n");
+		return false;
+	}
+}
 
 
 bool SpecificWorker::AGMCommonBehavior_activateAgent(const ParameterMap &prs)
@@ -190,6 +249,7 @@ void SpecificWorker::AGMExecutiveTopic_structuralChange(const RoboCompAGMWorldMo
  	AGMModelConverter::fromIceToInternal(w, worldModel);
  
 	innerModel = std::make_shared<InnerModel>(AGMInner::extractInnerModel(worldModel));
+	innerModel->save("structuralChange.xml");
 	regenerateInnerModelViewer();
 }
 

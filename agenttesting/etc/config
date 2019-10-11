@@ -10,7 +10,7 @@ AGMExecutiveTopicTopic.Endpoints=tcp -p 0
 
 
 # Proxies for required interfaces
-AGMExecutiveProxy = agmexecutive:tcp -h localhost -p 0
+AGMExecutiveProxy = agmexecutive:tcp -h localhost -p 10198
 
 
 # This property is used by the clients to connect to IceStorm.

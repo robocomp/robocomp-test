@@ -75,7 +75,6 @@ public:
 	bool deactivate();
 	bool isActive() { return active; }
 
-
 	AGMExecutivePrx agmexecutive_proxy;
 
 	virtual bool AGMCommonBehavior_activateAgent(const ParameterMap &prs) = 0;

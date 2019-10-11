@@ -28,6 +28,8 @@
 #ifndef SPECIFICWORKER_H
 #define SPECIFICWORKER_H
 
+#include <stdlib.h> 
+#include <time.h> 
 #include <genericworker.h>
 #include <innermodel/innermodel.h>
 #ifdef USE_QTGUI
@@ -42,6 +44,8 @@ public:
 	SpecificWorker(MapPrx& mprx);
 	~SpecificWorker();
 	bool setParams(RoboCompCommonBehavior::ParameterList params);
+	bool changeRobotPosition(int x, int z, float alpha);
+
 
 	bool AGMCommonBehavior_activateAgent(const ParameterMap &prs);
 	bool AGMCommonBehavior_deactivateAgent();
