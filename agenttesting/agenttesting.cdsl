@@ -1,0 +1,13 @@
+
+Component agenttesting
+{
+    Communications
+    {
+
+    };
+	language Cpp;
+	gui Qt(QWidget);
+	
+	options InnerModelViewer, agmagent;
+};
+
