@@ -256,7 +256,7 @@ void SpecificWorker::compute()
 	computeVisibility(points, laser_polygon);
 	//computeForces(points, laserData);
 	//cleanPath();
-	//controller();
+	controller();
 	updateRobot();				// goes
 	reloj.restart();
 }
@@ -268,58 +268,18 @@ void SpecificWorker::cleanPath()
 	cleanPoints();
 }
 
-/////////////////////////////////////////////////////////////////////7
-/////////
-////////////////////////////////////////////////////////////////////
-// void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
-// {
-// 	if(path.empty()) return;
-// 	for(auto &&p: points)
-// 		scene.removeItem(p);
-// 	points.clear();
-// 	for(auto &&p: path)
-// 	{
-// 		auto ellipse = scene.addEllipse(QRectF(-BALL_MIN,-BALL_MIN, BALL_SIZE, BALL_SIZE), QPen(QColor("LightGreen")), QBrush(QColor("LightGreen")));
-// 		ellipse->setFlag(QGraphicsItem::ItemIsMovable);
-// 		ellipse->setPos(p.x(), p.z());
-// 		points.push_back(ellipse);
-// 	}
-// 	first = points.front();
-// 	first->setPos(robot_nose->mapToScene(QPointF(0,0))); 
-// 	first->setBrush(QColor("MediumGreen"));
-// 	////////////////////////// add real target
-// 	last = points.back();
-// 	last->setPos(target->pos());
-// 	target->setZValue(1);
-
-// 	//remove intial points in the path that are too close to the robot excluding robot and target
-// 	std::vector<QGraphicsEllipseItem*> points_to_remove;
-// 	for( auto &&p: iter::slice(points,1,(int)points.size()-1, 1))
-// 	{
-// 		if(robot->polygon().containsPoint(robot->mapFromScene(p->pos()), Qt::OddEvenFill))
-// 		{
-// 			std::vector<QGraphicsEllipseItem*> points_to_remove;
-// 			points_to_remove.push_back(p);
-// 		}
-// 	}
-// 	for(auto p: points_to_remove)
-// 	{
-// 		scene.removeItem(p);
-// 		points.erase(std::remove_if(points.begin(), points.end(), [p](auto &r){ return p==r;}), points.end());
-// 	}
-// }
-
 void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
 {
 	if(path.empty()) return;
 	for(auto &&p: points)
 		scene.removeItem(p);
 	points.clear();
-	qDebug() << __FUNCTION__ << "hola";
 	for(auto &&p: path)
 	{
 		//if((p-QVec::vec2(robot->pos().x(), robot->pos().y())).norm2() > ROBOT_LENGTH * 2)
-		if(robot->polygon().containsPoint(robot->mapFromScene(p.toQPointF()), Qt::OddEvenFill)==false)
+		QRectF contorno(p.toQPointF(), QSizeF(BALL_SIZE, BALL_SIZE));
+		if(robot->polygon().intersects(robot->mapFromScene(contorno)) == false)
+		//if(robot->polygon().containsPoint(robot->mapFromScene(p.toQPointF()), Qt::OddEvenFill)==false)
 		{ 
 			auto ellipse = scene.addEllipse(QRectF(-BALL_MIN,-BALL_MIN, BALL_SIZE, BALL_SIZE), QPen(QColor("LightGreen")), QBrush(QColor("LightGreen")));
 			ellipse->setFlag(QGraphicsItem::ItemIsMovable);
@@ -337,20 +297,18 @@ void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
 	target->setZValue(1);
 
 	//remove intial points in the path that are too close to the robot excluding robot and target
-	// std::vector<QGraphicsEllipseItem*> points_to_remove;
-	// for( auto &&p: iter::slice(points,1,(int)points.size()-1, 1))
-	// {
-	// 	if(robot->polygon().containsPoint(robot->mapFromScene(p->pos()), Qt::OddEvenFill))
-	// 	{
-	// 		std::vector<QGraphicsEllipseItem*> points_to_remove;
-	// 		points_to_remove.push_back(p);
-	// 	}
-	// }
-	// for(auto p: points_to_remove)
-	// {
-	// 	scene.removeItem(p);
-	// 	points.erase(std::remove_if(points.begin(), points.end(), [p](auto &r){ return p==r;}), points.end());
-	// }
+	std::vector<QGraphicsEllipseItem*> points_to_remove;
+	for( auto &&p: iter::slice(points,1,(int)points.size()-1, 1))
+	{
+		if(robot->polygon().intersects(robot->mapFromScene(p->mapToScene(p->boundingRect()))))
+			points_to_remove.push_back(p);
+	}
+	for(auto p: points_to_remove)
+	{
+		scene.removeItem(p);
+		points.erase(std::remove_if(std::begin(points), std::end(points), [p](auto &r){ return p==r;}), std::end(points));
+	}
+
 	for(auto &&p: points)
 		std::cout << "(" << p->x() << " " << p->y() << ")" << std::endl;
 	std::cout << std::endl;
@@ -437,8 +395,9 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 					QVector2D tip(robot->mapToScene(t));
 					if(QVector2D(t).length() < MAX_LASER_DIST)
 					{
+						// subtract ball radius
 						float dist = std::min((QVector2D(p->pos()) - tip).length()-200, 0.f);
-						return std::make_tuple(dist, QVector2D(p->pos()) - tip);
+						return std::make_tuple(dist-200, QVector2D(p->pos()) - tip);
 					}	
 					else
 						return std::make_tuple(MAX_LASER_DIST, QVector2D(p->pos()));	
@@ -449,10 +408,12 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 			force = std::get<QVector2D>(*min);
 			float mag = force.length();
 			// compute linear inverse law  y = -1/4 x + 200
-			if(mag > 800) mag = 800;
-			mag  = -(200.f/800)*mag + 200.f;
+			// compute linear inverse law  y = -1/2 x + 500
+			
+			if(mag > 1000) mag = 1000;
+			mag  = -(500.f/1000)*mag + 500.f;
 			f_force = mag * force.normalized();	
-			if(mag < 800)	
+			if(mag < 1000)	
 				lforces.push_back(scene.addLine(QLineF( p->pos(), 1.1*(p->pos()+f_force.toPointF())), 
 							QPen(QBrush(QColor("DarkGreen")),15)));
 			eforces.push_back(f_force);
@@ -460,8 +421,8 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 	}
 
 	//Apply forces to current position
-	const float KE = 0.8;
-	const float KI = 1.5;	
+	const float KE = 0.6;
+	const float KI = 0.4;	
 	//const float KL = 0.06;	
 	for(auto &&[point, iforce, eforce, base_line] : iter::zip(lpath, iforces, eforces, base_lines))
 	{
@@ -605,7 +566,8 @@ void SpecificWorker::controller()
 	// Check for blocking
 	auto num_free = std::count_if(std::begin(points), std::end(points), [](auto &&p){ return p->data(0) == true;});
 	//qDebug() << "num free " << num_free;
-	if(num_free < ROBOT_LENGTH / ROAD_STEP_SEPARATION)
+	//if(num_free < ROBOT_LENGTH / ROAD_STEP_SEPARATION)
+	if(num_free < 2)
 	{
 		qDebug() << __FUNCTION__ << "Blocked!";
 		advVelz = 0;

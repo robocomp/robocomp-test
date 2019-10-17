@@ -7,8 +7,8 @@ DifferentialRobotProxy = differentialrobot:tcp -h 192.168.0.111 -p 10004
 SocialNavigationGaussianProxy = socialnavigationgaussian:tcp -h localhost -p 20020
 OmniRobotProxy = omnirobot:tcp -h localhost -p 12238
 
-#World = /home/robocomp/robocomp/components/robocomp-tests/elasticpath/src/hole.json
-World = /home/robocomp/robocomp/components/robocomp-tests/elasticpath/src/autonomy.json
+World = /home/robocomp/robocomp/components/robocomp-tests/elasticpath/src/hole.json
+#World = /home/robocomp/robocomp/components/robocomp-tests/elasticpath/src/autonomy.json
 InnerModelPath = innermodel.xml
 
 Ice.Warn.Connections=0
