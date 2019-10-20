@@ -460,6 +460,9 @@ void SpecificWorker::addPoints()
 	{
 		auto &p1 = group[0];
 		auto &p2 = group[1];
+
+		if( p1->data(0).toBool() == false or p2->data(0).toBool() == false) //not visible
+			continue;
 	
 		float dist = QVector2D(p1->pos()-p2->pos()).length();
 		if (dist > ROAD_STEP_SEPARATION)  
@@ -489,6 +492,9 @@ void SpecificWorker::cleanPoints()
 		const auto &p1 = group[0];
 		const auto &p2 = group[1];
 	
+		if( p1->data(0).toBool() == false or p2->data(0).toBool() == false) //not visible
+			continue;
+
 		if(p2 == last)
 			break;
 		float dist = QVector2D(p1->pos()-p2->pos()).length();
@@ -576,6 +582,7 @@ void SpecificWorker::controller()
 		rotVel = 0;
 		std::list<QVec> lpath = grid.computePath(Grid<TCell>::Key(robot_nose->mapToScene(QPointF(0,0))),
 										 Grid<TCell>::Key(target->pos()));
+		qDebug() << __FUNCTION__ << " New path requested";
 		if(lpath.size() > 0) createPathFromGraph(lpath);
 		else return;
 	}
