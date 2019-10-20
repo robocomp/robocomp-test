@@ -79,9 +79,8 @@ private:
 	const float ROBOT_LENGTH = 400;
 	const float BALL_MIN = ROBOT_LENGTH/2;
 	const float BALL_SIZE = ROBOT_LENGTH;
-
-	//const float BALL_MIN = ROBOT_LENGTH/4;
-	//const float BALL_SIZE = ROBOT_LENGTH/2;
+	const float X_ZERO = 1000;					// dist in mm at which repulsive force vanishes
+	const float Y_ZERO = 300;					// max force exerted at ~0 distance from obstacle
 	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 1.1;
 	const float MAX_LASER_DIST = 4000;
 	const float LASER_DIST_STEP = 0.05;

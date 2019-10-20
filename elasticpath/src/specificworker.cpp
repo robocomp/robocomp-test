@@ -276,10 +276,8 @@ void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
 	points.clear();
 	for(auto &&p: path)
 	{
-		//if((p-QVec::vec2(robot->pos().x(), robot->pos().y())).norm2() > ROBOT_LENGTH * 2)
 		QRectF contorno(p.toQPointF(), QSizeF(BALL_SIZE, BALL_SIZE));
-		if(robot->polygon().intersects(robot->mapFromScene(contorno)) == false)
-		//if(robot->polygon().containsPoint(robot->mapFromScene(p.toQPointF()), Qt::OddEvenFill)==false)
+		if(robot->polygon().intersected(robot->mapFromScene(contorno)).empty())
 		{ 
 			auto ellipse = scene.addEllipse(QRectF(-BALL_MIN,-BALL_MIN, BALL_SIZE, BALL_SIZE), QPen(QColor("LightGreen")), QBrush(QColor("LightGreen")));
 			ellipse->setFlag(QGraphicsItem::ItemIsMovable);
@@ -300,7 +298,7 @@ void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
 	std::vector<QGraphicsEllipseItem*> points_to_remove;
 	for( auto &&p: iter::slice(points,1,(int)points.size()-1, 1))
 	{
-		if(robot->polygon().intersects(robot->mapFromScene(p->mapToScene(p->boundingRect()))))
+		if(robot->polygon().intersected(robot->mapFromScene(p->mapToScene(p->boundingRect()))).empty() == false)
 			points_to_remove.push_back(p);
 	}
 	for(auto p: points_to_remove)
@@ -413,11 +411,11 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 			float mag = force.length();
 			// compute linear inverse law  y = -1/4 x + 200
 			// compute linear inverse law  y = -1/2 x + 500
-			
-			if(mag > 1000) mag = 1000;
-			mag  = -(500.f/1000)*mag + 500.f;
+
+			if(mag > X_ZERO) mag = X_ZERO;
+			mag  = -(Y_ZERO/X_ZERO)*mag + Y_ZERO;
 			f_force = mag * force.normalized();	
-			if(mag < 1000)	
+			if(mag < X_ZERO)	
 				lforces.push_back(scene.addLine(QLineF( p->pos(), 1.1*(p->pos()+f_force.toPointF())), 
 							QPen(QBrush(QColor("DarkGreen")),15)));
 			eforces.push_back(f_force);
@@ -426,7 +424,7 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 
 	//Apply forces to current position
 	const float KE = 0.6;
-	const float KI = 0.4;	
+	const float KI = 0.6;	
 	//const float KL = 0.06;	
 	for(auto &&[point, iforce, eforce, base_line] : iter::zip(lpath, iforces, eforces, base_lines))
 	{
