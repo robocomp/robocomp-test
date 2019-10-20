@@ -76,15 +76,15 @@ public slots:
 private:
 
 	//constants
-	//const float LEFT = -790, BOTTOM = 0, WIDTH = 5960, HEIGHT = 9700;
-	const float LEFT = -2000, BOTTOM = -4000, WIDTH = 9000, HEIGHT = 8000;
 	const float ROBOT_LENGTH = 400;
 	const float BALL_MIN = ROBOT_LENGTH/2;
 	const float BALL_SIZE = ROBOT_LENGTH;
-	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 1;
+
+	//const float BALL_MIN = ROBOT_LENGTH/4;
+	//const float BALL_SIZE = ROBOT_LENGTH/2;
+	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 1.1;
 	const float MAX_LASER_DIST = 4000;
 	const float LASER_DIST_STEP = 0.05;
-	const int TILE_SIZE = 200;
 	const float LASER_ANGLE_STEPS = 50;	
 	const float ROBOT_MAX_ADVANCE_SPEED = 200;
 	const float ROBOT_MAX_ROTATION_SPEED = 0.9;
@@ -94,10 +94,9 @@ private:
 	QGraphicsView view;
 	std::vector<QGraphicsEllipseItem*> points;
 
-	QGraphicsEllipseItem *first, *last, *second, *robot_nose, *laser_pose;
+	QGraphicsEllipseItem *first, *last, *robot_nose, *laser_pose;
 	QGraphicsPolygonItem *robot;
 	QGraphicsRectItem *target;
-	QGraphicsRectItem *north, *south, *west, *east, *middle;
 	bool active = false;
 	
 	std::vector<QGraphicsItem*> boxes;
@@ -136,6 +135,7 @@ private:
 
 	// Grid
 	using TDim = Grid<TCell>::Dimensions;
+	TDim dimensions;
 	Grid<TCell> grid;
 	
 	// Methods

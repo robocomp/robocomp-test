@@ -163,12 +163,15 @@ class Grid
 				qDebug() << __FUNCTION__ << "Robot already at target. Returning empty path";
 				return std::list<QVec>();
 			}
-
+			// vector de distancias inicializado a DBL_MAX
 			std::vector<double> min_distance(fmap.size(), DBL_MAX);
+			// std::uint32_t id with source value
 			auto id = std::get<T&>(getCell(source)).id;
+			// initialize source position to 0
 			min_distance[id] = 0;
+			// vector de pares<std::uint32_t,Key> initialized to (-1, Key())
 			std::vector<std::pair<std::uint32_t, Key>> previous(fmap.size(), std::make_pair(-1, Key()));
-			// compare two vertices			
+			// lambda to compare two vertices: a < b if a.id<b.id or 			
 			auto comp = [this](std::pair<std::uint32_t, Key> x, std::pair<std::uint32_t, Key> y)
 				{ if(x.first < y.first) 
 					return true;
@@ -177,6 +180,7 @@ class Grid
 				  else return false;	
 				};
 				
+			// OPEN List
 			std::set< std::pair<double, Key>, decltype(comp)> active_vertices(comp);
 			active_vertices.insert({0,source});
 			
@@ -199,8 +203,8 @@ class Grid
 						active_vertices.erase( { min_distance[ed.second.id], ed.first } );
 						min_distance[ed.second.id] = min_distance[fmap[where].id] + ed.second.cost;
 						previous[ed.second.id] = std::make_pair(fmap[where].id, where);
-						active_vertices.insert( { min_distance[ed.second.id], ed.first } );    // Djikstra
-						//active_vertices.insert( { min_distance[ed.second.id] + heuristicL2(ed.first, target), ed.first } ); //A*
+						//active_vertices.insert( { min_distance[ed.second.id], ed.first } );    // Djikstra
+					  active_vertices.insert( { min_distance[ed.second.id] + heuristicL2(ed.first, target), ed.first } ); //A*
 					}
 				}
 			}
@@ -258,13 +262,10 @@ class Grid
 					T &p_aux = fmap_aux.at(Key(lk.x,lk.z));
 					if(p.free and p_aux.free)
 					{
-						// check that incs are not both zero but have the same abs valure, i.e. a diagonal
+						// check that incs are not both zero but have the same abs value, i.e. a diagonal
 						if(itx != 0 and itz != 0 and (fabs(itx) == fabs(itz)))
 							p.cost = 1.41;		// if neighboor in diagonal, cost is sqrt(2) Should be computed over the initial value
-						//if neigh node is close to a occupied node, increase its cost
-						for(auto &&[dx, dz] : iter::zip(xincs, zincs))
-							try{ if( !(fmap.at(Key(lk.x+dx, lk.z+dz)).free)) p.cost = 5.f; }
-							catch(const std::exception& e){	};
+						
 						neigh.emplace_back(std::make_pair(lk,p));
 					}
 				}
