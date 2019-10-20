@@ -85,7 +85,7 @@ private:
 	const float MAX_LASER_DIST = 4000;
 	const float LASER_DIST_STEP = 0.05;
 	const float LASER_ANGLE_STEPS = 50;	
-	const float ROBOT_MAX_ADVANCE_SPEED = 900;
+	const float ROBOT_MAX_ADVANCE_SPEED = 600;
 	const float ROBOT_MAX_ROTATION_SPEED = 0.9;
     
 	InnerModel *innerModel;
