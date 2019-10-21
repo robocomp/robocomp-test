@@ -180,7 +180,7 @@ void SpecificWorker::initialize(int period)
 	
 	// clean path
 	connect(&cleanTimer, &QTimer::timeout, this, &SpecificWorker::cleanPath);
-	//cleanTimer.start(50);
+	cleanTimer.start(50);
 	
 	// controller
     connect(&controllerTimer, &QTimer::timeout, this, &SpecificWorker::controller);
@@ -271,7 +271,7 @@ void SpecificWorker::compute()
 {
 	computeLaser(laser_pose, boxes);  // goes
 	computeVisibility(points, laser_polygon);
-	cleanPath();
+	//cleanPath();
 	//controller();
 	updateRobot();				// goes
 	reloj.restart();
@@ -280,9 +280,9 @@ void SpecificWorker::compute()
 void SpecificWorker::cleanPath()
 {
 	computeForces(points, laserData);
-	qDebug() << __FUNCTION__ << points.size();
+	//qDebug() << __FUNCTION__ << points.size();
 	addPoints();
-	qDebug() << __FUNCTION__ << points.size();
+	// //qDebug() << __FUNCTION__ << points.size();
 	cleanPoints();
 }
 
@@ -386,9 +386,9 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 			QVector2D tip(robot->mapToScene(t));						// transform to scene RefS
 			if(QVector2D(t).length() < MAX_LASER_DIST)					// inside laser field
 			{
-				// compute distante of from laser tip to point minus RLENGTH/2 or 0 and keep it positive
+				// compute distante from laser tip to point minus RLENGTH/2 or 0 and keep it positive
 				float dist = (QVector2D(p->pos()) - tip).length()-(ROBOT_LENGTH / 2);
-				if( dist <= 0) dist = 0.01;
+				if( dist <= 0) dist = 0.1;
 				return std::make_tuple(dist, QVector2D(p->pos()) - tip);
 			}	
 			else
@@ -407,7 +407,7 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 		float magnitude = (1.f/ROBOT_LENGTH) * min_dist; 
 		// compute inverse square law
 		magnitude = 10.f/(magnitude*magnitude);
-		if(magnitude > 100) magnitude = 100.;
+		if(magnitude > 25) magnitude = 25.;
 		QVector2D f_force = magnitude * force.normalized();	
 		//qDebug() << magnitude << f_force;
 	
@@ -428,8 +428,8 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 		point->setPos(arrow->line().p2());
 		
 		// add the forces and move the point
-		const float KE = 6;
-		const float KI = 10;
+		const float KE = 3;
+		const float KI = 6;
 		const auto &idelta = KI * iforce.toPointF();
 		const auto &edelta = KE * f_force.toPointF();
 		
@@ -459,8 +459,8 @@ void SpecificWorker::addPoints()
 			QLineF line(p1->pos(), p2->pos());
 			points_to_insert.push_back(std::make_tuple(k+1, QPointF{line.pointAt(l)}));
 		}
+		//qDebug() << __FUNCTION__ << k;
 	}
-	//int l=0;
 	for(const auto &[l, p] : iter::enumerate(points_to_insert))
 	{
 		auto r = scene.addEllipse(QRectF(-BALL_MIN,-BALL_MIN,BALL_SIZE,BALL_SIZE), QPen(QColor("Black"),10), QBrush(QColor("LightGreen")));
