@@ -22,8 +22,6 @@
        @author authorname
 */
 
-
-
 #ifndef SPECIFICWORKER_H
 #define SPECIFICWORKER_H
 #include "GenericBase.h"
@@ -39,7 +37,6 @@
 #include <math.h>
 #include "grid.h"
 #include "human.h"
-
 
 // Map
 struct TCell

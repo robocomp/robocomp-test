@@ -99,6 +99,7 @@ void SpecificWorker::initialize(int period)
 	QBrush brush;
 	brush.setColor(QColor("DarkRed")); brush.setStyle(Qt::SolidPattern);
 	robot = scene.addPolygon(poly2, QPen(QColor("DarkRed")), brush);
+	robot->setFlag(QGraphicsItem::ItemIsMovable);
 	robot->setPos(0, -1000);
 	robot->setRotation(0);
 	robot->setZValue(1);
@@ -179,7 +180,7 @@ void SpecificWorker::initialize(int period)
 	
 	// clean path
 	connect(&cleanTimer, &QTimer::timeout, this, &SpecificWorker::cleanPath);
-	//cleanTimer.start(50);
+	cleanTimer.start(50);
 	
 	// controller
     connect(&controllerTimer, &QTimer::timeout, this, &SpecificWorker::controller);
@@ -271,7 +272,7 @@ void SpecificWorker::compute()
 	computeLaser(laser_pose, boxes);  // goes
 	computeVisibility(points, laser_polygon);
 	//computeForces(points, laserData);
-	cleanPath();
+	//cleanPath();
 	//controller();
 	updateRobot();				// goes
 	reloj.restart();
@@ -280,7 +281,9 @@ void SpecificWorker::compute()
 void SpecificWorker::cleanPath()
 {
 	computeForces(points, laserData);
+	qDebug() << __FUNCTION__ << points.size();
 	addPoints();
+	qDebug() << __FUNCTION__ << points.size();
 	cleanPoints();
 }
 
@@ -295,9 +298,9 @@ void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
 		QRectF contorno(p.toQPointF(), QSizeF(BALL_SIZE, BALL_SIZE));
 		if(robot->polygon().intersected(robot->mapFromScene(contorno)).empty())
 		{ 
-			auto ellipse = scene.addEllipse(QRectF(-BALL_MIN,-BALL_MIN, BALL_SIZE, BALL_SIZE), QPen(QColor("LightGreen")), QBrush(QColor("LightGreen")));
+			auto ellipse = scene.addEllipse(QRectF(-BALL_MIN,-BALL_MIN, BALL_SIZE, BALL_SIZE), QPen(QColor("Black"),10), QBrush(QColor("LightGreen")));
 			ellipse->setFlag(QGraphicsItem::ItemIsMovable);
-			ellipse->setPos(p.x(), p.z());
+			ellipse->setPos(p.x(), p.z()); 
 			points.push_back(ellipse);
 		}
 	}
@@ -353,12 +356,7 @@ void SpecificWorker::computeVisibility(const std::vector<QGraphicsEllipseItem*> 
 
 void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &path, const std::vector<LData> &lData)
 {
-	static std::vector<QGraphicsLineItem*> forces_as_lines;
-
-	for(auto f: forces_as_lines)
-		scene.removeItem(f);
-	forces_as_lines.clear();
-
+	
 	if(path.size() < 3) return;
 	
 	// Go through points using a sliding windows of 3
@@ -395,35 +393,44 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 				return std::make_tuple(dist, QVector2D(p->pos()) - tip);
 			}	
 			else
-				return std::make_tuple(MAX_LASER_DIST, QVector2D(p->pos()));	
+				return std::make_tuple(MAX_LASER_DIST, QVector2D());	
 		});
 		// compute min distance
 		auto min = std::min_element(std::begin(distances), std::end(distances), [](auto &a, auto &b){return std::get<float>(a) < std::get<float>(b);});
 		float min_dist = std::get<float>(*min);
-		if( min_dist == MAX_LASER_DIST)
+		
+		// if min > MAX_LASER_DIST don't apply forces
+		if( min_dist >= MAX_LASER_DIST)
 			continue;
+
 		QVector2D force = std::get<QVector2D>(*min);
 		// rescale min_dist so 1 is ROBOT_LENGTH
 		float magnitude = (1.f/ROBOT_LENGTH) * min_dist; 
 		// compute inverse square law
 		magnitude = 10.f/(magnitude*magnitude);
-		if(magnitude > 500) magnitude = 400.;
+		if(magnitude > 100) magnitude = 100.;
 		QVector2D f_force = magnitude * force.normalized();	
 		//qDebug() << magnitude << f_force;
 	
-		auto arrow = new QGraphicsLineItem(QLineF( QPointF(0,0), p->mapFromScene(1.1*(p->pos()+f_force.toPointF()))), p);
-		auto point = new QGraphicsEllipseItem(0,0,30,30, arrow);	
-		point->setBrush(QBrush(QColor("DarkGreen")));
-		arrow->setPen(QPen(QBrush(QColor("DarkGreen")),10));
-		point->setPos(arrow->line().p2());
-
 		// Remove tangential component of repulsion force by projecting on line tangent to path (base_line)
 		QVector2D base_line = (p1 - p3).normalized();
 		const QVector2D itangential = QVector2D::dotProduct(f_force, base_line) * base_line;
 		f_force = f_force - itangential;
+
+		// remove old arrows
+		for(const auto &p : path)
+			for( auto &&child : p->childItems())
+	 			scene.removeItem(child);
+		// create new ones
+		auto arrow = new QGraphicsLineItem(QLineF( QPointF(0,0), p->mapFromScene(1.1*(p->pos()+f_force.toPointF()))), p);
+		auto point = new QGraphicsEllipseItem(0,0,40,40, arrow);	
+		point->setBrush(QBrush(QColor("DarkGreen")));
+		arrow->setPen(QPen(QBrush(QColor("DarkGreen")),10));
+		point->setPos(arrow->line().p2());
 		
-		const float KE = 1;
-		const float KI = 1;
+		// add the forces and move the point
+		const float KE = 6;
+		const float KI = 10;
 		const auto &idelta = KI * iforce.toPointF();
 		const auto &edelta = KE * f_force.toPointF();
 		
