@@ -180,7 +180,7 @@ void SpecificWorker::initialize(int period)
 	
 	// clean path
 	connect(&cleanTimer, &QTimer::timeout, this, &SpecificWorker::cleanPath);
-	cleanTimer.start(50);
+	//cleanTimer.start(50);
 	
 	// controller
     connect(&controllerTimer, &QTimer::timeout, this, &SpecificWorker::controller);
@@ -271,8 +271,7 @@ void SpecificWorker::compute()
 {
 	computeLaser(laser_pose, boxes);  // goes
 	computeVisibility(points, laser_polygon);
-	//computeForces(points, laserData);
-	//cleanPath();
+	cleanPath();
 	//controller();
 	updateRobot();				// goes
 	reloj.restart();
@@ -369,7 +368,7 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 		auto p3 = QVector2D(group[2]->pos());
 		auto p = group[1];
 
-		if(p->data(0).value<bool>() == false) // if not visible (computed before) continue
+		if(isVisible(p) == false) // if not visible (computed before) continue
 			continue;
 
 		// internal curvature forces on p2
@@ -445,32 +444,30 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 void SpecificWorker::addPoints()
 {
 	std::vector<std::tuple<int, QPointF>> points_to_insert;
-	int k=1;
-	for(const auto &group: iter::sliding_window(points, 2))
+	for(auto &&[k, group] : iter::enumerate(iter::sliding_window(points, 2)))
 	{
 		auto &p1 = group[0];
 		auto &p2 = group[1];
 
-		if( p1->data(0).toBool() == false or p2->data(0).toBool() == false) //not visible
+		if( isVisible(p1) == false or isVisible(p2) == false ) //not visible
 			continue;
-	
+
 		float dist = QVector2D(p1->pos()-p2->pos()).length();
 		if (dist > ROAD_STEP_SEPARATION)  
 		{
 			float l = 0.9 * ROAD_STEP_SEPARATION / dist;   //Crucial que el punto se ponga mas cerca que la condición de entrada
 			QLineF line(p1->pos(), p2->pos());
-			points_to_insert.push_back(std::make_tuple(k, QPointF{line.pointAt(l)}));
+			points_to_insert.push_back(std::make_tuple(k+1, QPointF{line.pointAt(l)}));
 		}
-		k++;
 	}
-	int l=0;
-	for(const auto &p : points_to_insert)
+	//int l=0;
+	for(const auto &[l, p] : iter::enumerate(points_to_insert))
 	{
 		auto r = scene.addEllipse(QRectF(-BALL_MIN,-BALL_MIN,BALL_SIZE,BALL_SIZE), QPen(QColor("Black"),10), QBrush(QColor("LightGreen")));
 		r->setPos(std::get<QPointF>(p));
-		points.insert(points.begin() + std::get<int>(p) + l++, r);
+		points.insert(points.begin() + std::get<int>(p) + l, r);
 	}
-	//qDebug() << points.size();
+	qDebug() << __FUNCTION__ << "points inserted " << points_to_insert.size();
 }
 
 ////// Remove points fromthe path if needed
@@ -501,6 +498,7 @@ void SpecificWorker::cleanPoints()
 		scene.removeItem(p);
 	}
 }
+
 
 ////// Render synthetic laser
 void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsItem*> &box)
@@ -634,6 +632,11 @@ void SpecificWorker::updateRobot()
 //////////////////////////////////////////////////////////////////777
 ////// Utilities
 ////////////////////////////////////////////////////////////////////
+bool SpecificWorker::isVisible(const QGraphicsEllipseItem *p)
+{
+	return p->data(0).toBool();
+}
+
 float SpecificWorker::rewrapAngleRestricted(const float angle)
 {	
 	if(angle > M_PI)
