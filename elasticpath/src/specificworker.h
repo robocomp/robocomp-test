@@ -81,13 +81,16 @@ private:
 	const float BALL_SIZE = ROBOT_LENGTH;
 	const float X_ZERO = 1000;					// dist in mm at which repulsive force vanishes
 	const float Y_ZERO = 300;					// max force exerted at ~0 distance from obstacle
-	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 1.1;
+	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 1.6;
 	const float MAX_LASER_DIST = 4000;
 	const float LASER_DIST_STEP = 0.05;
 	const float LASER_ANGLE_STEPS = 50;	
 	const float ROBOT_MAX_ADVANCE_SPEED = 600;
 	const float ROBOT_MAX_ROTATION_SPEED = 0.9;
-    
+	const float FORCE_DISTANCE_LIMIT = (ROBOT_LENGTH * 1.5);  //mm
+	const float ROBOT_STEP = (ROBOT_LENGTH * 0.1);
+	const float DELTA_H = (ROBOT_LENGTH * 0.1);
+	
 	InnerModel *innerModel;
 	QGraphicsScene scene;
 	QGraphicsView view;

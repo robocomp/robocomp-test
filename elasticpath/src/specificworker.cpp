@@ -179,7 +179,7 @@ void SpecificWorker::initialize(int period)
 	
 	// clean path
 	connect(&cleanTimer, &QTimer::timeout, this, &SpecificWorker::cleanPath);
-	cleanTimer.start(50);
+	//cleanTimer.start(50);
 	
 	// controller
     connect(&controllerTimer, &QTimer::timeout, this, &SpecificWorker::controller);
@@ -271,7 +271,7 @@ void SpecificWorker::compute()
 	computeLaser(laser_pose, boxes);  // goes
 	computeVisibility(points, laser_polygon);
 	//computeForces(points, laserData);
-	//cleanPath();
+	cleanPath();
 	//controller();
 	updateRobot();				// goes
 	reloj.restart();
@@ -360,18 +360,6 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 	forces_as_lines.clear();
 
 	if(path.size() < 3) return;
-
-	// baselines needed to remove tangential component
-	// std::vector<QVector2D> base_lines(path.size(), QVector2D(0.f,0.f));
-	// int k=1;
-	// for(auto group : iter::sliding_window(path, 3))
-	// {
-	// 	if(group.size()<3) break;
-
-	// 	auto p1 = QVector2D(group[0]->pos());
-	// 	auto p3 = QVector2D(group[2]->pos());
-	// 	base_lines[k++] = (p1 - p3).normalized();
-	// }  
 	
 	// Go through points using a sliding windows of 3
 	for(auto group : iter::sliding_window(path, 3))
@@ -423,26 +411,16 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 		QVector2D f_force = magnitude * force.normalized();	
 		//qDebug() << magnitude << f_force;
 	
-		auto arrow = new QGraphicsLineItem(QLineF( QPointF(0,0), -p->mapFromScene(1.1*(p->pos()+f_force.toPointF()))), p);
+		auto arrow = new QGraphicsLineItem(QLineF( QPointF(0,0), p->mapFromScene(1.1*(p->pos()+f_force.toPointF()))), p);
 		auto point = new QGraphicsEllipseItem(0,0,30,30, arrow);	
 		point->setBrush(QBrush(QColor("DarkGreen")));
 		arrow->setPen(QPen(QBrush(QColor("DarkGreen")),10));
 		point->setPos(arrow->line().p2());
 
-	 	// Removing tangential component
-	 	//const auto eprod = QVector2D::dotProduct(QVector2D(force), base_line);
-	 	//if(eprod < 5)
-		// {
+		// Remove tangential component of repulsion force by projecting on line tangent to path (base_line)
 		QVector2D base_line = (p1 - p3).normalized();
 		const QVector2D itangential = QVector2D::dotProduct(f_force, base_line) * base_line;
 		f_force = f_force - itangential;
-
-		// 	// 	point->setPos( point->pos() + corrected_force ); 
-		// 	// }
-		// 	// else
-		// 	 	point->setPos( point->pos() + force ); 
-		// }
-		// reposition endpoints to robot's nose and target
 		
 		const float KE = 1;
 		const float KI = 1;
@@ -461,7 +439,7 @@ void SpecificWorker::addPoints()
 {
 	std::vector<std::tuple<int, QPointF>> points_to_insert;
 	int k=1;
-	for(auto &&group: iter::sliding_window(points, 2))
+	for(const auto &group: iter::sliding_window(points, 2))
 	{
 		auto &p1 = group[0];
 		auto &p2 = group[1];
@@ -479,9 +457,9 @@ void SpecificWorker::addPoints()
 		k++;
 	}
 	int l=0;
-	for(auto &&p : points_to_insert)
+	for(const auto &p : points_to_insert)
 	{
-		auto r = scene.addEllipse(QRectF(-BALL_MIN,-BALL_MIN,BALL_SIZE,BALL_SIZE), QPen(QColor("DarkGreen")), QBrush(QColor("LightGreen")));
+		auto r = scene.addEllipse(QRectF(-BALL_MIN,-BALL_MIN,BALL_SIZE,BALL_SIZE), QPen(QColor("Black"),10), QBrush(QColor("LightGreen")));
 		r->setPos(std::get<QPointF>(p));
 		points.insert(points.begin() + std::get<int>(p) + l++, r);
 	}
@@ -503,17 +481,17 @@ void SpecificWorker::cleanPoints()
 			break;
 		// check if p1 was marked to erase in the previous iteration
 		if(std::find(std::begin(points_to_remove), std::end(points_to_remove), p1) != std::end(points_to_remove))
-			continue;
+		 	continue;
 
 		float dist = QVector2D(p1->pos()-p2->pos()).length();
 		if( dist < 0.5 * ROAD_STEP_SEPARATION)
 			points_to_remove.push_back(p2);
  
 	}
-	for(auto p: points_to_remove)
+	for(auto &&p: points_to_remove)
 	{
-		scene.removeItem(p);
 		points.erase(std::remove_if(points.begin(), points.end(), [p](auto &r){ return p==r;}), points.end());
+		scene.removeItem(p);
 	}
 }
 
@@ -565,7 +543,7 @@ void SpecificWorker::controller()
 
 	// Compute euclidean distance to target 
 	float euc_dist_to_target = QVector2D(target->pos() - robot->pos()).length();
-	qDebug() << points.size() << euc_dist_to_target;
+	//qDebug() << __FUNCTION__  << points.size() << euc_dist_to_target;
 	if( points.size() < 3 and euc_dist_to_target<200) 
 		{
 			std::cout << "TARGET ACHIEVED" << std::endl;
