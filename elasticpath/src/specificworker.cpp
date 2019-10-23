@@ -292,7 +292,7 @@ void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
 	for(auto &&p: points)
 		scene.removeItem(p);
 	points.clear();
-	for(auto &&p: path)
+	for(const auto &p: path)
 	{
 		QRectF contorno(p.toQPointF(), QSizeF(BALL_SIZE, BALL_SIZE));
 		if(robot->polygon().intersected(robot->mapFromScene(contorno)).empty())
@@ -302,7 +302,12 @@ void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
 			ellipse->setPos(p.x(), p.z()); 
 			points.push_back(ellipse);
 		}
+
 	}
+	//Draw edges
+	for(auto &&pair: iter::sliding_window(points,2))
+		scene.addLine(QLineF(pair[0]->pos(), pair[1]->pos()),QPen());
+
 	if( points.empty()) return; 
 	first = points.front();
 	first->setPos(robot_nose->mapToScene(QPointF(0,0))); 
