@@ -280,10 +280,9 @@ void SpecificWorker::compute()
 void SpecificWorker::cleanPath()
 {
 	computeForces(points, laserData);
-	//qDebug() << __FUNCTION__ << points.size();
-	addPoints();
-	// //qDebug() << __FUNCTION__ << points.size();
 	cleanPoints();
+	addPoints();
+
 }
 
 void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
@@ -302,11 +301,7 @@ void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
 			ellipse->setPos(p.x(), p.z()); 
 			points.push_back(ellipse);
 		}
-
 	}
-	//Draw edges
-	for(auto &&pair: iter::sliding_window(points,2))
-		scene.addLine(QLineF(pair[0]->pos(), pair[1]->pos()),QPen());
 
 	if( points.empty()) return; 
 	first = points.front();
@@ -329,7 +324,13 @@ void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
 		scene.removeItem(p);
 		points.erase(std::remove_if(std::begin(points), std::end(points), [p](auto &r){ return p==r;}), std::end(points));
 	}
-
+	
+	//Draw edges
+	for(auto &&pair: iter::sliding_window(points,2))
+	{
+		auto line = new QGraphicsLineItem(QLineF(QPointF(0,0), pair[0]->mapFromScene(pair[1]->pos())), pair[0]);
+		line->setPen(QPen(QColor("Red"),20));
+	}
 	// for(auto &&p: points)
 	// 	std::cout << "(" << p->x() << " " << p->y() << ")" << std::endl;
 	// std::cout << std::endl;
@@ -420,17 +421,6 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 		QVector2D base_line = (p1 - p3).normalized();
 		const QVector2D itangential = QVector2D::dotProduct(f_force, base_line) * base_line;
 		f_force = f_force - itangential;
-
-		// remove old arrows
-		for(const auto &p : path)
-			for( auto &&child : p->childItems())
-	 			scene.removeItem(child);
-		// create new ones
-		auto arrow = new QGraphicsLineItem(QLineF( QPointF(0,0), p->mapFromScene(1.1*(p->pos()+f_force.toPointF()))), p);
-		auto point = new QGraphicsEllipseItem(0,0,40,40, arrow);	
-		point->setBrush(QBrush(QColor("DarkGreen")));
-		arrow->setPen(QPen(QBrush(QColor("DarkGreen")),10));
-		point->setPos(arrow->line().p2());
 		
 		// add the forces and move the point
 		const float KE = 3;
@@ -440,9 +430,32 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 		
 		const auto total =  idelta + edelta;	
 		p->setPos( p->pos() + total ); 
+
+		// remove old arrows and edges
+		for(const auto &pp : path)
+			for( auto &&child : pp->childItems())
+	 			scene.removeItem(child);
+		// create new ones
+		auto arrow = new QGraphicsLineItem(QLineF( QPointF(0,0), p->mapFromScene(1.1*(p->pos()+f_force.toPointF()))), p);
+		auto point = new QGraphicsEllipseItem(0,0,40,40, arrow);	
+		point->setBrush(QBrush(QColor("DarkGreen")));
+		arrow->setPen(QPen(QBrush(QColor("DarkGreen")),10));
+		point->setPos(arrow->line().p2());
 	}
 	first->setPos(robot_nose->mapToScene(QPointF(0,0)));
 	last->setPos(target->pos());
+
+	//Draw edges
+	for(auto &&pair: iter::sliding_window(path, 2))
+	{
+		for( auto &&child : pair[0]->childItems())
+		{
+			auto line = qgraphicsitem_cast<QGraphicsLineItem*>(child);
+	 		if(line) scene.removeItem(line);
+		}
+		auto line = new QGraphicsLineItem(QLineF(QPointF(0,0), pair[0]->mapFromScene(pair[1]->pos())), pair[0]);
+		line->setPen(QPen(QColor("Red"),20));
+	}
 }
 
 ////// Add points to the path if needed
@@ -471,8 +484,20 @@ void SpecificWorker::addPoints()
 		auto r = scene.addEllipse(QRectF(-BALL_MIN,-BALL_MIN,BALL_SIZE,BALL_SIZE), QPen(QColor("Black"),10), QBrush(QColor("LightGreen")));
 		r->setPos(std::get<QPointF>(p));
 		points.insert(points.begin() + std::get<int>(p) + l, r);
+		// create edge between new point and second old point
+		auto last = *(points.begin() + std::get<int>(p) + l + 1);
+		auto line = new QGraphicsLineItem(QLineF(QPointF(0,0), r->mapFromScene(last->pos())), r);
+		line->setPen(QPen(QColor("Red"),20));
+		// resize edge from first old point to new point
+		auto first = *(points.begin() + std::get<int>(p) + l - 1);
+		line = qgraphicsitem_cast<QGraphicsLineItem*>(first);
+		if(line)
+		{
+			line->line().setP2(first->mapFromScene(r->pos()));
+			line->setPen(QPen(QColor("Red"),20));
+		}
 	}
-	qDebug() << __FUNCTION__ << "points inserted " << points_to_insert.size();
+	//qDebug() << __FUNCTION__ << "points inserted " << points_to_insert.size();
 }
 
 ////// Remove points fromthe path if needed
@@ -500,8 +525,18 @@ void SpecificWorker::cleanPoints()
 	for(auto &&p: points_to_remove)
 	{
 		points.erase(std::remove_if(points.begin(), points.end(), [p](auto &r){ return p==r;}), points.end());
+		for( auto &&child : p->childItems())
+	 		scene.removeItem(child);
 		scene.removeItem(p);
 	}
+	//Repaint edges
+	for(auto &&p: iter::sliding_window(points,2))		 
+		for( auto &&child : p[0]->childItems())
+		{
+	 	 		auto line = qgraphicsitem_cast<QGraphicsLineItem*>(child);
+		 	 	if( line )
+					line->setLine(QLineF(QPointF(0,0), p[0]->mapFromScene(p[1]->pos())));
+		}
 }
 
 
