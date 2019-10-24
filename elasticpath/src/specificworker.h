@@ -78,8 +78,8 @@ private:
 	//const float BALL_SIZE = ROBOT_LENGTH;
 	const float BALL_MIN = 50;
 	const float BALL_SIZE = 100;
-	const float KE = 5;
-	const float KI = 15;
+	const float KE = 0.5;
+	const float KI = -9;
 	//const float X_ZERO = 1000;					// dist in mm at which repulsive force vanishes
 	//const float Y_ZERO = 300;					// max force exerted at ~0 distance from obstacle
 	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.7;
