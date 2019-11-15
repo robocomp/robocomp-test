@@ -89,10 +89,17 @@ void SpecificWorker::initialize(int period)
 	// Robot 
 	QPolygonF poly2;
 	float size = ROBOT_LENGTH/2.f;
-	poly2 << QPoint(-size, -size) << QPoint(-size, size) << QPoint(-size/3, size*1.6) << QPoint(size/3, size*1.6) << QPoint(size, size) << QPoint(size, -size);
+	poly2 << QPoint(-size, -size)
+		  << QPoint(-size, size) 
+		  << QPoint(-size/3, size*1.6) 
+		  << QPoint(size/3, size*1.6) 
+		  << QPoint(size, size) 
+		  << QPoint(size, -size);
+
 	QBrush brush;
 	brush.setColor(QColor("DarkRed")); brush.setStyle(Qt::SolidPattern);
 	robot = scene.addPolygon(poly2, QPen(QColor("DarkRed")), brush);
+	robot->setFlag(QGraphicsItem::ItemIsMovable);
 	robot->setPos(0, -1000);
 	robot->setRotation(0);
 	robot->setZValue(1);
@@ -102,7 +109,7 @@ void SpecificWorker::initialize(int period)
 	const auto robotN = robot_nose->mapToScene(QPointF(0,0));
 	laser_pose = new QGraphicsEllipseItem(QRectF(-5,-5, 10, 10), robot);
 	laser_pose->setPos(0,190);
-	qDebug() << robot_nose->pos() << robotN;
+	qDebug() << __FUNCTION__ << robot_nose->pos() << robotN;
 
 	// target
 	target = scene.addRect(QRectF(-80, -80, 160, 160));
@@ -127,11 +134,11 @@ void SpecificWorker::initialize(int period)
 	scene.addItem(humanB);
 //	human_vector.push_back(humanB);
 	
-	//Axis   
-	auto axisX = scene.addRect(QRectF(0, 0, 200, 20), QPen(Qt::red), QBrush(QColor("red")));
-	boxes.push_back(axisX);
-	auto axisZ = scene.addRect(QRectF(0, 0, 20, 200), QPen(Qt::blue), QBrush(QColor("blue")));
-	boxes.push_back(axisZ);
+	//Axis   PUT IN JSON
+	// auto axisX = scene.addRect(QRectF(0, 0, 200, 20), QPen(Qt::red), QBrush(QColor("red")));
+	// boxes.push_back(axisX);
+	// auto axisZ = scene.addRect(QRectF(0, 0, 20, 200), QPen(Qt::blue), QBrush(QColor("blue")));
+	// boxes.push_back(axisZ);
 	
 	// Laser
 	for( auto &&i : iter::range(-M_PI/2.f, M_PI/2.f, M_PI/LASER_ANGLE_STEPS) )
@@ -140,11 +147,11 @@ void SpecificWorker::initialize(int period)
 	//Grid
 	grid.initialize( dimensions, TCell{0, true, false, nullptr, 1.f} );
 	
-	// check is cell key.x, key.z is free by checking is there are boxes in it
+	// Obstacles: check is cell key.x, key.z is free by checking is there are boxes in it
 	std::uint32_t id_cont=0;
 	for(auto &&[k, cell] : grid)
 	{
-		cell.g_item = scene.addEllipse(QRectF(-200, -200, 200, 200));
+		cell.g_item = scene.addEllipse(QRectF(-100, -100, 200, 200));
 		cell.g_item->setPos(k.x, k.z);
 		cell.g_item->setZValue(-1);		
 		cell.g_item->setPen(QPen(QColor("OldLace")));
@@ -246,7 +253,17 @@ void SpecificWorker::initializeWorld()
   		//box->setRotation(object[6].toFloat()*180/M_PI2);
          boxes.push_back(box);
     }
-    
+     //load boxes
+    QVariantMap cajas = mainMap[QString("boxes")].toMap();
+    for (auto &t: cajas)
+    {
+         QVariantList object = t.toList();
+         auto box = scene.addRect(QRectF(-object[2].toFloat()/2, -object[3].toFloat()/2, object[2].toFloat(), object[3].toFloat()), QPen(QColor("Brown")), QBrush(QColor("Orange")));
+         box->setPos(object[4].toFloat(), object[5].toFloat());
+  		//box->setRotation(object[6].toFloat()*180/M_PI2);
+		 box->setFlag(QGraphicsItem::ItemIsMovable);
+         boxes.push_back(box);
+    }
 }
 
 // SLOTS
@@ -254,7 +271,6 @@ void SpecificWorker::compute()
 {
 	computeLaser(laser_pose, boxes);  // goes
 	computeVisibility(points, laser_polygon);
-	//computeForces(points, laserData);
 	//cleanPath();
 	//controller();
 	updateRobot();				// goes
@@ -264,8 +280,9 @@ void SpecificWorker::compute()
 void SpecificWorker::cleanPath()
 {
 	computeForces(points, laserData);
-	addPoints();
 	cleanPoints();
+	addPoints();
+
 }
 
 void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
@@ -274,19 +291,18 @@ void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
 	for(auto &&p: points)
 		scene.removeItem(p);
 	points.clear();
-	for(auto &&p: path)
+	for(const auto &p: path)
 	{
-		//if((p-QVec::vec2(robot->pos().x(), robot->pos().y())).norm2() > ROBOT_LENGTH * 2)
 		QRectF contorno(p.toQPointF(), QSizeF(BALL_SIZE, BALL_SIZE));
-		if(robot->polygon().intersects(robot->mapFromScene(contorno)) == false)
-		//if(robot->polygon().containsPoint(robot->mapFromScene(p.toQPointF()), Qt::OddEvenFill)==false)
+		if(robot->polygon().intersected(robot->mapFromScene(contorno)).empty())
 		{ 
-			auto ellipse = scene.addEllipse(QRectF(-BALL_MIN,-BALL_MIN, BALL_SIZE, BALL_SIZE), QPen(QColor("LightGreen")), QBrush(QColor("LightGreen")));
+			auto ellipse = scene.addEllipse(QRectF(-BALL_MIN,-BALL_MIN, BALL_SIZE, BALL_SIZE), QPen(QColor("Black"),10), QBrush(QColor("LightGreen")));
 			ellipse->setFlag(QGraphicsItem::ItemIsMovable);
-			ellipse->setPos(p.x(), p.z());
+			ellipse->setPos(p.x(), p.z()); 
 			points.push_back(ellipse);
 		}
 	}
+
 	if( points.empty()) return; 
 	first = points.front();
 	first->setPos(robot_nose->mapToScene(QPointF(0,0))); 
@@ -300,7 +316,7 @@ void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
 	std::vector<QGraphicsEllipseItem*> points_to_remove;
 	for( auto &&p: iter::slice(points,1,(int)points.size()-1, 1))
 	{
-		if(robot->polygon().intersects(robot->mapFromScene(p->mapToScene(p->boundingRect()))))
+		if(robot->polygon().intersected(robot->mapFromScene(p->mapToScene(p->boundingRect()))).empty() == false)
 			points_to_remove.push_back(p);
 	}
 	for(auto p: points_to_remove)
@@ -308,10 +324,16 @@ void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
 		scene.removeItem(p);
 		points.erase(std::remove_if(std::begin(points), std::end(points), [p](auto &r){ return p==r;}), std::end(points));
 	}
-
-	for(auto &&p: points)
-		std::cout << "(" << p->x() << " " << p->y() << ")" << std::endl;
-	std::cout << std::endl;
+	
+	//Draw edges
+	for(auto &&pair: iter::sliding_window(points,2))
+	{
+		auto line = new QGraphicsLineItem(QLineF(QPointF(0,0), pair[0]->mapFromScene(pair[1]->pos())), pair[0]);
+		line->setPen(QPen(QColor("Red"),20));
+	}
+	// for(auto &&p: points)
+	// 	std::cout << "(" << p->x() << " " << p->y() << ")" << std::endl;
+	// std::cout << std::endl;
 }
 
 void SpecificWorker::computeVisibility(const std::vector<QGraphicsEllipseItem*> &path, const QGraphicsPolygonItem *laser)
@@ -320,7 +342,7 @@ void SpecificWorker::computeVisibility(const std::vector<QGraphicsEllipseItem*> 
 	for(auto &&p: path)
 	{
 		if( poly.containsPoint(p->pos(), Qt::OddEvenFill) 
-			or robot->polygon().containsPoint(robot->mapFromScene(p->pos()), Qt::OddEvenFill))
+						or robot->polygon().containsPoint(robot->mapFromScene(p->pos()), Qt::OddEvenFill))
 		{
 			p->setData(0, true);
 			p->setBrush(QColor("LightGreen"));
@@ -331,151 +353,253 @@ void SpecificWorker::computeVisibility(const std::vector<QGraphicsEllipseItem*> 
 			p->setBrush(QColor("DarkGreen"));
 		}
 	}
+	// for(auto &&p: path)
+	//  	std::cout << "(" << p->pos().x() << " " << p->pos().y() << " " << p->data(0).toBool() << ")";
+	// std::cout << std::endl;
+	
+}
+
+void SpecificWorker::computeForcesJacobian(const std::vector<QGraphicsEllipseItem*> &path, const std::vector<LData> &lData)
+{
+	if(path.size() < 3) return;
+	
+	// Go through points using a sliding windows of 3
+	for(auto group : iter::sliding_window(path, 3))
+	{
+		if(group.size()<3) break;	// break if too short
+		
+		auto p1 = QVector2D(group[0]->pos());
+		auto p2 = QVector2D(group[1]->pos());
+		auto p3 = QVector2D(group[2]->pos());
+		auto p = group[1];
+
+		if(isVisible(p) == false) // if not visible (computed before) continue
+			continue;
+
+		// internal curvature forces on p2
+		QVector2D iforce = ((p1-p2)/(p1-p2).length() + (p3-p2)/(p3-p2).length());
+	
+		// EXTERNAL FORCES
+		// We need the minimun distance from each point to the obstacle(s). we compute the shortest laser ray to each point in the path
+		// compute minimun distances to each point within the laser field
+		std::vector<float> distances, mx, px, my, py;
+		for (const auto &l : lData)
+		{
+			auto lcart = QPointF(l.dist*sin(l.angle), l.dist*cos(l.angle));  				// can be optimized out
+ 			QVector2D lcart_world(robot->mapToScene(lcart));								// transform to scene RefS
+ 			// compute distante from laser tip to point minus RLENGTH/2 or 0 and keep it positive
+ 			distances.push_back((lcart_world - p2).length());
+			mx.push_back((lcart_world - (p2 - QVector2D(DELTA_H, 0))).length());
+			px.push_back((lcart_world - (p2 + QVector2D(DELTA_H, 0))).length());
+			my.push_back((lcart_world - (p2 - QVector2D(0, DELTA_H))).length());
+			py.push_back((lcart_world - (p2 + QVector2D(0, DELTA_H))).length());
+		}
+		float min_dist = *std::min_element(std::begin(distances), std::end(distances));
+		
+		// if min > MAX_LASER_DIST don't apply forces
+		if( min_dist > MAX_LASER_DIST)
+			continue;
+		
+		float min_mx = *std::min_element(std::begin(mx), std::end(mx));
+		float min_px = *std::min_element(std::begin(px), std::end(px));
+		float min_my = *std::min_element(std::begin(my), std::end(my));
+		float min_py = *std::min_element(std::begin(py), std::end(py));
+	
+		// space interval to compute the derivative. Related to to robot's size
+		QVec jacobian = QVec::vec2(min_mx - min_px, min_my - min_py) * (T) (1.f / (2.f * DELTA_H));
+
+		// repulsion force is computed in the direction of maximun laser-point distance variation and scaled so it is 0 is beyond FORCE_DISTANCE_LIMIT and FORCE_DISTANCE_LIMIT if w1.minDist.
+		auto final_dist = std::min(FORCE_DISTANCE_LIMIT, min_dist);
+		QVec repulsion_force = jacobian * (T)(FORCE_DISTANCE_LIMIT - final_dist);
+	
+		// Remove tangential component of repulsion force by projecting on line tangent to path (base_line)
+		// QVec base_line = (p1 - p3).normalize();
+		// const QVec itangential = (repulsion_force * base_line) * base_line;
+		// repulsion_force = repulsion_force - itangential;
+		
+		// add the forces and move the point using KE y KI defined in .h
+		//qDebug() << min_dist << final_dist << min_mx << min_px <<  min_my << min_py << "jac" << jacobian << iforce << repulsion_force << jacobian;
+		QVector2D total =  (KI * iforce) + (KE * QVector2D(repulsion_force.x(), repulsion_force.y()));	
+		if(total.length() > 8)
+			total = 10 * total.normalized();
+		p->setPos( p->pos() - total.toPointF() ); 
+
+		// remove old arrows and edges
+		for(const auto &pp : path)
+			for( auto &&child : pp->childItems())
+	 			scene.removeItem(child);
+		// create new ones
+		auto arrow = new QGraphicsLineItem(QLineF( QPointF(0,0), p->mapFromScene(1.1*(p->pos() + QPointF(repulsion_force.x(), repulsion_force.y())))), p);
+		auto point = new QGraphicsEllipseItem(0,0,40,40, arrow);	
+		point->setBrush(QBrush(QColor("DarkGreen")));
+		arrow->setPen(QPen(QBrush(QColor("DarkGreen")),10));
+		point->setPos(arrow->line().p2());
+	}
+	
+	first->setPos(robot_nose->mapToScene(QPointF(0,0)));
+	last->setPos(target->pos());
+
+	//Draw edges
+	for(auto &&pair: iter::sliding_window(path, 2))
+	{
+		for( auto &&child : pair[0]->childItems())
+		{
+			auto line = qgraphicsitem_cast<QGraphicsLineItem*>(child);
+	 		if(line) scene.removeItem(line);
+		}
+		auto line = new QGraphicsLineItem(QLineF(QPointF(0,0), pair[0]->mapFromScene(pair[1]->pos())), pair[0]);
+		line->setPen(QPen(QColor("Red"),20));
+	}
 }
 
 void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &path, const std::vector<LData> &lData)
 {
 	if(path.size() < 3) return;
 
-	auto &lpath = path;
-
-	// baselines needed to remove tangential component
-	std::vector<QVector2D> base_lines(lpath.size(), QVector2D(0.f,0.f));
-	int k=1;
-	for(auto group : iter::sliding_window(lpath, 3))
+	//convert laser polar coordinates to cartesian
+	std::vector<QPointF> laser_cart;
+	QPolygonF laser_poly;
+	for(const auto &l : lData)
 	{
-		if(group.size()<3) break;
+		QPointF p(robot->mapToScene(l.dist*sin(l.angle), l.dist*cos(l.angle)));
+		laser_cart.push_back(p); 
+		laser_poly << p;
+	}
 
-		auto p1 = QVector2D(group[0]->pos());
-		auto p3 = QVector2D(group[2]->pos());
-		base_lines[k++] = (p1 - p3).normalized();
-	}  
-	
-	// internal curvature forces
-	std::vector<QVector2D> iforces(lpath.size(), QVector2D(0.f,0.f));
-	k=1;
-	for(auto group : iter::sliding_window(lpath, 3))
+	// Go through points using a sliding windows of 3
+	for(auto group : iter::sliding_window(path, 3))
 	{
-		if(group.size()<3) break;
-
+		if(group.size()<3) break;	// break if too short
+		
 		auto p1 = QVector2D(group[0]->pos());
 		auto p2 = QVector2D(group[1]->pos());
 		auto p3 = QVector2D(group[2]->pos());
+		auto p = group[1];
 
-		//internal force on p2
-		auto iforce = ((p1-p2)/(p1-p2).length() + (p3-p2)/(p3-p2).length());
-		//QVector2D iforce(0,0);
-		//if(group[1]->data(0).value<bool>() == true) // inside laser field
-		//auto iforce = (p1-p2) + (p3-p2);
-		iforces[k++] = iforce;
-	} 
-	
-	// external forces
-	// we need the minimun distance from each point to the obstacle(s). 
-	// we compute the shortest laser ray to each point in the path
-	std::vector<QVector2D> eforces;
-	static std::vector<QGraphicsLineItem*> lforces;
-	
-	//remove graphic lines
-	for(auto &&f: lforces)
-		scene.removeItem(f);
-	lforces.clear();
-	// compute minimun distances to each point within the laser field
-	for( auto &&p : lpath)
-	{
-		QVector2D force(0,0), f_force(0,0);
-		if(p->data(0).value<bool>() == true) // if visible (computed before) then it is inside laser field
-		{
-			std::vector<std::tuple<float, QVector2D>> distances;
-			// apply to all laser points a functor to compute the distances to point in path (p)
-			std::transform(std::begin(lData), std::end(lData), std::back_inserter(distances), [p, this](auto &l)
-				{ 
-					// laser ray tip 
-					auto t = QPointF(l.dist*sin(l.angle), l.dist*cos(l.angle));
-					QVector2D tip(robot->mapToScene(t));
-					if(QVector2D(t).length() < MAX_LASER_DIST)
-					{
-						// subtract ball radius
-						float dist = std::min((QVector2D(p->pos()) - tip).length()-200, 0.f);
-						return std::make_tuple(dist-200, QVector2D(p->pos()) - tip);
-					}	
-					else
-						return std::make_tuple(MAX_LASER_DIST, QVector2D(p->pos()));	
-				});
-			// compute min distance
-			auto min = std::min_element(std::begin(distances), std::end(distances), [](auto &a, auto &b){return std::get<float>(a) < std::get<float>(b);});
-			// inverse raw force is min distante
-			force = std::get<QVector2D>(*min);
-			float mag = force.length();
-			// compute linear inverse law  y = -1/4 x + 200
-			// compute linear inverse law  y = -1/2 x + 500
-			
-			if(mag > 1000) mag = 1000;
-			mag  = -(500.f/1000)*mag + 500.f;
-			f_force = mag * force.normalized();	
-			if(mag < 1000)	
-				lforces.push_back(scene.addLine(QLineF( p->pos(), 1.1*(p->pos()+f_force.toPointF())), 
-							QPen(QBrush(QColor("DarkGreen")),15)));
-			eforces.push_back(f_force);
-		}
-	}
-
-	//Apply forces to current position
-	const float KE = 0.6;
-	const float KI = 0.4;	
-	//const float KL = 0.06;	
-	for(auto &&[point, iforce, eforce, base_line] : iter::zip(lpath, iforces, eforces, base_lines))
-	{
-		if( point->data(0).toBool() == false) //not visible
+		if(isVisible(p) == false) // if not visible (computed before) continue
 			continue;
-		const auto &idelta = KI * iforce.toPointF();
-		QPointF edelta{0,0}; 
-		edelta = KE * eforce.toPointF();
-		const auto force =  idelta + edelta;
 
-		// Removing tangential component
-		const auto eprod = QVector2D::dotProduct(QVector2D(force), base_line);
-		if(eprod < 5)
-		{
-			const auto corrected_force = force - (QVector2D::dotProduct(QVector2D(force), base_line)*base_line).toPointF();
-			point->setPos( point->pos() + corrected_force ); 
-		}
-		else
-			point->setPos( point->pos() + force ); 
+		// internal curvature forces on p2
+		QVector2D iforce = ((p1-p2)/(p1-p2).length() + (p3-p2)/(p3-p2).length());
+	
+		// External forces. We need the minimun distance from each point to the obstacle(s). we compute the shortest laser ray to each point in the path
+		// compute minimun distances to each point within the laser field
+	
+		std::vector<std::tuple<float, QVector2D>> distances;
+		// Apply to all laser points a functor to compute the distances to point p2
+		std::transform(std::begin(laser_cart), std::end(laser_cart), std::back_inserter(distances), [p, this](QPointF &t)
+		{ 
+			QVector2D tip(t);									
+			if(QVector2D(robot->mapFromScene(t)).length() < MAX_LASER_DIST)			// inside laser field
+			{
+				// compute distante from laser tip to point minus RLENGTH/2 or 0 and keep it positive
+				float dist = (QVector2D(p->pos()) - tip).length()-(ROBOT_LENGTH / 2);
+				if( dist <= 0) dist = 0.01;
+				return std::make_tuple(dist, QVector2D(p->pos()) - tip);
+			}	
+			else
+				return std::make_tuple(MAX_LASER_DIST, QVector2D());	
+		});
+		
+		// compute min distance
+		auto min = std::min_element(std::begin(distances), std::end(distances), [](auto &a, auto &b){return std::get<float>(a) < std::get<float>(b);});
+		float min_dist = std::get<float>(*min);
+		
+		// if min > MAX_LASER_DIST don't apply forces
+		if( min_dist >= MAX_LASER_DIST)
+			continue;
+
+		QVector2D force = std::get<QVector2D>(*min);
+		// rescale min_dist so 1 is ROBOT_LENGTH
+		float magnitude = (1.f/ROBOT_LENGTH) * min_dist; 
+		// compute inverse square law
+		magnitude = 10.f/(magnitude*magnitude);
+		//if(magnitude > 25) magnitude = 25.;
+		QVector2D f_force = magnitude * force.normalized();	
+		//qDebug() << magnitude << f_force;
+	
+		// Remove tangential component of repulsion force by projecting on line tangent to path (base_line)
+		QVector2D base_line = (p1 - p3).normalized();
+		const QVector2D itangential = QVector2D::dotProduct(f_force, base_line) * base_line;
+		f_force = f_force - itangential;
+		
+		// update node pos
+		auto total =  (KI * iforce) + (KE * f_force);
+		if(total.length() > 8)
+			total = 8 * total.normalized();
+		if(total.length() < -8)
+			total = -8 * total.normalized();	
+		
+		// move node only if does not exit the laser polygon
+		if (laser_poly.containsPoint( p->pos() + total.toPointF(), Qt::OddEvenFill))
+			p->setPos( p->pos() + total.toPointF() ); 
+
+		// remove old arrows and edges
+		for(const auto &pp : path)
+			for( auto &&child : pp->childItems())
+	 			scene.removeItem(child);
+		// create new ones
+		auto arrow = new QGraphicsLineItem(QLineF( QPointF(0,0), p->mapFromScene(1.1*(p->pos()+f_force.toPointF()))), p);
+		auto point = new QGraphicsEllipseItem(0,0,40,40, arrow);	
+		point->setBrush(QBrush(QColor("DarkGreen")));
+		arrow->setPen(QPen(QBrush(QColor("DarkGreen")),10));
+		point->setPos(arrow->line().p2());
 	}
-	// reposition endpoints to robot's nose and target
 	first->setPos(robot_nose->mapToScene(QPointF(0,0)));
 	last->setPos(target->pos());
-	
-}
 
+	//Draw edges
+	for(auto &&pair: iter::sliding_window(path, 2))
+	{
+		for( auto &&child : pair[0]->childItems())
+		{
+			auto line = qgraphicsitem_cast<QGraphicsLineItem*>(child);
+	 		if(line) scene.removeItem(line);
+		}
+		auto line = new QGraphicsLineItem(QLineF(QPointF(0,0), pair[0]->mapFromScene(pair[1]->pos())), pair[0]);
+		line->setPen(QPen(QColor("Red"),20));
+	}
+}
 ////// Add points to the path if needed
 void SpecificWorker::addPoints()
 {
 	std::vector<std::tuple<int, QPointF>> points_to_insert;
-	int k=1;
-	for(auto &&group: iter::sliding_window(points, 2))
+	for(auto &&[k, group] : iter::enumerate(iter::sliding_window(points, 2)))
 	{
 		auto &p1 = group[0];
 		auto &p2 = group[1];
-	
+
+		if( isVisible(p1) == false or isVisible(p2) == false ) //not visible
+			continue;
+
 		float dist = QVector2D(p1->pos()-p2->pos()).length();
 		if (dist > ROAD_STEP_SEPARATION)  
 		{
 			float l = 0.9 * ROAD_STEP_SEPARATION / dist;   //Crucial que el punto se ponga mas cerca que la condición de entrada
 			QLineF line(p1->pos(), p2->pos());
-			points_to_insert.push_back(std::make_tuple(k, QPointF{line.pointAt(l)}));
+			points_to_insert.push_back(std::make_tuple(k+1, QPointF{line.pointAt(l)}));
 		}
-		k++;
+		//qDebug() << __FUNCTION__ << k;
 	}
-	int l=0;
-	for(auto &&p : points_to_insert)
+	for(const auto &[l, p] : iter::enumerate(points_to_insert))
 	{
-		auto r = scene.addEllipse(QRectF(-BALL_MIN,-BALL_MIN,BALL_SIZE,BALL_SIZE), QPen(QColor("LightGreen")), QBrush(QColor("LightGreen")));
+		auto r = scene.addEllipse(QRectF(-BALL_MIN,-BALL_MIN,BALL_SIZE,BALL_SIZE), QPen(QColor("Black"),10), QBrush(QColor("LightGreen")));
 		r->setPos(std::get<QPointF>(p));
-		points.insert(points.begin() + std::get<int>(p) + l++, r);
+		points.insert(points.begin() + std::get<int>(p) + l, r);
+		// create edge between new point and second old point
+		auto last = *(points.begin() + std::get<int>(p) + l + 1);
+		auto line = new QGraphicsLineItem(QLineF(QPointF(0,0), r->mapFromScene(last->pos())), r);
+		line->setPen(QPen(QColor("Red"),20));
+		// resize edge from first old point to new point
+		auto first = *(points.begin() + std::get<int>(p) + l - 1);
+		line = qgraphicsitem_cast<QGraphicsLineItem*>(first);
+		if(line)
+		{
+			line->line().setP2(first->mapFromScene(r->pos()));
+			line->setPen(QPen(QColor("Red"),20));
+		}
 	}
-	//qDebug() << points.size();
+	//qDebug() << __FUNCTION__ << "points inserted " << points_to_insert.size();
 }
 
 ////// Remove points fromthe path if needed
@@ -487,21 +611,36 @@ void SpecificWorker::cleanPoints()
 		const auto &p1 = group[0];
 		const auto &p2 = group[1];
 	
+		if( (p1->data(0).toBool() == false) or (p2->data(0).toBool() == false)) //not visible
+			continue;
 		if(p2 == last)
 			break;
+		// check if p1 was marked to erase in the previous iteration
+		if(std::find(std::begin(points_to_remove), std::end(points_to_remove), p1) != std::end(points_to_remove))
+		 	continue;
+
 		float dist = QVector2D(p1->pos()-p2->pos()).length();
 		if( dist < 0.5 * ROAD_STEP_SEPARATION)
 			points_to_remove.push_back(p2);
  
-		//if( robot->polygon().containsPoint(robot->mapFromScene(p1->pos()), Qt::OddEvenFill))  
-		//	points_to_remove.push_back(p1);
 	}
-	for(auto p: points_to_remove)
+	for(auto &&p: points_to_remove)
 	{
-		scene.removeItem(p);
 		points.erase(std::remove_if(points.begin(), points.end(), [p](auto &r){ return p==r;}), points.end());
+		for( auto &&child : p->childItems())
+	 		scene.removeItem(child);
+		scene.removeItem(p);
 	}
+	//Repaint edges
+	for(auto &&p: iter::sliding_window(points,2))		 
+		for( auto &&child : p[0]->childItems())
+		{
+	 	 		auto line = qgraphicsitem_cast<QGraphicsLineItem*>(child);
+		 	 	if( line )
+					line->setLine(QLineF(QPointF(0,0), p[0]->mapFromScene(p[1]->pos())));
+		}
 }
+
 
 ////// Render synthetic laser
 void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsItem*> &box)
@@ -521,7 +660,7 @@ void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsI
 			auto point = line.pointAt(t);
 			if(std::any_of(std::begin(boxes_temp), std::end(boxes_temp),[point](auto &box){ return box->contains(box->mapFromScene(point));}))
 			{
-				l.dist = QVector2D(point-line.pointAt(0)).length();
+				l.dist = QVector2D(point-line.pointAt(0)).length()-1;
 				break;
 			}
 		}
@@ -532,7 +671,7 @@ void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsI
 	for(auto &&l : laserData)
 		poly << r->mapToScene(QPointF(l.dist*sin(l.angle), l.dist*cos(l.angle)));
 	
-	QColor color("Linen"); color.setAlpha(180);
+	QColor color("Pink"); color.setAlpha(150);
 	laser_polygon = scene.addPolygon(poly, QPen(color), QBrush(color));
 	laser_polygon->setZValue(-1);
 }
@@ -545,16 +684,14 @@ void SpecificWorker::controller()
 	{  return; }
 	
 	// Compute distance to target along path
-	float dist_to_target = 0.f;
-	for(auto &&g : iter::sliding_window(points, 2))
-		dist_to_target += QVector2D(g[1]->pos() - g[0]->pos()).length();
+	// float dist_to_target = 0.f;
+	// for(auto &&g : iter::sliding_window(points, 2))
+	// 	dist_to_target += QVector2D(g[1]->pos() - g[0]->pos()).length();
 
 	// Compute euclidean distance to target 
 	float euc_dist_to_target = QVector2D(target->pos() - robot->pos()).length();
-	
-	qDebug() << dist_to_target << euc_dist_to_target;
-	if( fabs(dist_to_target - euc_dist_to_target) < 2* ROBOT_LENGTH )
-		if(euc_dist_to_target < 100)
+	//qDebug() << __FUNCTION__  << points.size() << euc_dist_to_target;
+	if( points.size() < 3 and euc_dist_to_target<200) 
 		{
 			std::cout << "TARGET ACHIEVED" << std::endl;
 			advVelz = 0;
@@ -574,8 +711,16 @@ void SpecificWorker::controller()
 		rotVel = 0;
 		std::list<QVec> lpath = grid.computePath(Grid<TCell>::Key(robot_nose->mapToScene(QPointF(0,0))),
 										 Grid<TCell>::Key(target->pos()));
+		qDebug() << __FUNCTION__ << " New path requested";
 		if(lpath.size() > 0) createPathFromGraph(lpath);
-		else return;
+		else
+	 	{ 
+			qDebug() << __FUNCTION__ << "Received empty path. Aborting mission";
+			advVelz = 0;
+			rotVel = 0;
+			active = false;
+			return;
+		}
 	}
 
 	// Proceed through path
@@ -588,12 +733,20 @@ void SpecificWorker::controller()
 		angles.push_back(rewrapAngleRestricted(qDegreesToRadians(nose.angleTo(QLineF(first->pos(),points[i]->pos())))));
 	auto min_angle = std::min(angles.begin(), angles.end());	
 	
-	rotVel = 1.2 * *min_angle;
-	if (fabs(rotVel) > ROBOT_MAX_ROTATION_SPEED)
-		rotVel = rotVel/fabs(rotVel) * ROBOT_MAX_ROTATION_SPEED;
-
+	if( min_angle != angles.end())
+	{
+		rotVel = 1.2 * *min_angle;
+		if (fabs(rotVel) > ROBOT_MAX_ROTATION_SPEED)
+			rotVel = rotVel/fabs(rotVel) * ROBOT_MAX_ROTATION_SPEED;
+	}
+	else
+	{
+		rotVel = 0;
+		qDebug() << __FUNCTION__  << "rotvel = 0";
+	}
+	
 	// Compute advance speed
-	std::min( advVelz = ROBOT_MAX_ADVANCE_SPEED * exponentialFunction(rotVel, 0.3, 0.4, 0) , dist_to_target);
+	std::min( advVelz = ROBOT_MAX_ADVANCE_SPEED * exponentialFunction(rotVel, 0.3, 0.4, 0) , euc_dist_to_target);
 	//std::cout <<  "In controller: active " << active << " adv: "<< advVelz << " rot: " << rotVel << std::endl;
 	
 }
@@ -621,6 +774,11 @@ void SpecificWorker::updateRobot()
 //////////////////////////////////////////////////////////////////777
 ////// Utilities
 ////////////////////////////////////////////////////////////////////
+bool SpecificWorker::isVisible(const QGraphicsEllipseItem *p)
+{
+	return p->data(0).toBool();
+}
+
 float SpecificWorker::rewrapAngleRestricted(const float angle)
 {	
 	if(angle > M_PI)
@@ -864,3 +1022,64 @@ float SpecificWorker::degreesToRadians(const float angle_)
 	//robot->setRotation(qRadiansToDegrees(bState.alpha));
     
 //}
+
+
+// // // external forces
+// 	// // we need the minimun distance from each point to the obstacle(s). 
+// 	// // we compute the shortest laser ray to each point in the path
+// 	std::vector<QVector2D> eforces;
+// 	static std::vector<QGraphicsLineItem*> lforces;
+	
+// 	//remove graphic lines
+// 	for(auto &&f: lforces)
+// 		scene.removeItem(f);
+// 	lforces.clear();
+// 	// compute minimun distances to each point within the laser field
+// 	for( auto &&p : lpath)
+// 	{
+// 		QVector2D force(0,0), f_force(0,0);
+// 		if(p->data(0).value<bool>() == true) // if visible (computed before) then it is inside laser field
+// 		{
+// 			std::vector<std::tuple<float, QVector2D>> distances;
+// 			// apply to all laser points a functor to compute the distances to point in path (p)
+// 			std::transform(std::begin(lData), std::end(lData), std::back_inserter(distances), [p, this](auto &l)
+// 				{ 
+// 					// laser ray tip 
+// 					auto t = QPointF(l.dist*sin(l.angle), l.dist*cos(l.angle)); //can be optimized
+// 					QVector2D tip(robot->mapToScene(t));
+// 					if(QVector2D(t).length() < MAX_LASER_DIST)
+// 					{
+// 						// subtract ball radius  200 = robot size / 2
+// 						float dist = std::min((QVector2D(p->pos()) - tip).length()-200, 0.f);
+// 						return std::make_tuple(dist, QVector2D(p->pos()) - tip);
+// 					}	
+// 					else
+// 						return std::make_tuple(MAX_LASER_DIST, QVector2D(p->pos()));	
+// 				});
+// 			// compute min distance
+// 			auto min = std::min_element(std::begin(distances), std::end(distances), [](auto &a, auto &b){return std::get<float>(a) < std::get<float>(b);});
+// 			// inverse raw force is min distante
+// 			force = std::get<QVector2D>(*min);
+// 			float mag = force.length()-200;
+
+// 			// compute linear inverse law  y = -1/4 x + 200
+// 			if(mag > X_ZERO) mag = X_ZERO;
+// 			mag  = -(Y_ZERO/X_ZERO)*mag + Y_ZERO;
+// 			f_force = mag * force.normalized();	
+		
+// 			auto arrow = new QGraphicsLineItem(QLineF( QPointF(0,0), -p->mapFromScene(1.1*(p->pos()+f_force.toPointF()))), p);
+// 			auto point = new QGraphicsEllipseItem(0,0,30,30, arrow);	
+// 			point->setBrush(QBrush(QColor("DarkGreen")));
+// 			arrow->setPen(QPen(QBrush(QColor("DarkGreen")),10));
+// 			point->setPos(arrow->line().p2());
+// 			lforces.push_back(arrow);
+// 			eforces.push_back(f_force);
+
+// 			const float KE = 1;
+// 			const float KI = 0.3;
+// 			const auto &idelta = KI * iforce.toPointF();
+// 			const auto &edelta = KE * f_force.toPointF();
+// 			const auto force =  idelta + edelta;
+// 			point->setPos( point->pos() + force ); 
+// 		}
+// 	}

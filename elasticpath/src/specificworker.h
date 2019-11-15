@@ -22,8 +22,6 @@
        @author authorname
 */
 
-
-
 #ifndef SPECIFICWORKER_H
 #define SPECIFICWORKER_H
 #include "GenericBase.h"
@@ -39,7 +37,6 @@
 #include <math.h>
 #include "grid.h"
 #include "human.h"
-
 
 // Map
 struct TCell
@@ -81,13 +78,20 @@ private:
 	//const float BALL_SIZE = ROBOT_LENGTH;
 	const float BALL_MIN = 30;
 	const float BALL_SIZE = 60;
-	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 1.1;
+	const float KE = 10;
+	const float KI = 20;
+	//const float KE = 0.5;
+	//const float KI = -9;
+	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.9;
 	const float MAX_LASER_DIST = 4000;
 	const float LASER_DIST_STEP = 0.05;
 	const float LASER_ANGLE_STEPS = 50;	
-	const float ROBOT_MAX_ADVANCE_SPEED = 1000;
+	const float ROBOT_MAX_ADVANCE_SPEED = 600;
 	const float ROBOT_MAX_ROTATION_SPEED = 0.9;
-    
+	const float FORCE_DISTANCE_LIMIT = (ROBOT_LENGTH * 1.5);  //mm
+	const float ROBOT_STEP = (ROBOT_LENGTH * 0.1);
+	const float DELTA_H = (ROBOT_LENGTH * 0.1);
+	
 	InnerModel *innerModel;
 	QGraphicsScene scene;
 	QGraphicsView view;
@@ -140,6 +144,7 @@ private:
 	// Methods
     void initializeWorld();
 	void computeForces(const std::vector<QGraphicsEllipseItem*> &path, const std::vector<LData> &lData);
+	void computeForcesJacobian(const std::vector<QGraphicsEllipseItem*> &path, const std::vector<LData> &lData);
 	void computeLaser(QGraphicsItem *r, const std::vector<QGraphicsItem*> &box);
 	void addPoints();
 	void cleanPoints();
@@ -149,6 +154,7 @@ private:
 	void updateFreeSpaceMap(const std::vector<QPolygonF> &new_poly);
 	void createPathFromGraph(const std::list<QVec> &path);
 	//void markGrid(QGraphicsPolygonItem* poly, bool occupied);
+	bool isVisible(const QGraphicsEllipseItem *p);
 
 	// Target
 	struct Target 

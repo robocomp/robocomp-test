@@ -8,6 +8,9 @@ SocialNavigationGaussianProxy = socialnavigationgaussian:tcp -h localhost -p 200
 OmniRobotProxy = omnirobot:tcp -h localhost -p 12238
 
 World = /home/robocomp/robocomp/components/robocomp-tests/elasticpath/src/empty.json
+#World = /home/robocomp/robocomp/components/robocomp-tests/elasticpath/src/hole.json
+#World = /home/robocomp/robocomp/components/robocomp-tests/elasticpath/src/empty.json
+#World = /home/robocomp/robocomp/components/robocomp-tests/elasticpath/src/center_obstacle.json
 #World = /home/robocomp/robocomp/components/robocomp-tests/elasticpath/src/autonomy.json
 InnerModelPath = innermodel.xml
 
