@@ -99,13 +99,13 @@ class Grid
 			else
 				return std::forward_as_tuple(true, fmap.at(pointToGrid(k.x,k.z)));
 		}
-		T at(const Key &k) const 									{ return fmap.at(k);};
-		T& at(const Key &k) 										{ return fmap.at(k);};
-		typename FMap::iterator begin() 							{ return fmap.begin(); };
-		typename FMap::iterator end() 								{ return fmap.end();   };
+		T at(const Key &k) const 														{ return fmap.at(k);};
+		T& at(const Key &k) 																{ return fmap.at(k);};
+		typename FMap::iterator begin() 										{ return fmap.begin(); };
+		typename FMap::iterator end() 											{ return fmap.end();   };
 		typename FMap::const_iterator begin() const  				{ return fmap.begin(); };
 		typename FMap::const_iterator end() const 	 				{ return fmap.begin(); };
-		size_t size() const 										{ return fmap.size();  };
+		size_t size() const 																{ return fmap.size();  };
 		
 		void initialize(const Dimensions &dim_, T &&initValue)
 		{
@@ -173,15 +173,16 @@ class Grid
 			std::vector<std::pair<std::uint32_t, Key>> previous(fmap.size(), std::make_pair(-1, Key()));
 			// lambda to compare two vertices: a < b if a.id<b.id or 			
 			auto comp = [this](std::pair<std::uint32_t, Key> x, std::pair<std::uint32_t, Key> y)
-				{ if(x.first < y.first) 
-					return true;
-				  else if(x.first == y.first)
-				  	return std::get<T&>(getCell(x.second)).id <= std::get<T&>(getCell(y.second)).id;
+				{ 
+					if(x.first <= y.first) 
+						return true;
+				  //else if(x.first == y.first)
+				  //	return std::get<T&>(getCell(x.second)).id <= std::get<T&>(getCell(y.second)).id;
 				  else return false;	
 				};
 				
 			// OPEN List
-			std::set< std::pair<double, Key>, decltype(comp)> active_vertices(comp);
+			std::set< std::pair<std::uint32_t, Key>, decltype(comp)> active_vertices(comp);
 			active_vertices.insert({0,source});
 			
 			while (!active_vertices.empty()) 
@@ -203,8 +204,8 @@ class Grid
 						active_vertices.erase( { min_distance[ed.second.id], ed.first } );
 						min_distance[ed.second.id] = min_distance[fmap[where].id] + ed.second.cost;
 						previous[ed.second.id] = std::make_pair(fmap[where].id, where);
-						//active_vertices.insert( { min_distance[ed.second.id], ed.first } );    // Djikstra
-					  active_vertices.insert( { min_distance[ed.second.id] + heuristicL2(ed.first, target), ed.first } ); //A*
+						active_vertices.insert( { min_distance[ed.second.id], ed.first } );    // Djikstra
+					  //active_vertices.insert( { min_distance[ed.second.id] + heuristicL2(ed.first, target), ed.first } ); //A*
 					}
 				}
 			}
@@ -258,13 +259,13 @@ class Grid
 				Key lk{k.x + itx, k.z + itz}; 
 				try
 				{
-					T &p = fmap.at(Key(lk.x,lk.z));
+					T p = fmap.at(Key(lk.x,lk.z));
 					T &p_aux = fmap_aux.at(Key(lk.x,lk.z));
 					if(p.free and p_aux.free)
 					{
 						// check that incs are not both zero but have the same abs value, i.e. a diagonal
 						if(itx != 0 and itz != 0 and (fabs(itx) == fabs(itz)))
-							p.cost = 1.41;		// if neighboor in diagonal, cost is sqrt(2) Should be computed over the initial value
+							p.cost = 1.41;		// if neighboor in diagonal, cost is sqrt(2)
 						
 						neigh.emplace_back(std::make_pair(lk,p));
 					}
@@ -274,6 +275,7 @@ class Grid
 					std::cout << e.what() << " neighbour not found in grid " << lk.x << " " << lk.z << '\n';
 				}
 			}
+			qDebug() << neigh.size();
 			return neigh;
 		}
 		
