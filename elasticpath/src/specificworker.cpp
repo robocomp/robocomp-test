@@ -180,7 +180,7 @@ void SpecificWorker::initialize(int period)
 	
 	// clean path
 	connect(&cleanTimer, &QTimer::timeout, this, &SpecificWorker::cleanPath);
-	cleanTimer.start(50);
+	//cleanTimer.start(50);
 	
 	// controller
     connect(&controllerTimer, &QTimer::timeout, this, &SpecificWorker::controller);
@@ -272,7 +272,7 @@ void SpecificWorker::compute()
 	computeLaser(laser_pose, boxes);  // goes
 	computeVisibility(points, laser_polygon);
 	//cleanPath();
-	controller();
+	//controller();
 	updateRobot();				// goes
 	reloj.restart();
 }
