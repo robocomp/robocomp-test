@@ -363,6 +363,16 @@ void SpecificWorker::computeForcesJacobian(const std::vector<QGraphicsEllipseIte
 {
 	if(path.size() < 3) return;
 	
+	//convert laser polar coordinates to cartesian
+	std::vector<QVector2D> laser_cart;
+	QPolygonF laser_poly;
+	for(const auto &l : lData)
+	{
+		QPointF p(robot->mapToScene(l.dist*sin(l.angle), l.dist*cos(l.angle)));
+		laser_cart.push_back(QVector2D(p)); 
+		laser_poly << p;
+	}
+
 	// Go through points using a sliding windows of 3
 	for(auto group : iter::sliding_window(path, 3))
 	{
@@ -383,22 +393,18 @@ void SpecificWorker::computeForcesJacobian(const std::vector<QGraphicsEllipseIte
 		// We need the minimun distance from each point to the obstacle(s). we compute the shortest laser ray to each point in the path
 		// compute minimun distances to each point within the laser field
 		std::vector<float> distances, mx, px, my, py;
-		for (const auto &l : lData)
+		for (const auto &l : laser_cart)
 		{
-			auto lcart = QPointF(l.dist*sin(l.angle), l.dist*cos(l.angle));  				// can be optimized out
- 			QVector2D lcart_world(robot->mapToScene(lcart));								// transform to scene RefS
+			// auto lcart = QPointF(l.dist*sin(l.angle), l.dist*cos(l.angle));  				// can be optimized out
+ 			// QVector2D lcart_world(robot->mapToScene(lcart));								// transform to scene RefS
  			// compute distante from laser tip to point minus RLENGTH/2 or 0 and keep it positive
- 			distances.push_back((lcart_world - p2).length());
-			mx.push_back((lcart_world - (p2 - QVector2D(DELTA_H, 0))).length());
-			px.push_back((lcart_world - (p2 + QVector2D(DELTA_H, 0))).length());
-			my.push_back((lcart_world - (p2 - QVector2D(0, DELTA_H))).length());
-			py.push_back((lcart_world - (p2 + QVector2D(0, DELTA_H))).length());
+ 			distances.push_back((l - p2).length());
+			mx.push_back((l - (p2 - QVector2D(DELTA_H, 0))).length());
+			px.push_back((l - (p2 + QVector2D(DELTA_H, 0))).length());
+			my.push_back((l - (p2 - QVector2D(0, DELTA_H))).length());
+			py.push_back((l - (p2 + QVector2D(0, DELTA_H))).length());
 		}
 		float min_dist = *std::min_element(std::begin(distances), std::end(distances));
-		
-		// if min > MAX_LASER_DIST don't apply forces
-		if( min_dist > MAX_LASER_DIST)
-			continue;
 		
 		float min_mx = *std::min_element(std::begin(mx), std::end(mx));
 		float min_px = *std::min_element(std::begin(px), std::end(px));
@@ -412,17 +418,20 @@ void SpecificWorker::computeForcesJacobian(const std::vector<QGraphicsEllipseIte
 		auto final_dist = std::min(FORCE_DISTANCE_LIMIT, min_dist);
 		QVec repulsion_force = jacobian * (T)(FORCE_DISTANCE_LIMIT - final_dist);
 	
-		// Remove tangential component of repulsion force by projecting on line tangent to path (base_line)
+		//Remove tangential component of repulsion force by projecting on line tangent to path (base_line)
 		// QVec base_line = (p1 - p3).normalize();
 		// const QVec itangential = (repulsion_force * base_line) * base_line;
 		// repulsion_force = repulsion_force - itangential;
 		
 		// add the forces and move the point using KE y KI defined in .h
 		//qDebug() << min_dist << final_dist << min_mx << min_px <<  min_my << min_py << "jac" << jacobian << iforce << repulsion_force << jacobian;
-		QVector2D total =  (KI * iforce) + (KE * QVector2D(repulsion_force.x(), repulsion_force.y()));	
-		if(total.length() > 8)
-			total = 10 * total.normalized();
-		p->setPos( p->pos() - total.toPointF() ); 
+		QVector2D total =  (KIJ * iforce) + (KEJ * QVector2D(repulsion_force.x(), repulsion_force.y()));	
+		if(total.length() > 18)
+			total = 18 * total.normalized();
+		
+		// move node only if does not exit the laser polygon
+		if (laser_poly.containsPoint( p->pos() + total.toPointF(), Qt::OddEvenFill))
+			p->setPos( p->pos() + total.toPointF() ); 
 
 		// remove old arrows and edges
 		for(const auto &pp : path)
@@ -489,25 +498,15 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 		// Apply to all laser points a functor to compute the distances to point p2
 		std::transform(std::begin(laser_cart), std::end(laser_cart), std::back_inserter(distances), [p, this](QPointF &t)
 		{ 
-			QVector2D tip(t);									
-			if(QVector2D(robot->mapFromScene(t)).length() < MAX_LASER_DIST)			// inside laser field
-			{
-				// compute distante from laser tip to point minus RLENGTH/2 or 0 and keep it positive
-				float dist = (QVector2D(p->pos()) - tip).length()-(ROBOT_LENGTH / 2);
-				if( dist <= 0) dist = 0.01;
-				return std::make_tuple(dist, QVector2D(p->pos()) - tip);
-			}	
-			else
-				return std::make_tuple(MAX_LASER_DIST, QVector2D());	
+			// compute distante from laser tip to point minus RLENGTH/2 or 0 and keep it positive
+			float dist = (QVector2D(p->pos()) - QVector2D(t)).length()-(ROBOT_LENGTH / 2);
+			if( dist <= 0) dist = 0.01;
+			return std::make_tuple(dist, QVector2D(p->pos()) - QVector2D(t));
 		});
 		
 		// compute min distance
 		auto min = std::min_element(std::begin(distances), std::end(distances), [](auto &a, auto &b){return std::get<float>(a) < std::get<float>(b);});
 		float min_dist = std::get<float>(*min);
-		
-		// if min > MAX_LASER_DIST don't apply forces
-		if( min_dist >= MAX_LASER_DIST)
-			continue;
 
 		QVector2D force = std::get<QVector2D>(*min);
 		// rescale min_dist so 1 is ROBOT_LENGTH
