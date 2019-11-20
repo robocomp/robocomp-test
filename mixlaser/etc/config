@@ -1,5 +1,6 @@
 # Endpoints for implemented interfaces
-Laser.Endpoints=tcp -p 0
+Laser.Endpoints=tcp -p 10080
+CommonBehavior.Endpoints=tcp -p 20080
 
 
 # Proxies for required interfaces
@@ -7,6 +8,7 @@ LaserProxy = laser:tcp -h robonuc1.local -p 10003
 Laser1Proxy = laser:tcp -h robonuc1.local -p 20003
 
 
+InnerModelPath=/home/robocomp/robocomp/components/robocomp-viriato/etcSim/viriato.xml
 
 # This property is used by the clients to connect to IceStorm.
 TopicManager.Proxy=IceStorm/TopicManager:default -p 9999

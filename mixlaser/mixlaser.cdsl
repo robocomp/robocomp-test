@@ -7,6 +7,6 @@ Component mixlaser
         implements Laser;
         requires Laser,Laser;
     };
-	language python;
+	language cpp;
 };
 
