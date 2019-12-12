@@ -49,12 +49,6 @@ bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList _params)
 {
 	try
 	{
-		// RoboCompCommonBehavior::Parameter par = params.at("InnerModelPath");
-		// std::string innermodel_path = par.value;
-		// innerModel = new InnerModel(innermodel_path);
-		// InnerModelTransform *parent = innerModel->getTransform("robot");
-		// InnerModelTransform *rawOdometryParentNode = innerModel->newTransform("robot_raw_odometry_parent", "static", parent, 0, 0, 0, 0, 0, 0, 0);
-		// InnerModelTransform *rawOdometryNode = innerModel->newTransform("robot_raw_odometry", "static", rawOdometryParentNode,  0, 0, 0, 0, 0, 0, 0);
         params = _params;
 	}
 	catch(const std::exception &e) { qFatal("Error reading config params"); }
@@ -70,21 +64,9 @@ void SpecificWorker::initialize(int period)
 	
 	resize(QDesktopWidget().availableGeometry(this).size() * 0.6);
 	scene.setSceneRect(dimensions.HMIN, dimensions.VMIN, dimensions.WIDTH, dimensions.HEIGHT);
-	view.scale( 1, -1 );
-	view.setScene(&scene);
-	view.setParent(this);
-	QGridLayout* layout = new QGridLayout;
-    layout->addWidget(&view);
-	this->setLayout(layout);
-	view.fitInView(scene.sceneRect(), Qt::KeepAspectRatio );
-/*	QSettings settings("RoboComp", "ElasticPath");
-    settings.beginGroup("MainWindow");
-    	resize(settings.value("size", QSize(400, 400)).toSize());
-    settings.endGroup();
-	settings.beginGroup("QGraphicsView");
-		view.setTransform(settings.value("matrix", QTransform()).value<QTransform>());
-	settings.endGroup();
-*/
+	graphicsView->scale( 1, -1 );
+	graphicsView->setScene(&scene);
+	graphicsView->fitInView(scene.sceneRect(), Qt::KeepAspectRatio );
 
 	// Robot 
 	QPolygonF poly2;
@@ -172,6 +154,12 @@ void SpecificWorker::initialize(int period)
 		if( std::any_of(std::begin(list_n), std::end(list_n), [](const auto &n){ return n.second.free == false;}))
 			cell.second.cost = 5.f;			
 	}
+	
+	//Sliders
+	this->verticalSlider->setValue(KI);
+	this->verticalSlider_2->setValue(KE*50);
+	connect(this->verticalSlider, &QSlider::valueChanged, this, [this](int v){ KI = v; });
+	connect(this->verticalSlider_2, &QSlider::valueChanged, this, [this](int v){ KE = v/50.f; });
 	
 	qDebug() << "Grid initialize ok";
 
@@ -271,7 +259,7 @@ void SpecificWorker::compute()
 {
 	computeLaser(laser_pose, boxes);  // goes
 	computeVisibility(points, laser_polygon);
-	//cleanPath();
+	cleanPath();
 	//controller();
 	updateRobot();				// goes
 	reloj.restart();
@@ -282,7 +270,6 @@ void SpecificWorker::cleanPath()
 	computeForces(points, laserData);
 	cleanPoints();
 	addPoints();
-
 }
 
 void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
@@ -425,7 +412,7 @@ void SpecificWorker::computeForcesJacobian(const std::vector<QGraphicsEllipseIte
 		
 		// add the forces and move the point using KE y KI defined in .h
 		//qDebug() << min_dist << final_dist << min_mx << min_px <<  min_my << min_py << "jac" << jacobian << iforce << repulsion_force << jacobian;
-		QVector2D total =  (KIJ * iforce) + (KEJ * QVector2D(repulsion_force.x(), repulsion_force.y()));	
+		QVector2D total =  (KI * iforce) + (KE * QVector2D(repulsion_force.x(), repulsion_force.y()));	
 		if(total.length() > 18)
 			total = 18 * total.normalized();
 		
@@ -524,9 +511,9 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 		
 		// update node pos
 		auto total =  (KI * iforce) + (KE * f_force);
-		if(total.length() > 8)
+		if(total.length() > 28)
 			total = 8 * total.normalized();
-		if(total.length() < -8)
+		if(total.length() < -28)
 			total = -8 * total.normalized();	
 		
 		// move node only if does not exit the laser polygon
@@ -537,6 +524,7 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 		for(const auto &pp : path)
 			for( auto &&child : pp->childItems())
 	 			scene.removeItem(child);
+
 		// create new ones
 		auto arrow = new QGraphicsLineItem(QLineF( QPointF(0,0), p->mapFromScene(1.1*(p->pos()+f_force.toPointF()))), p);
 		auto point = new QGraphicsEllipseItem(0,0,40,40, arrow);	
@@ -804,7 +792,7 @@ void SpecificWorker::mousePressEvent(QMouseEvent *event)
 {
 	if(event->button() == Qt::LeftButton)
 	{
-		auto p = view.mapToScene(event->x(), event->y());	
+		auto p = graphicsView->mapToScene(event->x(), event->y());	
 		qDebug() << __FUNCTION__ << "target " << p;
 		std::list<QVec> path = grid.computePath(Grid<TCell>::Key(robot_nose->mapToScene(QPointF(0,0))), Grid<TCell>::Key(p));
 		if(path.size() > 0) 
@@ -829,8 +817,8 @@ void SpecificWorker::mousePressEvent(QMouseEvent *event)
 // zoom
 void SpecificWorker::wheelEvent(QWheelEvent *event)
 {
-	const QGraphicsView::ViewportAnchor anchor = view.transformationAnchor();
-	view.setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
+	const QGraphicsView::ViewportAnchor anchor = graphicsView->transformationAnchor();
+	graphicsView->setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
 	int angle = event->angleDelta().y();
 	qreal factor;
 	if (angle > 0) 
@@ -845,12 +833,12 @@ void SpecificWorker::wheelEvent(QWheelEvent *event)
 		QRectF r = scene.sceneRect();
 		this->scene.setSceneRect(r);
 	}
-	view.scale(factor, factor);
-	view.setTransformationAnchor(anchor);
+	graphicsView->scale(factor, factor);
+	graphicsView->setTransformationAnchor(anchor);
 
 	QSettings settings("RoboComp", "ElasticPath");
 	settings.beginGroup("QGraphicsView");
-		settings.setValue("matrix", view.transform());
+		settings.setValue("matrix", graphicsView->transform());
 	settings.endGroup();
 }
 

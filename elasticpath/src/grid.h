@@ -275,7 +275,7 @@ class Grid
 					std::cout << e.what() << " neighbour not found in grid " << lk.x << " " << lk.z << '\n';
 				}
 			}
-			qDebug() << neigh.size();
+			//qDebug() << neigh.size();
 			return neigh;
 		}
 		

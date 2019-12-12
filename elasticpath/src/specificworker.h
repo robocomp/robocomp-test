@@ -77,10 +77,10 @@ private:
 	//const float BALL_MIN = ROBOT_LENGTH/2;
 	const float BALL_MIN = 30;
 	const float BALL_SIZE = 60;
-	const float KE = 10;
-	const float KI = 20;
-	//const float KE = 0.5;
-	//const float KI = -9;
+	//const float KE = 10;
+	//const float KI = 20;
+	float KE = 1;
+	float KI = 50;
 	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.9;
 	const float MAX_LASER_DIST = 4000;
 	const float LASER_DIST_STEP = 0.05;
@@ -93,7 +93,7 @@ private:
 	
 	InnerModel *innerModel;
 	QGraphicsScene scene;
-	QGraphicsView view;
+	//QGraphicsView view;
 	std::vector<QGraphicsEllipseItem*> points;
 
 	QGraphicsEllipseItem *first, *last, *robot_nose, *laser_pose;
