@@ -123,7 +123,7 @@ void SpecificWorker::initialize(int period)
 	// boxes.push_back(axisZ);
 	
 	// Laser
-	for( auto &&i : iter::range(-M_PI/2.f, M_PI/2.f, M_PI/LASER_ANGLE_STEPS) )
+	for( auto &&i : iter::range(-3*M_PI/2, 3*M_PI/2, M_PI/LASER_ANGLE_STEPS) )
 		laserData.emplace_back(LData{0.f, (float)i});
 	
 	//Grid
@@ -260,7 +260,7 @@ void SpecificWorker::compute()
 	computeLaser(laser_pose, boxes);  // goes
 	computeVisibility(points, laser_polygon);
 	cleanPath();
-	//controller();
+	controller();
 	updateRobot();				// goes
 	reloj.restart();
 }
@@ -329,7 +329,7 @@ void SpecificWorker::computeVisibility(const std::vector<QGraphicsEllipseItem*> 
 	for(auto &&p: path)
 	{
 		if( poly.containsPoint(p->pos(), Qt::OddEvenFill) 
-						or robot->polygon().containsPoint(robot->mapFromScene(p->pos()), Qt::OddEvenFill))
+			or robot->polygon().containsPoint(robot->mapFromScene(p->pos()), Qt::OddEvenFill))
 		{
 			p->setData(0, true);
 			p->setBrush(QColor("LightGreen"));
@@ -343,7 +343,6 @@ void SpecificWorker::computeVisibility(const std::vector<QGraphicsEllipseItem*> 
 	// for(auto &&p: path)
 	//  	std::cout << "(" << p->pos().x() << " " << p->pos().y() << " " << p->data(0).toBool() << ")";
 	// std::cout << std::endl;
-	
 }
 
 void SpecificWorker::computeForcesJacobian(const std::vector<QGraphicsEllipseItem*> &path, const std::vector<LData> &lData)
@@ -475,10 +474,10 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 		if(isVisible(p) == false) // if not visible (computed before) continue
 			continue;
 
-		// internal curvature forces on p2
+		// INTERNAL curvature forces on p2
 		QVector2D iforce = ((p1-p2)/(p1-p2).length() + (p3-p2)/(p3-p2).length());
 	
-		// External forces. We need the minimun distance from each point to the obstacle(s). we compute the shortest laser ray to each point in the path
+		// EXTERNAL forces. We need the minimun distance from each point to the obstacle(s). we compute the shortest laser ray to each point in the path
 		// compute minimun distances to each point within the laser field
 	
 		std::vector<std::tuple<float, QVector2D>> distances;
@@ -511,9 +510,11 @@ void SpecificWorker::computeForces(const std::vector<QGraphicsEllipseItem*> &pat
 		
 		// update node pos
 		auto total =  (KI * iforce) + (KE * f_force);
-		if(total.length() > 28)
+
+		// limiters
+		if(total.length() > 48)
 			total = 8 * total.normalized();
-		if(total.length() < -28)
+		if(total.length() < -48)
 			total = -8 * total.normalized();	
 		
 		// move node only if does not exit the laser polygon
@@ -642,6 +643,7 @@ void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsI
 	{
 		l.dist = MAX_LASER_DIST;
 		QLineF line(r->mapToScene(QPointF(0,0)), r->mapToScene(QPointF(MAX_LASER_DIST*sin(l.angle), MAX_LASER_DIST*cos(l.angle))));
+		//float step = 10.f / line.length();
 		for( auto t : iter::range(0.f, 1.f, LASER_DIST_STEP))
 		{
 			auto point = line.pointAt(t);
@@ -665,11 +667,12 @@ void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsI
 
 void SpecificWorker::controller()
 {
-	// Check for inminent collision to block and bounce backwards using laser field
-
     if (not active)
 	{  return; }
-	
+
+	// Check for inminent collision to block and bounce backwards using laser field
+
+
 	// Compute distance to target along path
 	// float dist_to_target = 0.f;
 	// for(auto &&g : iter::sliding_window(points, 2))
@@ -735,7 +738,20 @@ void SpecificWorker::controller()
 	// Compute advance speed
 	std::min( advVelz = ROBOT_MAX_ADVANCE_SPEED * exponentialFunction(rotVel, 0.3, 0.4, 0) , euc_dist_to_target);
 	//std::cout <<  "In controller: active " << active << " adv: "<< advVelz << " rot: " << rotVel << std::endl;
-	
+
+	// Compute lateral speed
+	QVector2D total{0,0};
+	for( const auto &l : laserData )
+	{
+		float limit = (ROBOT_LENGTH*sin(l.angle) + ROBOT_LENGTH*cos(l.angle)) + 100;
+		float diff = limit - l.dist;
+		if(diff >= 0)
+		{
+			total = total + QVector2D(-diff*sin(l.angle), -diff*cos(l.angle));
+		}
+	}
+	// Lateral velocity is the X component of the resultant
+	advVelx = total.x() / 200.f;
 }
 
 ///Periodic update of robot's state based on its adv and rot speeds.
@@ -755,6 +771,10 @@ void SpecificWorker::updateRobot()
 	auto new_pose = m * QVec::vec3(incs.x(), incs.y(), 1);
 	robot->setRotation(alpha);
 	robot->setPos(new_pose.x(), new_pose.y());
+	QPointF resX = robot->mapToScene(QPointF(advVelx, 0.f));
+	qDebug() << resX << new_pose;
+	robot->setPos(resX.x(), resX.y());
+	
 	//std::cout << "In update " << alpha << " " << new_pose.x() << " " << new_pose.y() << std::endl;
 }
 

@@ -79,8 +79,8 @@ private:
 	const float BALL_SIZE = 60;
 	//const float KE = 10;
 	//const float KI = 20;
-	float KE = 1;
-	float KI = 50;
+	float KE = 3;
+	float KI = 150;
 	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.9;
 	const float MAX_LASER_DIST = 4000;
 	const float LASER_DIST_STEP = 0.05;
@@ -132,7 +132,7 @@ private:
 	//QMap<QString, PolygonData> human_poly;
 	std::vector<QGraphicsPolygonItem*> human_poly;
 
-//todo: remove when not needed
+	//todo: remove when not needed
 	//QMap<QString, QGraphicsRectItem *>occupied;	
 
 	// Grid
