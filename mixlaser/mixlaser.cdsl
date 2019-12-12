@@ -1,0 +1,12 @@
+import "Laser.idsl";
+
+Component mixlaser
+{
+    Communications
+    {
+        implements Laser;
+        requires Laser,Laser;
+    };
+	language cpp;
+};
+
