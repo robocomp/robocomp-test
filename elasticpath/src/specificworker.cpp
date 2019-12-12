@@ -123,7 +123,7 @@ void SpecificWorker::initialize(int period)
 	// boxes.push_back(axisZ);
 	
 	// Laser
-	for( auto &&i : iter::range(-3*M_PI/2, 3*M_PI/2, M_PI/LASER_ANGLE_STEPS) )
+	for( auto &&i : iter::range(-3*M_PI/4, 3*M_PI/4, (3*M_PI/2.f)/LASER_ANGLE_STEPS) )
 		laserData.emplace_back(LData{0.f, (float)i});
 	
 	//Grid
@@ -267,7 +267,7 @@ void SpecificWorker::compute()
 
 void SpecificWorker::cleanPath()
 {
-	computeForces(points, laserData);
+	computeForcesJacobian(points, laserData);
 	cleanPoints();
 	addPoints();
 }
@@ -306,6 +306,7 @@ void SpecificWorker::createPathFromGraph(const std::list<QVec> &path)
 		if(robot->polygon().intersected(robot->mapFromScene(p->mapToScene(p->boundingRect()))).empty() == false)
 			points_to_remove.push_back(p);
 	}
+	qDebug() << points_to_remove.size();
 	for(auto p: points_to_remove)
 	{
 		scene.removeItem(p);
@@ -411,9 +412,9 @@ void SpecificWorker::computeForcesJacobian(const std::vector<QGraphicsEllipseIte
 		
 		// add the forces and move the point using KE y KI defined in .h
 		//qDebug() << min_dist << final_dist << min_mx << min_px <<  min_my << min_py << "jac" << jacobian << iforce << repulsion_force << jacobian;
-		QVector2D total =  (KI * iforce) + (KE * QVector2D(repulsion_force.x(), repulsion_force.y()));	
-		if(total.length() > 18)
-			total = 18 * total.normalized();
+		QVector2D total =  (KI * iforce) + (-KE * QVector2D(repulsion_force.x(), repulsion_force.y()));	
+		if(total.length() > 68)
+			total = 68 * total.normalized();
 		
 		// move node only if does not exit the laser polygon
 		if (laser_poly.containsPoint( p->pos() + total.toPointF(), Qt::OddEvenFill))
@@ -643,13 +644,13 @@ void SpecificWorker::computeLaser(QGraphicsItem *r, const std::vector<QGraphicsI
 	{
 		l.dist = MAX_LASER_DIST;
 		QLineF line(r->mapToScene(QPointF(0,0)), r->mapToScene(QPointF(MAX_LASER_DIST*sin(l.angle), MAX_LASER_DIST*cos(l.angle))));
-		//float step = 10.f / line.length();
+		float step = 100.f / line.length();
 		for( auto t : iter::range(0.f, 1.f, LASER_DIST_STEP))
 		{
 			auto point = line.pointAt(t);
 			if(std::any_of(std::begin(boxes_temp), std::end(boxes_temp),[point](auto &box){ return box->contains(box->mapFromScene(point));}))
 			{
-				l.dist = QVector2D(point-line.pointAt(0)).length()-1;
+				l.dist = QVector2D(point-line.pointAt(0)).length()-(step*2);
 				break;
 			}
 		}
@@ -743,15 +744,15 @@ void SpecificWorker::controller()
 	QVector2D total{0,0};
 	for( const auto &l : laserData )
 	{
-		float limit = (ROBOT_LENGTH*sin(l.angle) + ROBOT_LENGTH*cos(l.angle)) + 100;
+		float limit = (fabs(ROBOT_LENGTH/2.f*sin(l.angle)) + fabs(ROBOT_LENGTH/2.f*cos(l.angle))) + 200;
 		float diff = limit - l.dist;
 		if(diff >= 0)
-		{
 			total = total + QVector2D(-diff*sin(l.angle), -diff*cos(l.angle));
-		}
 	}
 	// Lateral velocity is the X component of the resultant
-	advVelx = total.x() / 200.f;
+	bumperVel = total/100.f ;
+	//advVelx = total.x()/100.f ;
+	//qDebug() << total.x();
 }
 
 ///Periodic update of robot's state based on its adv and rot speeds.
@@ -771,8 +772,11 @@ void SpecificWorker::updateRobot()
 	auto new_pose = m * QVec::vec3(incs.x(), incs.y(), 1);
 	robot->setRotation(alpha);
 	robot->setPos(new_pose.x(), new_pose.y());
-	QPointF resX = robot->mapToScene(QPointF(advVelx, 0.f));
-	qDebug() << resX << new_pose;
+	
+	// add bumper derived force
+	//QPointF resX = robot->mapToScene(QPointF(advVelx, 0.f));
+	QPointF resX = robot->mapToScene(bumperVel.toPointF());
+	//qDebug() << resX << new_pose;
 	robot->setPos(resX.x(), resX.y());
 	
 	//std::cout << "In update " << alpha << " " << new_pose.x() << " " << new_pose.y() << std::endl;

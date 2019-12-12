@@ -79,8 +79,8 @@ private:
 	const float BALL_SIZE = 60;
 	//const float KE = 10;
 	//const float KI = 20;
-	float KE = 3;
-	float KI = 150;
+	float KE = 2.2;
+	float KI = 160;
 	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.9;
 	const float MAX_LASER_DIST = 4000;
 	const float LASER_DIST_STEP = 0.05;
@@ -112,6 +112,7 @@ private:
 	// Robot sim
 	timeval lastCommand_timeval;
 	float advVelx=0, advVelz=0, rotVel=0;
+	QVector2D bumperVel;
 	RoboCompGenericBase::TBaseState bState;
     RoboCompCommonBehavior::ParameterList params;
 	QGraphicsPolygonItem* localizationPolygon;
