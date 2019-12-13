@@ -175,8 +175,8 @@ void SpecificWorker::initialize(int period)
     //controllerTimer.start(200);
 	
 	// Proxemics
-	//	connect(humanA, &Human::personChangedSignal, this, &SpecificWorker::personChangedSlot);
-	//	connect(humanB, &Human::personChangedSignal, this, &SpecificWorker::personChangedSlot);
+	connect(humanA, &Human::personChangedSignal, this, &SpecificWorker::personChangedSlot);
+	connect(humanB, &Human::personChangedSignal, this, &SpecificWorker::personChangedSlot);
 
 	//showMaximized();
 
@@ -886,6 +886,7 @@ void SpecificWorker::personChangedSlot(Human *human)
 	// Go through the list of humans to check for composite gaussians
 	// Using the whole list, create the modified laser field
 	// Modify the Grid
+	qDebug() << "personChangedSlot";
 	RoboCompSocialNavigationGaussian::SNGPersonSeq persons;
 	for (auto human: human_vector)
 	{
