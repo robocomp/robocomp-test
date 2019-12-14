@@ -75,12 +75,10 @@ private:
 	//constants
 	const float ROBOT_LENGTH = 400;
 	//const float BALL_MIN = ROBOT_LENGTH/2;
-	const float BALL_MIN = 30;
-	const float BALL_SIZE = 60;
-	//const float KE = 10;
-	//const float KI = 20;
-	float KE = 2.2;
-	float KI = 160;
+	const float BALL_SIZE = 200;
+	const float BALL_MIN = BALL_SIZE/2;
+	float KE = 3.0;
+	float KI = 120;
 	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.9;
 	const float MAX_LASER_DIST = 4000;
 	const float LASER_DIST_STEP = 0.05;
@@ -90,16 +88,15 @@ private:
 	const float FORCE_DISTANCE_LIMIT = (ROBOT_LENGTH * 1.5);  //mm
 	const float ROBOT_STEP = (ROBOT_LENGTH * 0.1);
 	const float DELTA_H = (ROBOT_LENGTH * 0.1);
+	const float FINAL_DISTANCE_TO_TARGET = 100;  //mm
 	
 	InnerModel *innerModel;
 	QGraphicsScene scene;
-	//QGraphicsView view;
 	std::vector<QGraphicsEllipseItem*> points;
 
 	QGraphicsEllipseItem *first, *last, *robot_nose, *laser_pose;
 	QGraphicsPolygonItem *robot;
 	QGraphicsRectItem *target;
-	bool active = false;
 	
 	std::vector<QGraphicsItem*> boxes;
 	QGraphicsPolygonItem *laser_polygon = nullptr;
@@ -155,16 +152,19 @@ private:
 	void createPathFromGraph(const std::list<QVec> &path);
 	//void markGrid(QGraphicsPolygonItem* poly, bool occupied);
 	bool isVisible(const QGraphicsEllipseItem *p);
+	bool findNewPath();
 
 	// Target
-	struct Target 
+	struct Target : public std::mutex
 	{ 
 		QPointF p; 
-		bool active = false; 
+		std::atomic_bool active = false; 
+		std::atomic_bool blocked = true; 
+		std::atomic_bool new_target = false; 
 		QGraphicsRectItem *item;
 	};
 	Target current_target;
-
+	
 	// This function takes an angle in the range [-3*pi, 3*pi] and wraps it to the range [-pi, pi].
 	float rewrapAngleRestricted(const float angle);
 	float degreesToRadians(const float angle_);
