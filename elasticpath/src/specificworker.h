@@ -153,6 +153,7 @@ private:
 	//void markGrid(QGraphicsPolygonItem* poly, bool occupied);
 	bool isVisible(const QGraphicsEllipseItem *p);
 	bool findNewPath();
+	std::tuple<bool, bool, QPointF, float> epoch();
 
 	// Target
 	struct Target : public std::mutex

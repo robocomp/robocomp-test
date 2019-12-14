@@ -258,15 +258,21 @@ void SpecificWorker::initializeWorld()
 
 void SpecificWorker::compute()
 {
+	auto r = epoch();
+}
+
+//////////////////////////////////////////////////
+ std::tuple<bool, bool, QPointF, float> SpecificWorker::epoch()
+{
 	if (this->current_target.active.load() == false)
-		return;
+		return std::make_tuple(true, false, QPointF(), 0.f );
 
 	if (this->current_target.blocked.load() == true)
 	{
 		if (findNewPath() == false)
 		{
 			qDebug() << __FUNCTION__ << "Blocked: No path found in Compute";
-			return;
+			return std::make_tuple(false, true, QPointF(), 0.f );
 		}
 		reloj.restart();
 	}
@@ -276,7 +282,7 @@ void SpecificWorker::compute()
 		if (findNewPath() == false)
 		{
 			qDebug() << __FUNCTION__ << "New_target: No path found in Compute";
-			return;
+			return std::make_tuple(false, true, QPointF(), 0.f );
 		}
 		reloj.restart();
 	}
@@ -287,9 +293,8 @@ void SpecificWorker::compute()
 	controller();
 	updateRobot();
 	reloj.restart();
+	return std::make_tuple(false, false, robot->pos(), bumperVel.length() );
 }
-
-//////////////////////////////////////////////////
 
 void SpecificWorker::cleanPath()
 {
@@ -643,7 +648,7 @@ void SpecificWorker::controller()
 	std::min(advVelz = ROBOT_MAX_ADVANCE_SPEED * exponentialFunction(rotVel, 0.3, 0.4, 0), euc_dist_to_target);
 	//std::cout <<  "In controller: active " << active << " adv: "<< advVelz << " rot: " << rotVel << std::endl;
 
-	// Compute lateral speed
+	// Compute bumper-away speed
 	QVector2D total{0, 0};
 	for (const auto &l : laserData)
 	{
@@ -652,10 +657,8 @@ void SpecificWorker::controller()
 		if (diff >= 0)
 			total = total + QVector2D(-diff * sin(l.angle), -diff * cos(l.angle));
 	}
-	// Lateral velocity is the X component of the resultant
+	
 	bumperVel = total / 100.f;
-	//advVelx = total.x()/100.f ;
-	//qDebug() << total.x();
 }
 
 bool SpecificWorker::findNewPath()
