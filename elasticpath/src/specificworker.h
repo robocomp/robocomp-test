@@ -34,6 +34,11 @@
 #include <QGraphicsLineItem>
 #include <QGraphicsRectItem>
 #include <QGraphicsPolygonItem>
+#include <QGLWidget>
+#include <QtCharts/QChartView>
+#include <QtCharts/QLegend>
+#include <QtCharts/QLineSeries>
+
 #include <math.h>
 #include "grid.h"
 #include "human.h"
@@ -72,11 +77,11 @@ private:
 	//constants
 	const float ROBOT_LENGTH = 400;
 	//const float BALL_MIN = ROBOT_LENGTH/2;
-	const float BALL_SIZE = 200;
+	const float BALL_SIZE = 400;
 	const float BALL_MIN = BALL_SIZE / 2;
 	float KE = 3.0;
 	float KI = 120;
-	float KB = 100;
+	float KB = 90;
 	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.9;
 	const float MAX_LASER_DIST = 4000;
 	const float LASER_DIST_STEP = 0.05;
@@ -101,12 +106,14 @@ private:
 
 	InnerModel *innerModel;
 	QGraphicsScene scene;
-	std::vector<QGraphicsEllipseItem *> points;
 
+	// ElasticBand
+	std::vector<QGraphicsEllipseItem *> points;
 	QGraphicsEllipseItem *first, *last, *robot_nose, *laser_pose;
 	QGraphicsPolygonItem *robot;
 	QGraphicsRectItem *target;
 
+	//Obstacles
 	std::vector<QGraphicsItem *> boxes;
 	QGraphicsPolygonItem *laser_polygon = nullptr;
 
@@ -119,7 +126,7 @@ private:
 	std::vector<LData> laserData;
 	QTimer cleanTimer, timerRobot, controllerTimer;
 
-	// Robot sim
+	// Robot simuation
 	timeval lastCommand_timeval;
 	float advVelx = 0, advVelz = 0, rotVel = 0;
 	QVector2D bumperVel;
@@ -128,6 +135,13 @@ private:
 	QGraphicsPolygonItem *localizationPolygon;
 	QGraphicsEllipseItem *spherePolygon;
 	int lostMeasure = 0;
+
+	// reward drawing
+	QGraphicsScene reward_scene;
+	QtCharts::QChart chart;
+	QtCharts::QChartView chartView;
+	
+	
 
 	//human
 	Human *humanA, *humanB;
