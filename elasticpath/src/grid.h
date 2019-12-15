@@ -43,7 +43,7 @@ class Grid
 public:
 	struct Dimensions
 	{
-		int TILE_SIZE = 200;
+		int TILE_SIZE = 50;
 		float HMIN = -2500, VMIN = -2500, WIDTH = 2500, HEIGHT = 2500;
 	};
 
@@ -105,8 +105,8 @@ public:
 		else
 			return std::forward_as_tuple(true, fmap.at(pointToGrid(k.x, k.z)));
 	}
-	T at(const Key &k) const { try{ return fmap.at(k);} catch(...){} };
-	T &at(const Key &k) { try{ return fmap.at(k);} catch(...){} };
+	T at(const Key &k) const { return fmap.at(k);};
+	T &at(const Key &k) { return fmap.at(k);};
 	typename FMap::iterator begin() { return fmap.begin(); };
 	typename FMap::iterator end() { return fmap.end(); };
 	typename FMap::const_iterator begin() const { return fmap.begin(); };
@@ -257,7 +257,7 @@ public:
 			}
 	}
 
-	std::vector<std::pair<Key, T>> neighboors(const Key &k)
+	std::vector<std::pair<Key, T>> neighboors(const Key &k, bool all = false)
 	{
 		std::vector<std::pair<Key, T>> neigh;
 		// list of increments to access the neighboors of a given position
@@ -272,12 +272,18 @@ public:
 			{
 				T p = fmap.at(Key(lk.x, lk.z));
 				T &p_aux = fmap_aux.at(Key(lk.x, lk.z));
-				if (p.free and p_aux.free)
+				// check that incs are not both zero but have the same abs value, i.e. a diagonal
+				if (itx != 0 and itz != 0 and (fabs(itx) == fabs(itz)) and p.cost==1)
+							p.cost = 1.41; 								// if neighboor in diagonal, cost is sqrt(2)
+				if(all == false)
 				{
-					// check that incs are not both zero but have the same abs value, i.e. a diagonal
-					if (itx != 0 and itz != 0 and (fabs(itx) == fabs(itz)))
-						p.cost = 1.41; // if neighboor in diagonal, cost is sqrt(2)
-
+					if (p.free and p_aux.free)
+					{
+						neigh.emplace_back(std::make_pair(lk, p));
+					}
+				}
+				else
+				{
 					neigh.emplace_back(std::make_pair(lk, p));
 				}
 			}

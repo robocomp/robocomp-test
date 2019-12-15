@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>elasticpath</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_3">
+  <layout class="QVBoxLayout" name="verticalLayout_4">
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
@@ -85,6 +85,38 @@
          </item>
         </layout>
        </item>
+       <item>
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <item>
+          <widget class="QLCDNumber" name="lcdNumber_3"/>
+         </item>
+         <item>
+          <widget class="QSlider" name="verticalSlider_3">
+           <property name="maximum">
+            <number>300</number>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_3">
+           <property name="font">
+            <font>
+             <pointsize>12</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Bump</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
       </layout>
      </item>
     </layout>
@@ -113,6 +145,22 @@
    <sender>verticalSlider_2</sender>
    <signal>valueChanged(int)</signal>
    <receiver>lcdNumber_2</receiver>
+   <slot>display(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>467</x>
+     <y>169</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>484</x>
+     <y>23</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>verticalSlider_3</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>lcdNumber_3</receiver>
    <slot>display(int)</slot>
    <hints>
     <hint type="sourcelabel">

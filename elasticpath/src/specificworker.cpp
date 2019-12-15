@@ -93,7 +93,6 @@ void SpecificWorker::initialize(int period)
 	const auto robotN = robot_nose->mapToScene(QPointF(0, 0));
 	laser_pose = new QGraphicsEllipseItem(QRectF(-5, -5, 10, 10), robot);
 	laser_pose->setPos(0, 190);
-	qDebug() << __FUNCTION__ << robot_nose->pos() << robotN;
 
 	// target
 	target = scene.addRect(QRectF(-80, -80, 160, 160));
@@ -132,7 +131,7 @@ void SpecificWorker::initialize(int period)
 
 	// Obstacles: check is cell key.x, key.z is free by checking is there are boxes in it
 	std::uint32_t id_cont = 0;
-	for (auto &&[k, cell] : grid)
+	for (auto &[k, cell] : grid)
 	{
 		cell.g_item = scene.addEllipse(QRectF(-100, -100, 200, 200));
 		cell.g_item->setPos(k.x, k.z);
@@ -144,28 +143,35 @@ void SpecificWorker::initialize(int period)
 		if (std::any_of(std::begin(boxes), std::end(boxes), [k, this](auto &box) { return box->contains(box->mapFromScene(QPointF(k.x, k.z))); }))
 		{
 			cell.free = false;
-			cell.g_item->setPen(QPen(QColor("WhiteSmoke")));
-			cell.g_item->setBrush(QBrush(QColor("WhiteSmoke")));
+			cell.g_item->setPen(QPen(QColor("Red")));
+			cell.g_item->setBrush(QBrush(QColor("Red")));
 		}
 	}
-	// Set high cost to cell touching obstacles
-	for (auto &cell : grid)
+	// Set high cost to obstacles touching cells
+	for (auto &[k, cell] : grid)
 	{
-		auto list_n = grid.neighboors(cell.first); //Key
+		auto list_n = grid.neighboors(k, true); //Key
 		if (std::any_of(std::begin(list_n), std::end(list_n), [](const auto &n) { return n.second.free == false; }))
-			cell.second.cost = 5.f;
+		{
+			cell.cost = 50.f;
+			cell.g_item->setPen(QPen(QColor("Blue")));
+			cell.g_item->setBrush(QBrush(QColor("Blue")));
+		}
 	}
 
 	//Sliders
 	this->verticalSlider->setValue(KI);
 	this->verticalSlider_2->setValue(KE * 50);
+	this->verticalSlider_3->setValue(KB);
 	connect(this->verticalSlider, &QSlider::valueChanged, this, [this](int v) { KI = v; });
 	connect(this->verticalSlider_2, &QSlider::valueChanged, this, [this](int v) { KE = v / 50.f; });
-
+	connect(this->verticalSlider_3, &QSlider::valueChanged, this, [this](int v) { KB = v; });
+	
 	qDebug() << "Grid initialize ok";
 
 	// compute
 	timer.start(100);
+	reloj.restart();
 
 	// clean path
 	connect(&cleanTimer, &QTimer::timeout, this, &SpecificWorker::cleanPath);
@@ -180,6 +186,7 @@ void SpecificWorker::initialize(int period)
 	connect(humanB, &Human::personChangedSignal, this, &SpecificWorker::personChangedSlot);
 
 	//showMaximized();
+
 }
 
 //load world model from file
@@ -258,11 +265,67 @@ void SpecificWorker::initializeWorld()
 
 void SpecificWorker::compute()
 {
-	auto r = epoch();
+	//auto r = epoch();
+	 static std::vector<std::tuple<QPointF, float>> epochs;
+	 auto [end, no_path, pos, bumper] = epoch();
+	 //qDebug() << end << no_path << pos << bumper;
+	 if(end or no_path)
+	 {
+	 	evaluatePath(epochs);
+	 	getNextTarget();
+	 	epochs.clear();
+	 }
+	else
+	 	epochs.push_back(std::make_tuple(pos, bumper));
+	reloj.restart();
 }
 
 //////////////////////////////////////////////////
- std::tuple<bool, bool, QPointF, float> SpecificWorker::epoch()
+//  std::tuple<bool, bool, QPointF, float> SpecificWorker::epoch()
+// {
+// 	if (this->current_target.active.load() == false)
+// 		return std::make_tuple(true, false, QPointF(), 0.f );
+
+// 	if (this->current_target.blocked.load())
+// 	{
+// 		if (findNewPath() == false)
+// 		{
+// 			qDebug() << __FUNCTION__ << "Blocked: No path found in Compute";
+// 			return std::make_tuple(false, true, QPointF(), 0.f );
+// 		}
+// 	}
+// 	computeLaser(laser_pose, boxes);
+// 	computeVisibility(points, laser_polygon);
+// 	cleanPath(); 		// might go in a faster timer
+// 	controller();
+// 	updateRobot();
+// 	return std::make_tuple(false, false, robot->pos(), bumperVel.length() );
+// }
+
+void SpecificWorker::getNextTarget()
+{
+	//random generator
+	//static std::random_device rd;
+    //static std::mt19937 mt(rd());
+    //static std::uniform_real_distribution<double> dist(1.0, 10.0);
+	static bool flip = true;
+
+	if( flip )
+		current_target.p = QPointF(6206,3445);
+		//current_target.p = QPointF(2141, -1212);
+	else
+		current_target.p = QPointF(0, -1000);
+	current_target.active.store(true);
+	this->current_target.blocked.store(true);
+	flip = !flip;
+}
+
+void SpecificWorker::evaluatePath(const std::vector<std::tuple<QPointF, float>> &epochs)
+{
+	qDebug() << __FUNCTION__ << epochs.size();
+}
+
+std::tuple<bool, bool, QPointF, float> SpecificWorker::epoch()
 {
 	if (this->current_target.active.load() == false)
 		return std::make_tuple(true, false, QPointF(), 0.f );
@@ -274,16 +337,7 @@ void SpecificWorker::compute()
 			qDebug() << __FUNCTION__ << "Blocked: No path found in Compute";
 			return std::make_tuple(false, true, QPointF(), 0.f );
 		}
-		reloj.restart();
-	}
-	if (this->current_target.new_target.load() == true)
-	{
-		this->current_target.new_target.store(false);
-		if (findNewPath() == false)
-		{
-			qDebug() << __FUNCTION__ << "New_target: No path found in Compute";
-			return std::make_tuple(false, true, QPointF(), 0.f );
-		}
+		this->current_target.blocked.store(false);
 		reloj.restart();
 	}
 
@@ -295,6 +349,41 @@ void SpecificWorker::compute()
 	reloj.restart();
 	return std::make_tuple(false, false, robot->pos(), bumperVel.length() );
 }
+
+// std::tuple<bool, bool, QPointF, float> SpecificWorker::epoch()
+// {
+// 	if (this->current_target.active.load() == false)
+// 		return std::make_tuple(true, false, QPointF(), 0.f );
+
+// 	if (this->current_target.blocked.load() == true)
+// 	{
+// 		if (findNewPath() == false)
+// 		{
+// 			qDebug() << __FUNCTION__ << "Blocked: No path found in Compute";
+// 			return std::make_tuple(false, true, QPointF(), 0.f );
+// 		}
+// 		reloj.restart();
+// 	}
+// 	if (this->current_target.new_target.load() == true)
+// 	{
+// 		this->current_target.new_target.store(false);
+// 		if (findNewPath() == false)
+// 		{
+// 			qDebug() << __FUNCTION__ << "New_target: No path found in Compute";
+// 			return std::make_tuple(false, true, QPointF(), 0.f );
+// 		}
+// 		reloj.restart();
+// 	}
+
+// 	computeLaser(laser_pose, boxes);
+// 	computeVisibility(points, laser_polygon);
+// 	cleanPath(); // might go in a faster timer
+// 	controller();
+// 	updateRobot();
+// 	reloj.restart();
+// 	return std::make_tuple(false, false, robot->pos(), bumperVel.length() );
+// }
+
 
 void SpecificWorker::cleanPath()
 {
@@ -658,7 +747,7 @@ void SpecificWorker::controller()
 			total = total + QVector2D(-diff * sin(l.angle), -diff * cos(l.angle));
 	}
 	
-	bumperVel = total / 100.f;
+	bumperVel = total / KB;
 }
 
 bool SpecificWorker::findNewPath()
@@ -667,7 +756,7 @@ bool SpecificWorker::findNewPath()
 	this->current_target.lock();
 		auto p = this->current_target.p;
 	this->current_target.unlock();
-	qDebug() << __FUNCTION__ << "target " << p;
+	qDebug() << __FUNCTION__ << "robot" << robot->pos() << "target " << p;
 
 	//mark spece under the robot as occupied
 	grid.markAreaInGridAs(robot->mapToScene(robot->polygon()), false);
@@ -676,16 +765,17 @@ bool SpecificWorker::findNewPath()
 	{
 		target->setPos(p);
 		createPathFromGraph(path);
-		this->current_target.active.store(true);
-		this->current_target.blocked.store(false);
+		//this->current_target.active.store(true);
+		//this->current_target.blocked.store(false);
 		grid.markAreaInGridAs(robot->mapToScene(robot->polygon()), true);
 		return true;
 	}
 	else
 	{
-		this->current_target.active.store(false);
-		this->current_target.blocked.store(true);
+		//this->current_target.active.store(false);
+		//this->current_target.blocked.store(true);
 		qDebug() << __FUNCTION__ << "Path not found";
+		grid.markAreaInGridAs(robot->mapToScene(robot->polygon()), true);
 		return false;
 	}
 }
@@ -793,8 +883,8 @@ void SpecificWorker::mousePressEvent(QMouseEvent *event)
 	if (event->button() == Qt::LeftButton)
 	{
 		auto p = graphicsView->mapToScene(event->x(), event->y());
+		qDebug() << __FUNCTION__ << p;
 		this->current_target.lock();
-		current_target.new_target.store(true);
 		current_target.active.store(true);
 		current_target.p = p;
 		//current_target.item = nullptr;

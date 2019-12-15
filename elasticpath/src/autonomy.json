@@ -4,7 +4,7 @@
         "BOTTOM" : -4000,
         "WIDTH" : 9000,
         "HEIGHT" : 8000,
-        "TILESIZE" : 200
+        "TILESIZE" : 60
     },
    "tables": {
 		"tableA": [0, 0, 800, 1820, 1274, 3320, 0], 
