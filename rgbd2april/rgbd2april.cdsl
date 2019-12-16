@@ -1,0 +1,12 @@
+import "AprilTagsServer.idsl";
+import "RGBD.idsl";
+
+Component rgbd2april
+{
+    Communications
+    {
+        requires AprilTagsServer, RGBD;
+    };
+	language Cpp;
+};
+

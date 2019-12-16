@@ -1,0 +1,14 @@
+CommonBehavior.Endpoints=tcp -p 10000
+
+
+# Proxies for required interfaces
+AprilTagsServerProxy = apriltagsserver:tcp -h localhost -p 0
+RGBDProxy = rgbd:tcp -h localhost -p 0
+
+
+
+InnerModelPath = innermodel.xml
+
+Ice.Warn.Connections=0
+Ice.Trace.Network=0
+Ice.Trace.Protocol=0
