@@ -26,6 +26,8 @@ QObject()
 
 	apriltagsserver_proxy = (*(AprilTagsServerPrx*)mprx["AprilTagsServerProxy"]);
 	rgbd_proxy = (*(RGBDPrx*)mprx["RGBDProxy"]);
+	rgbd1_proxy = (*(RGBDPrx*)mprx["RGBDProxy1"]);
+	rgbd2_proxy = (*(RGBDPrx*)mprx["RGBDProxy2"]);
 
 	mutex = new QMutex(QMutex::Recursive);
 

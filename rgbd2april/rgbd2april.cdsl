@@ -5,7 +5,7 @@ Component rgbd2april
 {
     Communications
     {
-        requires AprilTagsServer, RGBD;
+        requires AprilTagsServer, RGBD, RGBD, RGBD;
     };
 	language Cpp;
 };
