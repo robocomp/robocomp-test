@@ -34,6 +34,11 @@
 #include <QGraphicsLineItem>
 #include <QGraphicsRectItem>
 #include <QGraphicsPolygonItem>
+#include <QGLWidget>
+#include <QtCharts/QChartView>
+#include <QtCharts/QLegend>
+#include <QtCharts/QLineSeries>
+
 #include <math.h>
 #include "grid.h"
 #include "human.h"
@@ -41,26 +46,24 @@
 // Map
 struct TCell
 {
-   	std::uint32_t id;
-    bool free;
-    bool visited;
-    QGraphicsEllipseItem* g_item;
+	std::uint32_t id;
+	bool free;
+	bool visited;
+	QGraphicsEllipseItem *g_item;
 	float cost;
-    
-    // method to save the value
-    void save(std::ostream &os) const {	os << free << " " << visited; };
-    void read(std::istream &is) {	is >> free >> visited ;};
+
+	// method to save the value
+	void save(std::ostream &os) const { os << free << " " << visited; };
+	void read(std::istream &is) { is >> free >> visited; };
 };
-		
 
 class SpecificWorker : public GenericWorker
 {
-Q_OBJECT
+	Q_OBJECT
 public:
 	SpecificWorker(TuplePrx tprx);
 	~SpecificWorker();
 	bool setParams(RoboCompCommonBehavior::ParameterList params);
-
 
 public slots:
 	void compute();
@@ -69,58 +72,80 @@ public slots:
 	void updateRobot();
 	void controller();
 	void personChangedSlot(Human *human);
-   
-private:
 
+private:
 	//constants
 	const float ROBOT_LENGTH = 400;
 	//const float BALL_MIN = ROBOT_LENGTH/2;
-	const float BALL_MIN = 30;
-	const float BALL_SIZE = 60;
-	const float KE = 10;
-	const float KI = 20;
-	//const float KE = 0.5;
-	//const float KI = -9;
+	const float BALL_SIZE = 400;
+	const float BALL_MIN = BALL_SIZE / 2;
+	float KE = 3.0;
+	float KI = 120;
+	float KB = 90;
 	const float ROAD_STEP_SEPARATION = ROBOT_LENGTH * 0.9;
 	const float MAX_LASER_DIST = 4000;
 	const float LASER_DIST_STEP = 0.05;
-	const float LASER_ANGLE_STEPS = 50;	
+	const float LASER_ANGLE_STEPS = 50;
 	const float ROBOT_MAX_ADVANCE_SPEED = 600;
 	const float ROBOT_MAX_ROTATION_SPEED = 0.9;
-	const float FORCE_DISTANCE_LIMIT = (ROBOT_LENGTH * 1.5);  //mm
+	const float FORCE_DISTANCE_LIMIT = (ROBOT_LENGTH * 1.5); //mm
 	const float ROBOT_STEP = (ROBOT_LENGTH * 0.1);
 	const float DELTA_H = (ROBOT_LENGTH * 0.1);
-	
+	const float FINAL_DISTANCE_TO_TARGET = 100; //mm
+
+	// Target
+	struct Target : public std::mutex
+	{
+		QPointF p;
+		std::atomic_bool active = false;
+		std::atomic_bool blocked = true;
+		std::atomic_bool new_target = false;
+		QGraphicsRectItem *item;
+	};
+	Target current_target;
+
 	InnerModel *innerModel;
 	QGraphicsScene scene;
-	QGraphicsView view;
-	std::vector<QGraphicsEllipseItem*> points;
 
+	// ElasticBand
+	std::vector<QGraphicsEllipseItem *> points;
 	QGraphicsEllipseItem *first, *last, *robot_nose, *laser_pose;
 	QGraphicsPolygonItem *robot;
 	QGraphicsRectItem *target;
-	bool active = false;
-	
-	std::vector<QGraphicsItem*> boxes;
+
+	//Obstacles
+	std::vector<QGraphicsItem *> boxes;
 	QGraphicsPolygonItem *laser_polygon = nullptr;
-	
+
 	// Laser
-	struct LData { float dist; float angle;};
+	struct LData
+	{
+		float dist;
+		float angle;
+	};
 	std::vector<LData> laserData;
 	QTimer cleanTimer, timerRobot, controllerTimer;
 
-	// Robot sim
+	// Robot simuation
 	timeval lastCommand_timeval;
-	float advVelx=0, advVelz=0, rotVel=0;
+	float advVelx = 0, advVelz = 0, rotVel = 0;
+	QVector2D bumperVel;
 	RoboCompGenericBase::TBaseState bState;
-    RoboCompCommonBehavior::ParameterList params;
-	QGraphicsPolygonItem* localizationPolygon;
-	QGraphicsEllipseItem* spherePolygon;
+	RoboCompCommonBehavior::ParameterList params;
+	QGraphicsPolygonItem *localizationPolygon;
+	QGraphicsEllipseItem *spherePolygon;
 	int lostMeasure = 0;
+
+	// reward drawing
+	QGraphicsScene reward_scene;
+	QtCharts::QChart chart;
+	QtCharts::QChartView chartView;
+	
+	
 
 	//human
 	Human *humanA, *humanB;
-	QVector<Human*> human_vector;
+	QVector<Human *> human_vector;
 
 	//human Polygon
 	// struct PolygonData
@@ -130,39 +155,34 @@ private:
 	// 	QGraphicsPolygonItem* item;
 	// };
 	//QMap<QString, PolygonData> human_poly;
-	std::vector<QGraphicsPolygonItem*> human_poly;
+	std::vector<QGraphicsPolygonItem *> human_poly;
 
-//todo: remove when not needed
-	//QMap<QString, QGraphicsRectItem *>occupied;	
+	//todo: remove when not needed
+	//QMap<QString, QGraphicsRectItem *>occupied;
 
 	// Grid
 	using TDim = Grid<TCell>::Dimensions;
 	TDim dimensions;
 	Grid<TCell> grid;
-	
+
 	// Methods
-    void initializeWorld();
-	void computeForces(const std::vector<QGraphicsEllipseItem*> &path, const std::vector<LData> &lData);
-	void computeForcesJacobian(const std::vector<QGraphicsEllipseItem*> &path, const std::vector<LData> &lData);
-	void computeLaser(QGraphicsItem *r, const std::vector<QGraphicsItem*> &box);
+	void initializeWorld();
+	void computeForces(const std::vector<QGraphicsEllipseItem *> &path, const std::vector<LData> &lData);
+	void computeForcesJacobian(const std::vector<QGraphicsEllipseItem *> &path, const std::vector<LData> &lData);
+	void computeLaser(QGraphicsItem *r, const std::vector<QGraphicsItem *> &box);
 	void addPoints();
 	void cleanPoints();
-	void computeVisibility(const std::vector<QGraphicsEllipseItem*> &path, const QGraphicsPolygonItem *laser);
+	void computeVisibility(const std::vector<QGraphicsEllipseItem *> &path, const QGraphicsPolygonItem *laser);
 	float exponentialFunction(float value, float xValue, float yValue, float min);
 	//void updateFreeSpaceMap(QMap<QString, QPolygonF> poly_map);
 	void updateFreeSpaceMap(const std::vector<QPolygonF> &new_poly);
 	void createPathFromGraph(const std::list<QVec> &path);
 	//void markGrid(QGraphicsPolygonItem* poly, bool occupied);
 	bool isVisible(const QGraphicsEllipseItem *p);
-
-	// Target
-	struct Target 
-	{ 
-		QPointF p; 
-		bool active = false; 
-		QGraphicsRectItem *item;
-	};
-	Target current_target;
+	bool findNewPath();
+	std::tuple<bool, bool, QPointF, float> epoch();
+	void getNextTarget();
+	void evaluatePath(const std::vector<std::tuple<QPointF, float>> &epochs);
 
 	// This function takes an angle in the range [-3*pi, 3*pi] and wraps it to the range [-pi, pi].
 	float rewrapAngleRestricted(const float angle);
@@ -170,7 +190,6 @@ private:
 
 	//Integrating time
 	QTime reloj = QTime::currentTime();
-
 
 protected:
 	void mousePressEvent(QMouseEvent *event) override;

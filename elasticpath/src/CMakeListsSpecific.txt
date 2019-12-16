@@ -14,6 +14,7 @@ SET ( HEADERS
 
 add_definitions(-g -fmax-errors=1 )
 set(CMAKE_CXX_STANDARD 17)
+set(LIBS  Qt5Charts)
 
 if(COMMAND "cat /proc/cpuinfo | grep avx")
   ADD_DEFINITIONS( -mavx2 )
