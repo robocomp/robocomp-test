@@ -6,9 +6,10 @@ HumanTrackerJointsAndRGBTopic.Endpoints=tcp -p 10080
 
 
 # This property is used by the clients to connect to IceStorm.
-TopicManager.Proxy=IceStorm/TopicManager:default -h astra1.local -p 9999
+TopicManager.Proxy=IceStorm/TopicManager:default -h 10.253.247.234 -p 9999
 
-InnerModelPath = innermodel.xml
+InnerModelPath = autonomyLab.xml
+
 
 Ice.Warn.Connections=0
 Ice.Trace.Network=0

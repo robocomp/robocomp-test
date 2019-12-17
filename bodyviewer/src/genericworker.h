@@ -44,7 +44,7 @@ using TuplePrx = std::tuple<>;
 
 class GenericWorker :
 #ifdef USE_QTGUI
-	public QWidget, public Ui_guiDlg
+	public QMainWindow, public Ui_guiDlg
 #else
 	public QObject
  #endif

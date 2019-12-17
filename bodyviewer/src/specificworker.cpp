@@ -31,7 +31,6 @@ SpecificWorker::SpecificWorker(TuplePrx tprx) : GenericWorker(tprx)
 		"LeftElbow", 
 		"LeftWrist", 
 		"LeftHand", 
-		"left_elbow", 
 		"RightShoulder", 
 		"RightElbow", 
 		"RightWrist", 
@@ -39,7 +38,6 @@ SpecificWorker::SpecificWorker(TuplePrx tprx) : GenericWorker(tprx)
 		"MidSpine", 
 		"BaseSpine", 
 		"LeftHip", 
-		"left_ankle", 
 		"LeftKnee",
         "LeftFoot",
         "RightHip",
@@ -48,25 +46,24 @@ SpecificWorker::SpecificWorker(TuplePrx tprx) : GenericWorker(tprx)
     });
 
 	skeleton = SKELETON_CONNECTIONS({
-		{"left_ankle","left_knee"},
-		{"left_knee","left_hip"},
-		{"right_ankle", "right_knee"},
-		{"right_knee", "right_hip"},
-		{"left_hip", "right_hip"},
-		{"left_shoulder", "left_hip"},
-		{"right_shoulder", "right_hip"},
-		{"left_shoulder", "right_shoulder"},
-		{"left_shoulder", "left_elbow"},
-		{"right_shoulder", "right_elbow"},
-		{"left_elbow", "left_wrist"},
-		{"right_elbow", "right_wrist"},		
-		{"left_eye", "right_eye"},		
-		{"nose", "left_eye"},
-		{"nose", "right_eye"},
-		{"left_eye", "left_ear"},
-		{"right_eye", "right_ear"},
-		{"left_ear", "left_shoulder"},
-		{"right_ear", "right_shoulder"}});
+		{"Head","Neck"},
+		{"Neck","ShoulderSpine"},
+		{"ShoulderSpine", "LeftShoulder"},
+		{"LeftShoulder", "LeftElbow"},
+		{"LeftElbow", "LeftWrist"},
+		{"LeftWrist", "LeftHand"},
+		{"ShoulderSpine", "RightShoulder"},
+		{"RightShoulder", "RightElbow"},
+		{"RightElbow", "RightWrist"},
+		{"RightWrist", "RightHand"},
+		{"ShoulderSpine", "MidSpine"},
+		{"MidSpine", "BaseSpine"},		
+		{"BaseSpine", "LeftHip"},		
+		{"LeftHip", "LeftKnee"},
+		{"LeftKnee", "LeftFoot"},
+		{"BaseSpine", "RightHip"},
+		{"RightHip", "RightKnee"},
+		{"RightKnee", "RightFoot"}});
 }
 
 /**
@@ -79,19 +76,13 @@ SpecificWorker::~SpecificWorker()
 
 bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList params)
 {
-//       THE FOLLOWING IS JUST AN EXAMPLE
-//	To use innerModelPath parameter you should uncomment specificmonitor.cpp readConfig method content
-//	try
-//	{
-//		RoboCompCommonBehavior::Parameter par = params.at("InnerModelPath");
-//		std::string innermodel_path = par.value;
-//		innerModel = new InnerModel(innermodel_path);
-//	}
-//	catch(const std::exception &e) { qFatal("Error reading config params"); }
-
-
-
-	
+	try
+	{
+		RoboCompCommonBehavior::Parameter par = params.at("InnerModelPath");
+		std::string innermodel_path = par.value;
+		innermodel = std::make_shared<InnerModel>(innermodel_path);
+	}
+	catch(const std::exception &e) { qFatal("Error reading config params"); }
 
 
 	return true;
@@ -100,75 +91,174 @@ bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList params)
 void SpecificWorker::initialize(int period)
 {
 	std::cout << "Initialize worker" << std::endl;
+	scene.setSceneRect(LEFT, BOTTOM, WIDTH, HEIGHT);
+	view.scale( 1, -1 );
+	view.setScene(&scene);
+	view.fitInView(scene.sceneRect(), Qt::KeepAspectRatio );
+	resize(view.size());
+	view.show();
+
+
+	const float fx=535.4, fy=539.2, sx=1, sy=1, Ox=320, Oy=240;
+	K = QMat::zeros(3,3);
+	K(0,0) = fx/sx; K(0,1) = 0.f; 		K(0,2) = Ox;
+	K(1,0) = 0; 	 K(1,1) = -fy/sy; 	K(1,2) = Oy;
+	K(2,0) = 0;		 K(2,1) = 0;		K(2,2) = 1;
     
-    camera = new Cam(535.4, 539.2, 640/2., 480/2.);
-    
-	this->Period = period;
+	QPen pen(QColor("DarkRed"));
+	pen.setWidth(2);
+
+
+//	scene.addRect(QRectF(0,-4000, 7000, 0),pen);
+	scene.addRect(QRectF(10, -400, 700, -10),pen);
+	peopleScene.append(QList<QGraphicsEllipseItem*>());
+	peopleScene.append(QList<QGraphicsEllipseItem*>());
+	peopleScene.append(QList<QGraphicsEllipseItem*>());
+	
+		for (int j=0;j<5;j++){
+			QGraphicsEllipseItem* p = scene.addEllipse(QRectF(-50,-50, 300, 300), QPen(QColor(255, 0, 0)), QBrush(QColor(255, 0, 0)));
+			peopleScene[0].append(p);
+		}
+	for (int j=0;j<5;j++){
+			QGraphicsEllipseItem* p = scene.addEllipse(QRectF(-50,-50, 300, 300), QPen(QColor(0, 255, 0)), QBrush(QColor(0, 255, 0)));
+			peopleScene[1].append(p);
+		}
+		for (int j=0;j<5;j++){
+			QGraphicsEllipseItem* p = scene.addEllipse(QRectF(-50,-50, 300, 300), QPen(QColor(0, 0, 255)), QBrush(QColor(0, 0, 255)));
+			peopleScene[2].append(p);
+		}
+	
+
+	this->Period = 10;
 	timer.start(Period);
 
 }
 
 void SpecificWorker::compute()
 {
-//computeCODE
-//QMutexLocker locker(mutex);
-//	try
-//	{
-//		camera_proxy->getYImage(0,img, cState, bState);
-//		memcpy(image_gray.data, &img[0], m_width*m_height*sizeof(uchar));
-//		searchTags(image_gray);
-//	}
-//	catch(const Ice::Exception &e)
-//	{
-//		std::cout << "Error reading from Camera" << e << std::endl;
-//	}
-}
+//	scene.clear();
 
-void SpecificWorker::drawBody(cv::Mat frame, const RoboCompHumanTrackerJointsAndRGB::PersonList &people)
-{
-	for(auto &person : people)
+	static auto beginC = std::chrono::steady_clock::now();
+	//draw Complete data
+	if (not dataComplete.isEmpty())
 	{
-		qDebug() << __FUNCTION__ <<"person id = "<<person.first;
-        auto p = person.second;
-		for (auto &[first, second] : skeleton)
-		{
-            try{
-                RoboCompHumanTrackerJointsAndRGB::joint j1 = p.joints.at(first);
-                RoboCompHumanTrackerJointsAndRGB::joint j2 = p.joints.at(second);
-                QVec p13D = QVec::vec3(j1[0],j1[1], j1[2]);
-                QVec p23D = QVec::vec3(j2[0],j2[1], j2[2]);
-                //convert
-                QVec img1 = camera->getRayHomogeneous(p13D);
-                QVec img2 = camera->getRayHomogeneous(p23D);
-                //Draw joint point
-                cv::circle(frame,cv::Point(img1[0], img1[1]),10,cv::Scalar(0,0,255));
-                cv::circle(frame,cv::Point(img2[0], img2[1]),10,cv::Scalar(0,0,255));
-                
-                //Draw bone
-                //cv::line(frame, cv::Point(j1->x, j1->y), cv::Point(j2->x, j2->y), cv::Scalar(0,255,0), 2);
-             }
-             catch(...){}
-		}
+		RoboCompHumanTrackerJointsAndRGB::MixedJointsRGB mixedData = dataComplete.get();
+        drawBodyOnly(mixedData);
 	}
-	cv::imshow("People", frame);
+	//draw only skeleton
+/*	if (not dataPeople.isEmpty())
+	{
+		RoboCompHumanTrackerJointsAndRGB::PersonList people = dataPeople.get();
+		cv::Mat frame(480, 640, CV_8UC3, cv::Scalar(0,0,0));
+        drawSkeleton(frame, people);
+	}*/
+	//Time
+	auto endC = std::chrono::steady_clock::now();
+//	std::cout << "Compute=>Elapsed = " << std::chrono::duration_cast<std::chrono::milliseconds>(endC-beginC).count() << std::endl;
+	beginC = endC;
+
 	
 }
 
+void SpecificWorker::drawBodyWithImage(RoboCompHumanTrackerJointsAndRGB::MixedJointsRGB mixedData)
+{
+	cv::Mat frame(mixedData.rgbImage.height, mixedData.rgbImage.width, CV_8UC3,  &(mixedData.rgbImage.image)[0]);
+	cv::cvtColor(frame, frame, CV_BGR2RGB);
+	drawBody(frame, mixedData);
+}
+
+void SpecificWorker::drawBodyOnly(const RoboCompHumanTrackerJointsAndRGB::MixedJointsRGB &mixedData)
+{
+	//videom
+	cv::Mat frame(480, 640, CV_8UC3, cv::Scalar(0,0,0));
+	drawBody(frame, mixedData);
+}
+
+void SpecificWorker::drawBody(const cv::Mat &frame, const RoboCompHumanTrackerJointsAndRGB::MixedJointsRGB &mixedData)
+{
+    //people
+	PersonList people = mixedData.persons;
+	drawSkeleton(mixedData.cameraID, frame, people);
+	updatePersonCamera(mixedData.cameraID, people);
+}
+
+void SpecificWorker::updatePersonCamera(int camera, RoboCompHumanTrackerJointsAndRGB::PersonList people)
+{
+	if (people.size())
+	{
+		int i=0;
+		for(const auto &person : people)
+		{
+			try{
+std::cout<<"camera"<<camera<<"person "<<person.first<<" joint "<<person.second.joints.at("Head")<<std::endl;
+				QVec cam = QVec::vec3(-person.second.joints.at("Head")[0], person.second.joints.at("Head")[1], person.second.joints.at("Head")[2]);
+				std::string cameraName = "camera" + to_string(camera);
+				QVec world = innermodel->transform("world", cam, cameraName.c_str());
+world.print("personInWorld");
+
+				//add person ellipse
+				
+				peopleScene[camera][i]->setPos(world.x(), world.z());
+				i++;
+				
+				
+			}catch(...)
+			{
+				qDebug()<<"No data for midSpine joint, camera:"<<camera;
+			}
+		}
+		while(i<peopleScene[camera].size())
+		{
+			peopleScene[camera][i]->setPos(0,0);
+			i++;
+		}
+	}
+}
+
+void SpecificWorker::drawSkeleton(int camera, const cv::Mat &frame, const RoboCompHumanTrackerJointsAndRGB::PersonList &people)
+{
+	if (people.size())
+	{
+		for(const auto &person : people)
+		{
+			qDebug() << __FUNCTION__ <<"person id = "<<person.first;
+			auto p = person.second;
+			for (const auto &[first, second] : skeleton)
+			{
+				try{
+					RoboCompHumanTrackerJointsAndRGB::joint j1 = p.joints.at(first);
+					RoboCompHumanTrackerJointsAndRGB::joint j2 = p.joints.at(second);
+					QVec p13D = QVec::vec3(j1[0], j1[1], j1[2]);
+					QVec p23D = QVec::vec3(j2[0], j2[1], j2[2]);
+					//convert
+					QVec img1 = K * p13D;
+					QVec img2 = K * p23D;
+					//Draw joint point
+					cv::circle(frame,cv::Point(img1[0]/img1[2], img1[1]/img1[2]),10,cv::Scalar(person.first,0,255));
+					cv::circle(frame,cv::Point(img2[0]/img2[2], img2[1]/img2[2]),10,cv::Scalar(person.first,0,255));
+					
+					//Draw bone
+					cv::line(frame, cv::Point(img1[0]/img1[2], img1[1]/img1[2]), cv::Point(img2[0]/img2[2], img2[1]/img2[2]), cv::Scalar(person.first,255,0), 2);
+				}
+				catch(...){}
+			}
+		}
+	}
+	cv::imshow(to_string(camera), frame);   
+//	cv::imshow(to_string(0), frame);   
+}
 
 void SpecificWorker::HumanTrackerJointsAndRGB_newPersonListAndRGB(MixedJointsRGB mixedData)
 {
-    qDebug()<<"Data received, people:"<<mixedData.persons.size();
-    //video
-	cv::Mat frame(mixedData.rgbImage.height, mixedData.rgbImage.width, CV_8UC3,  &(mixedData.rgbImage.image)[0]);
-	cv::cvtColor(frame, frame, CV_BGR2RGB);
-    cv::imshow("People", frame);
-    
-    //people
-    PersonList people = mixedData.persons;
-    if (people.size())
-        drawBody(frame, people);
-   
-    
+	endS = std::chrono::steady_clock::now();
+//    qDebug()<<"Data received, people:"<<mixedData.persons.size()<<"camera"<<mixedData.cameraID;
+//	qDebug()<<"Size: "<<mixedData.rgbImage.image.size();
+	dataComplete.put(mixedData);
+//	dataPeople.put(mixedData.persons);
+	//Time
+	
+//	std::cout << "Storm=>Elapsed = " << std::chrono::duration_cast<std::chrono::milliseconds>(endS-beginS).count() << std::endl;
+	beginS = std::chrono::steady_clock::now();
 }
 
 

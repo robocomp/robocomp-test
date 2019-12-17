@@ -6,6 +6,6 @@ Component bodyviewer
         subscribesTo HumanTrackerJointsAndRGB;
     };
 	language Cpp11;
-	gui Qt(QWidget);
+	gui Qt(QMainWindow);
 };
 
