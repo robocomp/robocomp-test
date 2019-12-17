@@ -137,12 +137,9 @@ private:
 	int lostMeasure = 0;
 
 	// reward drawing
-	QGraphicsScene reward_scene;
 	QtCharts::QChart chart;
 	QtCharts::QChartView chartView;
-	
-	
-
+	QtCharts::QLineSeries curve;
 	//human
 	Human *humanA, *humanB;
 	QVector<Human *> human_vector;
@@ -183,6 +180,7 @@ private:
 	std::tuple<bool, bool, QPointF, float> epoch();
 	void getNextTarget();
 	void evaluatePath(const std::vector<std::tuple<QPointF, float>> &epochs);
+	void checkProgress();
 
 	// This function takes an angle in the range [-3*pi, 3*pi] and wraps it to the range [-pi, pi].
 	float rewrapAngleRestricted(const float angle);

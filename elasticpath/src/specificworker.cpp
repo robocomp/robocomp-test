@@ -74,10 +74,10 @@ void SpecificWorker::initialize(int period)
 	chartView.setParent(frame);
 	chartView.resize(frame->size());
 	chartView.setChart(&chart);
+	chart.addSeries(&curve);
+	chart.createDefaultAxes();
 	chartView.show();
 	
-	chart.createDefaultAxes();
-
 
 	// Robot
 	QPolygonF poly2;
@@ -157,15 +157,28 @@ void SpecificWorker::initialize(int period)
 			cell.g_item->setBrush(QBrush(QColor("Red")));
 		}
 	}
-	// Set high cost to obstacles touching cells
+	// Set very high cost to obstacles touching cells
 	for (auto &[k, cell] : grid)
 	{
 		auto list_n = grid.neighboors(k, true); //Key
-		if (std::any_of(std::begin(list_n), std::end(list_n), [](const auto &n) { return n.second.free == false; }))
+		if (std::any_of(std::begin(list_n), std::end(list_n), [cell](const auto &n) 
+			{ return cell.cost != 200 and n.second.free == false; }))
 		{
-			cell.cost = 50.f;
+			cell.cost = 200;
 			cell.g_item->setPen(QPen(QColor("Cyan")));
 			cell.g_item->setBrush(QBrush(QColor("Cyan")));
+		}
+	}
+	// Set high cost to high cost touching cells
+	for (auto &[k, cell] : grid)
+	{
+		auto list_n = grid.neighboors(k, true); //Key
+		if (std::any_of(std::begin(list_n), std::end(list_n), [cell](const auto &n) 
+			{ return cell.cost != 200 and n.second.cost == 200; }))
+		{
+			cell.cost = 50;
+			cell.g_item->setPen(QPen(QColor("Yellow")));
+			cell.g_item->setBrush(QBrush(QColor("Yellow")));
 		}
 	}
 
@@ -281,7 +294,7 @@ void SpecificWorker::compute()
 	{
 		if(pushButtonAutomatic->isChecked())
 		{
-			evaluatePath(epochs);
+			//evaluatePath(epochs);
 			getNextTarget();
 			epochs.clear();
 		}
@@ -314,15 +327,24 @@ void SpecificWorker::getNextTarget()
 void SpecificWorker::evaluatePath(const std::vector<std::tuple<QPointF, float>> &epochs)
 {
 	static std::vector<int> lens;
-	qDebug() << __FUNCTION__ << epochs.size();
-	lens.push_back(epochs.size());
-	QtCharts::QLineSeries curve;
-	curve.setUseOpenGL(true);
-	for(auto &&[i, e]: iter::enumerate(lens))
-		curve.append(i, e);
+	static float accumulated_path = 0;
+	static QPointF last_position = robot->pos();
+	static int cont =0;
 	
-	chart.addSeries(&curve);
-	chart.createDefaultAxes();
+	//curve.setUseOpenGL(true);
+
+	accumulated_path += QVector2D(robot->pos() - last_position).length();
+
+	qDebug() << __FUNCTION__ << epochs.size();
+	//lens.push_back(epochs.size());
+	lens.push_back(accumulated_path);
+
+	//chart.removeAllSeries();
+	
+	///for(auto &&[i, e]: iter::enumerate(lens))
+	curve.append(cont++, accumulated_path);
+	
+	chart.show();
 }
 
 std::tuple<bool, bool, QPointF, float> SpecificWorker::epoch()
@@ -346,8 +368,21 @@ std::tuple<bool, bool, QPointF, float> SpecificWorker::epoch()
 	cleanPath(); // might go in a faster timer
 	controller();
 	updateRobot();
+	checkProgress();
 	reloj.restart();
 	return std::make_tuple(false, false, robot->pos(), bumperVel.length() );
+}
+
+// Check is the robot is stuck 
+void SpecificWorker::checkProgress()
+{
+	static QTime reloj = QTime::currentTime();
+	static float accumulated_path = 0;
+	static QPointF last_position = robot->pos();
+
+	accumulated_path += QVector2D(robot->pos() - last_position).length();
+	qDebug() << accumulated_path;
+	last_position = robot->pos();
 }
 
 void SpecificWorker::cleanPath()
@@ -728,7 +763,7 @@ void SpecificWorker::controller()
 			total = total + QVector2D(-diff * sin(l.angle), -diff * cos(l.angle));
 	}
 	
-	bumperVel = total / KB;
+	bumperVel = total / KB;  // Parameter set in slidebar
 }
 
 bool SpecificWorker::findNewPath()
