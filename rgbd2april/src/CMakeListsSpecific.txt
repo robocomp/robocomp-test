@@ -12,5 +12,5 @@ SET ( HEADERS
 )
 
 set(CMAKE_CXX_STANDARD 17)
-
+INCLUDE( $ENV{ROBOCOMP}/cmake/modules/opencv3.cmake)
 SET (LIBS ${LIBS}  )

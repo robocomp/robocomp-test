@@ -126,26 +126,26 @@
 		<transform id="room_5">
 			<!-- APRIL -->
 			<!--<transform id="april" tx="3200" tz="-1600" rx="1.57075" rz="1.57075" >-->
-			<transform id="april1" tx="4859" tz="-2176" ry="1.57075" >
-				<plane id="planeTag01" nz="-1" size="-348,348,10"   texture="/home/robocomp/robocomp/files/innermodel/tar36h11-0.png" />
-					<transform id="cam1Translation" tz="-4859" ty="2930" rx="0.54">
-					<rgbd id="camera1" focal="537" width="640" height="480" port="10097" noise="0.00" ifconfig="40000,50000" />
-				<plane id="cam1_mesh" nz="1" px="-100" pz="-100" size="200,200,10" repeat="1" texture="#555500" />
+			<transform id="april0" tx="4859" tz="-2176" ry="1.57075" >
+				<plane id="planeTag00" nz="-1" size="-348,348,10"   texture="/home/robocomp/robocomp/files/innermodel/tar36h11-0.png" />
+					<transform id="cam0Translation" tz="-4859" ty="2930" rx="0.54">
+					<rgbd id="camera0" focal="537" width="640" height="480" port="10097" noise="0.00" ifconfig="40000,50000" />
+				<plane id="cam0_mesh" nz="1" px="-100" pz="-100" size="200,200,10" repeat="1" texture="#555500" />
 			</transform>
 			<!-- CAMERAS -->
 			</transform>
-			<transform id="april2" tx="3341" tz="229"  >
-				<plane id="planeTag02" nz="-1" size="-348,348,10"   texture="/home/robocomp/robocomp/files/innermodel/tar36h11-0.png" />
-				<transform id="cam2Translation" tz="-4436" ty="2930" rx="0.58">
-					<rgbd id="camera2" focal="537" width="640" height="480" port="10097" noise="0.00" ifconfig="40000,50000" />
-					<plane id="cam2_mesh" nz="1" px="-100" pz="-100" size="200,200,10" repeat="1" texture="#555500" />
+			<transform id="april1" tx="3341" tz="229"  >
+				<plane id="planeTag01" nz="-1" size="-348,348,10"   texture="/home/robocomp/robocomp/files/innermodel/tar36h11-0.png" />
+				<transform id="cam1Translation" tz="-4436" ty="2930" rx="0.58">
+					<rgbd id="camera1" focal="537" width="640" height="480" port="10097" noise="0.00" ifconfig="40000,50000" />
+					<plane id="cam1_mesh" nz="1" px="-100" pz="-100" size="200,200,10" repeat="1" texture="#555500" />
 				</transform>
 			</transform>
-			<transform id="april3" tx="755" tz="-2273" ry="-1.57075" >				
-				<plane id="planeTag03" nz="-1" size="-348,348,10"   texture="/home/robocomp/robocomp/files/innermodel/tar36h11-0.png" />
-				<transform id="cam3Translation" tz="-6183" ty="2930" rx="0.44">
-					<rgbd id="camera3" focal="537" width="640" height="480" port="10096" noise="0.00" ifconfig="40000,50000" />
-					<plane id="cam3_mesh" nz="1" px="-100" pz="-100" size="200,200,10" repeat="1" texture="#555500" />
+			<transform id="april2" tx="755" tz="-2273" ry="-1.57075" >				
+				<plane id="planeTag02" nz="-1" size="-348,348,10"   texture="/home/robocomp/robocomp/files/innermodel/tar36h11-0.png" />
+				<transform id="cam2Translation" tz="-6183" ty="2930" rx="0.44">
+					<rgbd id="camera2" focal="537" width="640" height="480" port="10096" noise="0.00" ifconfig="40000,50000" />
+					<plane id="cam2_mesh" nz="1" px="-100" pz="-100" size="200,200,10" repeat="1" texture="#555500" />
 				</transform>
 			</transform>
             

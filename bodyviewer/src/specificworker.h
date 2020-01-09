@@ -22,14 +22,18 @@
        @author authorname
 */
 
-
-
 #ifndef SPECIFICWORKER_H
 #define SPECIFICWORKER_H
 
 #include <genericworker.h>
 #include <innermodel/innermodel.h>
 #include <opencv2/opencv.hpp>
+#include "doublebuffer.h"
+#include <QGraphicsScene>
+#include <QGraphicsView>
+#include <QGridLayout>
+#include <QGraphicsEllipseItem>
+
 
 using SKELETON_CONNECTIONS = std::vector<std::tuple<std::string, std::string>>;
 using JOINTS_ID = std::vector<std::string>;
@@ -42,18 +46,30 @@ public:
 	~SpecificWorker();
 	bool setParams(RoboCompCommonBehavior::ParameterList params);
 
-	void HumanTrackerJointsAndRGB_newPersonListAndRGB(MixedJointsRGB mixedData);
-    void drawBody(cv::Mat frame, const RoboCompHumanTrackerJointsAndRGB::PersonList &people);
-    
-    
+	void HumanTrackerJointsAndRGB_newPersonListAndRGB( RoboCompHumanTrackerJointsAndRGB::MixedJointsRGB mixedData);
+	void drawBodyWithImage(RoboCompHumanTrackerJointsAndRGB::MixedJointsRGB mixedData);
+    void drawBodyOnly(const RoboCompHumanTrackerJointsAndRGB::MixedJointsRGB &mixedData);
+	void drawBody(const cv::Mat &frame, const RoboCompHumanTrackerJointsAndRGB::MixedJointsRGB &mixedData);
+    void drawSkeleton(int camera, const cv::Mat &frame, const RoboCompHumanTrackerJointsAndRGB::PersonList &people);
+	void updatePersonCamera(int camera, RoboCompHumanTrackerJointsAndRGB::PersonList people);
+
 public slots:
 	void compute();
 	void initialize(int period);
 private:
-	std::shared_ptr<InnerModel> innerModel;
-    Cam *camera;
+	const float LEFT = 0, BOTTOM = -4000, WIDTH = 7000, HEIGHT = 4000;
+	QGraphicsScene scene;
+	QGraphicsView view;
+	QList<QList<QGraphicsEllipseItem*>> peopleScene;
+
+	std::shared_ptr<InnerModel> innermodel;
+	DoubleBuffer<RoboCompHumanTrackerJointsAndRGB::MixedJointsRGB, RoboCompHumanTrackerJointsAndRGB::MixedJointsRGB> dataComplete;
+	DoubleBuffer<RoboCompHumanTrackerJointsAndRGB::PersonList, RoboCompHumanTrackerJointsAndRGB::PersonList> dataPeople;
+    QMat K;
     SKELETON_CONNECTIONS skeleton;
 	JOINTS_ID joints_id;
+
+	std::chrono::steady_clock::time_point beginS, endS;
 };
 
 #endif

@@ -82,8 +82,8 @@
 #include "commonbehaviorI.h"
 
 
-#include <JointMotor.h>
 #include <GenericBase.h>
+#include <JointMotor.h>
 
 
 // User includes here
@@ -133,6 +133,8 @@ int ::rgbd2april::run(int argc, char* argv[])
 
 	AprilTagsServerPrx apriltagsserver_proxy;
 	RGBDPrx rgbd_proxy;
+	RGBDPrx rgbd1_proxy;
+	RGBDPrx rgbd2_proxy;
 
 	string proxy, tmp;
 	initialize();
@@ -171,6 +173,40 @@ int ::rgbd2april::run(int argc, char* argv[])
 	rInfo("RGBDProxy initialized Ok!");
 
 	mprx["RGBDProxy"] = (::IceProxy::Ice::Object*)(&rgbd_proxy);//Remote server proxy creation example
+
+	try
+	{
+		if (not GenericMonitor::configGetString(communicator(), prefix, "RGBD1Proxy", proxy, ""))
+		{
+			cout << "[" << PROGRAM_NAME << "]: Can't read configuration for proxy RGBDProxy\n";
+		}
+		rgbd1_proxy = RGBDPrx::uncheckedCast( communicator()->stringToProxy( proxy ) );
+	}
+	catch(const Ice::Exception& ex)
+	{
+		cout << "[" << PROGRAM_NAME << "]: Exception creating proxy RGBD1: " << ex;
+		return EXIT_FAILURE;
+	}
+	rInfo("RGBDProxy1 initialized Ok!");
+
+	mprx["RGBDProxy1"] = (::IceProxy::Ice::Object*)(&rgbd1_proxy);//Remote server proxy creation example
+
+	try
+	{
+		if (not GenericMonitor::configGetString(communicator(), prefix, "RGBD2Proxy", proxy, ""))
+		{
+			cout << "[" << PROGRAM_NAME << "]: Can't read configuration for proxy RGBDProxy\n";
+		}
+		rgbd2_proxy = RGBDPrx::uncheckedCast( communicator()->stringToProxy( proxy ) );
+	}
+	catch(const Ice::Exception& ex)
+	{
+		cout << "[" << PROGRAM_NAME << "]: Exception creating proxy RGBD2: " << ex;
+		return EXIT_FAILURE;
+	}
+	rInfo("RGBDProxy2 initialized Ok!");
+
+	mprx["RGBDProxy2"] = (::IceProxy::Ice::Object*)(&rgbd2_proxy);//Remote server proxy creation example
 
 	SpecificWorker *worker = new SpecificWorker(mprx);
 	//Monitor thread

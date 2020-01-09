@@ -25,8 +25,8 @@
 
 #include <CommonBehavior.h>
 
-#include <JointMotor.h>
 #include <GenericBase.h>
+#include <JointMotor.h>
 #include <AprilTagsServer.h>
 #include <RGBD.h>
 
@@ -34,8 +34,8 @@
 #define BASIC_PERIOD 100
 
 using namespace std;
-using namespace RoboCompJointMotor;
 using namespace RoboCompGenericBase;
+using namespace RoboCompJointMotor;
 using namespace RoboCompAprilTagsServer;
 using namespace RoboCompRGBD;
 
@@ -58,6 +58,8 @@ public:
 
 	AprilTagsServerPrx apriltagsserver_proxy;
 	RGBDPrx rgbd_proxy;
+	RGBDPrx rgbd1_proxy;
+	RGBDPrx rgbd2_proxy;
 
 
 protected:
