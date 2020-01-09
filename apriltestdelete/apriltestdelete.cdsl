@@ -1,0 +1,10 @@
+import "GetAprilTags.idsl";
+import "CameraSimple.idsl";
+
+Component apriltestdelete{
+	Communications{
+		requires CameraSimple, GetAprilTags;
+	};
+	language Cpp11;
+	
+};
