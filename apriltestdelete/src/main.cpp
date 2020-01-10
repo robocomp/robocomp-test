@@ -129,11 +129,27 @@ int ::apriltestdelete::run(int argc, char* argv[])
 
 	int status=EXIT_SUCCESS;
 
+	AprilTagsServerPrxPtr apriltagsserver_proxy;
 	CameraSimplePrxPtr camerasimple_proxy;
-	GetAprilTagsPrxPtr getapriltags_proxy;
 
 	string proxy, tmp;
 	initialize();
+
+
+	try
+	{
+		if (not GenericMonitor::configGetString(communicator(), prefix, "AprilTagsServerProxy", proxy, ""))
+		{
+			cout << "[" << PROGRAM_NAME << "]: Can't read configuration for proxy AprilTagsServerProxy\n";
+		}
+		apriltagsserver_proxy = Ice::uncheckedCast<AprilTagsServerPrx>( communicator()->stringToProxy( proxy ) );
+	}
+	catch(const Ice::Exception& ex)
+	{
+		cout << "[" << PROGRAM_NAME << "]: Exception creating proxy AprilTagsServer: " << ex;
+		return EXIT_FAILURE;
+	}
+	rInfo("AprilTagsServerProxy initialized Ok!");
 
 
 	try
@@ -152,23 +168,7 @@ int ::apriltestdelete::run(int argc, char* argv[])
 	rInfo("CameraSimpleProxy initialized Ok!");
 
 
-	try
-	{
-		if (not GenericMonitor::configGetString(communicator(), prefix, "GetAprilTagsProxy", proxy, ""))
-		{
-			cout << "[" << PROGRAM_NAME << "]: Can't read configuration for proxy GetAprilTagsProxy\n";
-		}
-		getapriltags_proxy = Ice::uncheckedCast<GetAprilTagsPrx>( communicator()->stringToProxy( proxy ) );
-	}
-	catch(const Ice::Exception& ex)
-	{
-		cout << "[" << PROGRAM_NAME << "]: Exception creating proxy GetAprilTags: " << ex;
-		return EXIT_FAILURE;
-	}
-	rInfo("GetAprilTagsProxy initialized Ok!");
-
-
-	tprx = std::make_tuple(camerasimple_proxy,getapriltags_proxy);
+	tprx = std::make_tuple(apriltagsserver_proxy,camerasimple_proxy);
 	SpecificWorker *worker = new SpecificWorker(tprx);
 	//Monitor thread
 	SpecificMonitor *monitor = new SpecificMonitor(worker,communicator());

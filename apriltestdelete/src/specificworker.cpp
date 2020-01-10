@@ -54,7 +54,6 @@ void SpecificWorker::initialize(int period)
 	std::cout << "Initialize worker" << std::endl;
 	this->Period = 100;
 	timer.start(Period);
-
 }
 
 void SpecificWorker::compute()
@@ -63,10 +62,20 @@ void SpecificWorker::compute()
 	{
 		RoboCompCameraSimple::TImage img;
 		camerasimple_proxy->getImage(img);
-		cv::Mat image = cv::Mat(img.width, img.height, CV_8UC3, (uchar *)(&img.image[0]));
-		cv::imshow("" , image);
-		auto listamarcas = getapriltags_proxy->checkMarcas();
-		cv::waitKey(1);
+
+		RoboCompAprilTagsServer::Image april_image;
+		april_image.data = img.image;
+		april_image.frmt.modeImage = Mode::RGB888Packet;
+		april_image.frmt.width = img.width;
+		april_image.frmt.height = img.height;
+		april_image.frmt.size = 3;
+		
+		auto tagsList = apriltagsserver_proxy->getAprilTags(april_image, 100, 400,  400);
+		
+		// cv::Mat image = cv::Mat(img.width, img.height, CV_8UC3, (uchar *)(&img.image[0]));
+		// cv::drawMarker(image, cv::Point(img.height/2, img.width/2),  cv::Scalar(0, 0, 255), cv::MARKER_CROSS, 250, 2);
+		// cv::imshow("" , image);
+		// cv::waitKey(1);
 
 	}
 	catch(const Ice::Exception &e)

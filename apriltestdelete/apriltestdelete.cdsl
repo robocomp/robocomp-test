@@ -1,9 +1,9 @@
-import "GetAprilTags.idsl";
+import "AprilTagsServer.idsl";
 import "CameraSimple.idsl";
 
 Component apriltestdelete{
 	Communications{
-		requires CameraSimple, GetAprilTags;
+		requires CameraSimple, AprilTagsServer;
 	};
 	language Cpp11;
 	

@@ -1,7 +1,7 @@
 CommonBehavior.Endpoints=tcp -p 10100
 
 # Proxies for required interfaces
-GetAprilTagsProxy = getapriltags:tcp -h localhost -p 14310
+AprilTagsServerProxy = apriltagsserver:tcp -h localhost -p 12555
 CameraSimpleProxy = camerasimple:tcp -h localhost -p 10005
 
 InnerModelPath = innermodel.xml

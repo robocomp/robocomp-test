@@ -136,6 +136,9 @@ void SpecificWorker::initialize(int period)
 	for (auto &&i : iter::range(-3 * M_PI / 4, 3 * M_PI / 4, (3 * M_PI / 2.f) / LASER_ANGLE_STEPS))
 		laserData.emplace_back(LData{0.f, (float)i});
 
+	
+	
+	
 	//Grid
 	grid.initialize(dimensions, TCell{0, true, false, nullptr, 1.f});
 
@@ -149,7 +152,7 @@ void SpecificWorker::initialize(int period)
 		cell.g_item->setPen(QPen(QColor("OldLace")));
 		cell.g_item->setBrush(QBrush(QColor("OldLace"), Qt::Dense6Pattern));
 		cell.id = id_cont++;
-		cell.free = true;
+		cell.free = true; 
 		if (std::any_of(std::begin(boxes), std::end(boxes), [k, this](auto &box) { return box->contains(box->mapFromScene(QPointF(k.x, k.z))); }))
 		{
 			cell.free = false;
