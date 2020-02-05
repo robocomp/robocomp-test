@@ -1,0 +1,13 @@
+import "CameraRGBDSimple.idsl";
+import "CameraRGBDSimplePub.idsl";
+
+Component camerargbdsimple_writer
+{
+    Communications
+    {
+        requires CameraRGBDSimple;
+        subscribesTo CameraRGBDSimplePub;
+    };
+	language python;
+};
+
