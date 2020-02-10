@@ -1,0 +1,11 @@
+import "CameraRGBDSimple.idsl";
+
+Component camerargbd_fromfile
+{
+    Communications
+    {
+        implements CameraRGBDSimple;
+    };
+	language python;
+};
+
