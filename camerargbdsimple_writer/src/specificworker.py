@@ -34,11 +34,10 @@ class SpecificWorker(GenericWorker):
 	def __init__(self, proxy_map):
 		super(SpecificWorker, self).__init__(proxy_map)
 		self.timer.timeout.connect(self.compute)
-		self.Period = 2000
+		self.Period = 100
 		self.timer.start(self.Period)
 		self.contFPS = 0
-		self.initialize()
-		self.start = time.time()
+		self.wfile = None
 
 	def __del__(self):
 		if self.wfile:
@@ -47,32 +46,38 @@ class SpecificWorker(GenericWorker):
 		print('SpecificWorker destructor')
 
 	def setParams(self, params):
-		#try:
-		#	self.innermodel = InnerModel(params["InnerModelPath"])
-		#except:
-		#	traceback.print_exc()
-		#	print("Error reading config params")
+		self.capture_rpc = "true" in params["capture_rpc"]
+		self.capture_pub = "true" in params["capture_pub"]
+		self.output_file = params["output_file"]
+		self.initialize()
 		return True
 
 
 	def initialize(self):
-		self.wfile = open( "prueba", 'wb')
+		self.wfile = open( self.output_file, 'wb')
+		self.start = time.time()
 
 	@QtCore.Slot()
 	def compute(self):
 		print('SpecificWorker.compute...')
-		return
 
-		try:
-			color_, depth_ = self.camerargbdsimple_proxy.getAll()
-			if (len(color_.image) == 0) or (len(depth_.depth) == 0):
-				print('Error retrieving images!')
-			else:
-				color = np.frombuffer(color_.image, np.uint8).reshape(color_.height, color_.width, color_.depth)
-				cv2.imshow("RPC_frame", color)
-		except:
-			print("Exception reading images: ", sys.exc_info()[0])
-
+		if self.capture_rpc:
+			try:
+				color_, depth_ = self.camerargbdsimple_proxy.getAll()
+				if (len(color_.image) == 0) or (len(depth_.depth) == 0):
+					print('Error retrieving images!')
+				else:
+#					color = np.frombuffer(color_.image, np.uint8).reshape(color_.height, color_.width, color_.depth)
+#					cv2.imshow("RPC_frame", color)
+					pickle.dump(im, self.wfile)
+					pickle.dump(dep, self.wfile)
+					if time.time() - self.start > 1:
+						print("FPS:", self.contFPS)
+						self.start = time.time()
+						self.contFPS = 0
+					self.contFPS += 1
+			except:
+				print("Exception reading images: ", sys.exc_info()[0])
 
 		return True
 
@@ -81,17 +86,22 @@ class SpecificWorker(GenericWorker):
 	# pushRGBD
 	#
 	def CameraRGBDSimplePub_pushRGBD(self, im, dep):
-		print("received data")
+		if self.capture_pub:
+	#		print("received data")
 
-		color = np.frombuffer(im.image, np.uint8).reshape(im.height, im.width, im.depth)
-		cv2.imshow("Pub_frame", color)
+	#		color = np.frombuffer(im.image, np.uint8).reshape(im.height, im.width, im.depth)
+			try:
+	#			cv2.imshow("Pub_frame", color)
+				pass
+			except :
+				print("Exception reading images: ", sys.exc_info()[0])
 
-#		pickle.dump(im, self.wfile)
-#		pickle.dump(dep, self.wfile)
+			pickle.dump(im, self.wfile)
+			pickle.dump(dep, self.wfile)
 
-		if time.time() - self.start > 1:
-			print("FPS:", self.contFPS)
-			self.start = time.time()
-			self.contFPS = 0
-		self.contFPS += 1
+			if time.time() - self.start > 1:
+				print("FPS:", self.contFPS)
+				self.start = time.time()
+				self.contFPS = 0
+			self.contFPS += 1
 

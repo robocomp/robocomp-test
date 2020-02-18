@@ -1,12 +1,18 @@
 CameraRGBDSimplePubTopic.Endpoints=tcp -p 11010
 
 # Proxies for required interfaces
-CameraRGBDSimpleProxy = camerargbdsimple:tcp -h 10.253.247.154 -p 10179
+#CameraRGBDSimpleProxy = camerargbdsimple:tcp -h 10.253.247.234 -p 10179
 
+CameraRGBDSimpleProxy = camerargbdsimple:tcp -h localhost -p 10178
 
 
 # This property is used by the clients to connect to IceStorm.
 TopicManager.Proxy=IceStorm/TopicManager:default -p 9999 -h 10.253.247.154
+
+
+capture_rpc = false
+capture_pub = true
+output_file = prueba4
 
 
 Ice.Warn.Connections=0
