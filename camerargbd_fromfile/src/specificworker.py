@@ -29,9 +29,8 @@ class SpecificWorker(GenericWorker):
 	def __init__(self, proxy_map):
 		super(SpecificWorker, self).__init__(proxy_map)
 		self.timer.timeout.connect(self.compute)
-		self.Period = 2000
+		self.Period = 33
 		self.timer.start(self.Period)
-		self.rfile = open("prueba", 'rb')
 		self.im = TImage()
 		self.dep = TDepth()
 
@@ -41,6 +40,12 @@ class SpecificWorker(GenericWorker):
 			self.rfile.close()
 
 	def setParams(self, params):
+		self.filename = params["input_file"]
+		try:
+			self.rfile = open(self.filename, 'rb')
+		except:
+			print("Incorrect input file provided, check config:", self.filename)
+			sys.exit(-1)
 		return True
 
 	@QtCore.Slot()
@@ -48,15 +53,16 @@ class SpecificWorker(GenericWorker):
 		print('SpecificWorker.compute...')
 
 		# Loop file
-		if self.rfile.tell() == os.stat("prueba").st_size:
+		if self.rfile.tell() == os.stat(self.filename).st_size:
+			print("End of file")
 			self.rfile.seek(0, 0)
 
 		# read
 		self.im = pickle.load(self.rfile)
 		self.dep = pickle.load(self.rfile)
-
-#		color = np.frombuffer(self.im.image, np.uint8).reshape(self.im.height, self.im.width, self.im.depth)
-#		cv2.imshow("Pub_frame", color)
+#		if self.im.cameraID == 1:
+#			color = np.frombuffer(self.im.image, np.uint8).reshape(self.im.height, self.im.width, self.im.depth)
+#			cv2.imshow("Pub_frame", color)
 
 
 		return True
