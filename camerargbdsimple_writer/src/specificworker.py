@@ -69,8 +69,8 @@ class SpecificWorker(GenericWorker):
 				else:
 #					color = np.frombuffer(color_.image, np.uint8).reshape(color_.height, color_.width, color_.depth)
 #					cv2.imshow("RPC_frame", color)
-					pickle.dump(im, self.wfile)
-					pickle.dump(dep, self.wfile)
+					pickle.dump(color_, self.wfile)
+					pickle.dump(depth_, self.wfile)
 					if time.time() - self.start > 1:
 						print("FPS:", self.contFPS)
 						self.start = time.time()

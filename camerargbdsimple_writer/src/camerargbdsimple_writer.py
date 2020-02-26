@@ -79,6 +79,7 @@ class CommonBehaviorI(RoboCompCommonBehavior.CommonBehavior):
 			print('Problem getting timeAwake')
 	def killYourSelf(self, current = None):
 		self.handler.killYourSelf()
+
 	def getAttrList(self, current = None):
 		try:
 			return self.handler.getAttrList()
@@ -88,7 +89,7 @@ class CommonBehaviorI(RoboCompCommonBehavior.CommonBehavior):
 			status = 1
 			return
 
-#SIGNALS handler
+# SIGNALS handler
 def sigint_handler(*args):
 	QtCore.QCoreApplication.quit()
     
